@@ -262,7 +262,14 @@ export function AppearanceSettings(): React.ReactElement {
               max={TYPOGRAPHY_LIMITS.fontSize.max}
               step={1}
               value={typography.fontSize ?? 15}
-              onChange={async (v) => setTypography(await updateTypographySettings({ fontSize: v }))}
+              onChange={async (v) => {
+                // 区域「对话正文」的显式字号会以内联变量遮蔽排版字号（同一消费点），
+                // 调排版字号前先解除区域覆盖，否则滑杆看起来完全不生效
+                if (areaStyles.body?.fontSize != null) {
+                  setAreaStyles(await updateAreaStyle('body', { fontSize: undefined }))
+                }
+                setTypography(await updateTypographySettings({ fontSize: v }))
+              }}
             />
             <TypographySlider
               label="行距"
@@ -302,7 +309,13 @@ export function AppearanceSettings(): React.ReactElement {
                       key={preset.name}
                       type="button"
                       title={preset.name}
-                      onClick={async () => setTypography(await updateTypographySettings({ textColor: preset.value || undefined }))}
+                      onClick={async () => {
+                        // 同字号：区域「对话正文」显式颜色会遮蔽排版颜色，先解除
+                        if (areaStyles.body?.color) {
+                          setAreaStyles(await updateAreaStyle('body', { color: undefined }))
+                        }
+                        setTypography(await updateTypographySettings({ textColor: preset.value || undefined }))
+                      }}
                       className={cn(
                         'flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
                         isActive ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
@@ -329,7 +342,19 @@ export function AppearanceSettings(): React.ReactElement {
                 area={area}
                 label={AREA_LABELS[area]}
                 value={areaStyles[area] ?? {}}
-                onChange={async (partial) => setAreaStyles(await updateAreaStyle(area, partial))}
+                onChange={async (partial) => {
+                  // 反向互斥：区域「对话正文」显式设置字号/颜色时，清除排版侧的同名
+                  // 覆盖，保证同一属性只有一个来源，滑杆始终即时可见生效
+                  if (area === 'body') {
+                    if (partial.fontSize != null && typography.fontSize != null) {
+                      setTypography(await updateTypographySettings({ fontSize: undefined }))
+                    }
+                    if (partial.color && typography.textColor) {
+                      setTypography(await updateTypographySettings({ textColor: undefined }))
+                    }
+                  }
+                  setAreaStyles(await updateAreaStyle(area, partial))
+                }}
                 onReset={async () => setAreaStyles(await resetAreaStyle(area))}
               />
             ))}
