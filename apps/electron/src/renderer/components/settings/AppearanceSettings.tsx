@@ -554,21 +554,22 @@ function StylePreview(): React.ReactElement {
 
         {/* 模拟内容区 */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3">
-            {/* 模拟 AI 回复（body 区域）：shrink-0 保证完整显示，不被压缩 */}
-            <div className="max-w-[85%] shrink-0 rounded-xl rounded-tl-sm bg-muted/60 px-3 py-2 text-[length:var(--area-body-font-size)] leading-[var(--md-body-line-height)] tracking-[var(--md-body-letter-spacing)] text-[color:var(--md-body-color)]">
+          {/* 内容超高时整体纵向滚动（保底完整显示，避免 flex 布局压缩导致空白） */}
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+            {/* 模拟 AI 回复（body 区域） */}
+            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-muted/60 px-3 py-2 text-[length:var(--area-body-font-size)] leading-[var(--md-body-line-height)] tracking-[var(--md-body-letter-spacing)] text-[color:var(--md-body-color)]">
               <p className="text-[10px] text-muted-foreground">AI 回复</p>
               <p className="my-[var(--md-body-paragraph-spacing)]">这是对话正文的实时预览，字号、行距、字距、段距与颜色会随左侧设置即时变化。</p>
               <p className="my-[var(--md-body-paragraph-spacing)]">调整"段距"滑块可以看到两个段落之间的距离实时改变。</p>
             </div>
-            {/* 模拟代码块（code 区域）：占剩余空间，内容超高时内部滚动，不再被裁切 */}
-            <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/60">
-              <div className="flex shrink-0 items-center justify-between bg-muted/60 px-2 py-1 text-[9px] text-muted-foreground">
+            {/* 模拟代码块（code 区域） */}
+            <div className="overflow-hidden rounded-lg border border-border/60">
+              <div className="flex items-center justify-between bg-muted/60 px-2 py-1 text-[9px] text-muted-foreground">
                 <span>typescript</span>
                 <span>复制</span>
               </div>
               <pre
-                className="m-0 min-h-0 flex-1 overflow-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
+                className="m-0 overflow-x-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
                 style={{ color: 'var(--area-code-color, #e1e4e8)' }}
               >
                 <code>{`const greet = (name: string) => \`你好, \${name}\``}</code>

@@ -29,8 +29,11 @@
      用户设置 --area-ui-font-size 后按比例缩放所有界面文字 */
   --area-ui-font-size: 14px;
   --area-ui-color: inherit;
-  --area-body-font-size: inherit;
-  --area-body-color: inherit;
+  /* 对话正文区域默认跟随排版设置（--md-body-*），用户显式设置区域字号/颜色时由
+     area-styles.ts 覆盖为具体值；不能用 inherit——inherit 会吞掉排版 fallback，
+     导致排版字号/颜色永远不生效 */
+  --area-body-font-size: var(--md-body-font-size, 15px);
+  --area-body-color: var(--md-body-color, inherit);
   --area-input-font-size: inherit;
   --area-input-color: inherit;
   --area-code-font-size: inherit;
@@ -3115,9 +3118,16 @@ html.theme-custom body {
 :root:not(.ui-classic) .message-response,
 :root.ui-classic .message-response {
   font-size: var(--area-body-font-size, var(--md-body-font-size, 15px));
+  color: var(--area-body-color, var(--md-body-color, inherit));
+}
+
+/* 行距/字距必须直接作用于块级子元素——Tailwind typography 会给 p/li 设置具体
+   line-height（prose 默认 1.625），只设在 .message-response 根元素上会被子元素
+   自己的规则覆盖（继承失效） */
+:root:not(.ui-classic) .message-response :is(p, li, h1, h2, h3, h4, blockquote, pre, ul, ol),
+:root.ui-classic .message-response :is(p, li, h1, h2, h3, h4, blockquote, pre, ul, ol) {
   line-height: var(--md-body-line-height, 1.65);
   letter-spacing: var(--md-body-letter-spacing, 0px);
-  color: var(--area-body-color, var(--md-body-color, inherit));
 }
 
 :root:not(.ui-classic) .message-response :is(p, li),
