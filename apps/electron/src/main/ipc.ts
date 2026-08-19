@@ -6329,6 +6329,22 @@ export function registerIpcHandlers(): void {
     if (!id || typeof id !== 'string') throw new Error('提醒 id 必填')
     const reminder = acknowledgePlanningReminder(id); if (reminder) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return reminder
   })
+  ipcMain.handle(
+    IPC_CHANNELS.WINDOW_GET_ZOOM_FACTOR,
+    async (event) => event.sender.getZoomFactor(),
+  )
+
+  // 渲染进程滚轮缩放请求（Ctrl/⌘+滚轮）：按 delta 方向缩放并广播新系数
+  ipcMain.on(IPC_CHANNELS.WINDOW_ZOOM_BY_DELTA, (event, delta: unknown) => {
+    if (typeof delta !== 'number' || !Number.isFinite(delta) || delta === 0) return
+    const wc = event.sender
+    const win = BrowserWindow.fromWebContents(wc)
+    if (!win || win.isDestroyed()) return
+    const step = delta > 0 ? 0.15 : -0.15
+    const nextLevel = Math.max(-8, Math.min(9, wc.getZoomLevel() + step))
+    wc.setZoomLevel(nextLevel)
+    wc.send(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, wc.getZoomFactor())
+  })
   ipcMain.handle(PLANNING_IPC_CHANNELS.SNOOZE_REMINDER, async (_, input: SnoozePlanningReminderInput): Promise<PlanningReminder | undefined> => {
     if (!input || typeof input.id !== 'string' || !Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 10080) throw new Error('推迟分钟数非法')
     const reminder = snoozePlanningReminder(input.id, input.minutes); if (reminder) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return reminder

@@ -18,7 +18,64 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* 正文排版精细调节（AI 回复 + Markdown 编辑器），由 typography-settings.ts 动态覆盖 */
+  --md-body-font-size: 15px;
+  --md-body-line-height: 1.65;
+  --md-body-letter-spacing: 0px;
+  --md-body-paragraph-spacing: 6px;
+  --md-body-color: inherit;
+  /* 区域样式（界面/正文/输入框/代码块），由 area-styles.ts 动态覆盖；默认跟随主题 */
+  /* 界面字号基准：Tailwind text-* 类以 rem 为单位（1rem = 14px 基准），
+     用户设置 --area-ui-font-size 后按比例缩放所有界面文字 */
+  --area-ui-font-size: 14px;
+  --area-ui-color: inherit;
+  --area-body-font-size: inherit;
+  --area-body-color: inherit;
+  --area-input-font-size: inherit;
+  --area-input-color: inherit;
+  --area-code-font-size: inherit;
+  --area-code-color: inherit;
 }
+
+/* ===== UI 区域字号跟随 --area-ui-font-size =====
+ * Tailwind 的 text-xs/sm/base 及各 text-[Npx] 任意值类是显式字号，
+ * 会覆盖父级 font-size 继承——因此根容器上的 font-size 对大部分
+ * 界面文字不生效。这里在 .app-ui-area 容器内按比例重新计算这些类，
+ * 使「界面文字」设置能实际缩放全部 UI 文本。
+ * 基准 14px = 默认 text-sm，比例 = var(--area-ui-font-size) / 14px。
+ *
+ * 通过 :not() 排除内容区容器（对话正文/编辑器/输入框/代码块/终端），
+ * 这些区域由各自的区域变量（--md-body-* / --area-input-* / --area-code-*）
+ * 独立驱动，不应被 UI 字号覆盖。
+ */
+.app-ui-area {
+  font-size: var(--area-ui-font-size);
+  color: var(--area-ui-color);
+}
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[10px\] { font-size: calc(var(--area-ui-font-size) * 10 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[11px\] { font-size: calc(var(--area-ui-font-size) * 11 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[12px\] { font-size: calc(var(--area-ui-font-size) * 12 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[13px\] { font-size: calc(var(--area-ui-font-size) * 13 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[14px\] { font-size: calc(var(--area-ui-font-size) * 14 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-\[15px\] { font-size: calc(var(--area-ui-font-size) * 15 / 14); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-xs { font-size: calc(var(--area-ui-font-size) * 0.75); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-sm { font-size: calc(var(--area-ui-font-size) * 0.875); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-base { font-size: var(--area-ui-font-size); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-lg { font-size: calc(var(--area-ui-font-size) * 1.125); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-xl { font-size: calc(var(--area-ui-font-size) * 1.25); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-2xl { font-size: calc(var(--area-ui-font-size) * 1.5); }
+.app-ui-area :not(.rich-text-input):not(.message-response):not(.prose):not(.code-block-wrapper):not(.shiki):not(.markdown-editor):not(.planning-editor):not(.excalidraw-container) .text-3xl { font-size: calc(var(--area-ui-font-size) * 1.875); }
+
+/* 界面文字颜色跟随 --area-ui-color。
+ * 仅在用户显式设置颜色时（.app-ui-area.ui-color-custom）覆盖通用前景色类，
+ * 避免未设置时 color:var() 回落为 inherit 破坏主题色。 */
+.app-ui-area.ui-color-custom .text-foreground { color: var(--area-ui-color); }
+.app-ui-area.ui-color-custom .text-muted-foreground { color: var(--area-ui-color); }
+.app-ui-area.ui-color-custom .text-foreground\/50,
+.app-ui-area.ui-color-custom .text-foreground\/55,
+.app-ui-area.ui-color-custom .text-foreground\/60,
+.app-ui-area.ui-color-custom .text-foreground\/70,
+.app-ui-area.ui-color-custom .text-foreground\/80 { color: var(--area-ui-color); }
 
 /* CRT Terminal 主题：全局等宽字体覆盖 */
 .theme-terminal-dark {
@@ -537,9 +594,9 @@
 
 @layer base {
   /* Electron 主窗口不应成为滚动容器；所有滚动必须停留在各自面板内。 */
-  html.myyoda-main-window,
-  html.myyoda-main-window body,
-  html.myyoda-main-window #root {
+  html.proma-main-window,
+  html.proma-main-window body,
+  html.proma-main-window #root {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -1392,6 +1449,16 @@ html.theme-custom body {
   text-wrap: wrap;
 }
 
+/* 用户气泡强制标准换行（增强版，任何主题都生效）：
+   上游原规则限定 :not(.ui-classic)，经典主题下不生效；且上游 .message-response
+   的 pretty/balance 会把短 CJK 文本主动"平衡"断行（如 8 字拆 6+2 避免孤字），
+   Chromium 在 pretty/balance 下甚至会影响 max-content 宽度测量。
+   !important + 不限主题，彻底杀死用户气泡的排版优化。 */
+.user-message-bubble .message-response,
+.user-message-bubble .message-response :is(h1, h2, h3, p, li) {
+  text-wrap: wrap !important;
+}
+
 :root:not(.ui-classic) .message-response h1 {
   margin-top: 1.55em;
   margin-bottom: 0.65em;
@@ -1981,8 +2048,8 @@ html.theme-custom body {
   pointer-events: none;
 }
 
-/* 会话行 ⋯ 悬浮按钮：在 flex 行内预留固定宽度，hover 才显示。
-   标题容器 flex-1 会自然绕开该区域，避免 hover 时盖住 3/3、工作区名等标签。 */
+/* 会话行 ⋯ 悬浮按钮：absolute 浮在行右侧，hover 才显示，不占布局宽度。
+   标题 truncate 自带 ellipsis 自然裁断，无需渐变遮罩。 */
 .session-item-actions {
   padding-right: 2px;
 }
@@ -3021,29 +3088,6 @@ html.theme-custom body {
   .ProseMirror-gapcursor::after {
     animation-duration: 1.3s !important;
   }
-
-  /* 浏览器面板入场 / 预览滑出（Proma #1663）：reduce 下直接瞬切，不做过渡 */
-  .animate-browser-panel-in,
-  .animate-preview-slide-out {
-    animation-duration: 1ms !important;
-  }
-}
-
-/* ===== 终端运行指示器（synara 风格跳动点） ===== */
-@keyframes terminal-running-dot-blink {
-  0%, 60%, 100% { opacity: 0.25; }
-  30% { opacity: 1; }
-}
-
-.terminal-running-dot {
-  animation: terminal-running-dot-blink 1.2s ease-in-out infinite;
-}
-
-/* ===== 终端 xterm 滚动条隐藏 =====
- * xterm 6 右侧自定义滚动条（右下角小方块）；滚动功能保留（滚轮/触摸板），
- * 对齐 synara/VS Code 终端体验。 */
-.xterm .xterm-scrollable-element > .scrollbar {
-  display: none !important;
 }
 
 
@@ -3056,4 +3100,42 @@ html.theme-custom body {
 .agent-transcript-group-cv {
   content-visibility: auto;
   contain-intrinsic-size: auto 600px;
+}
+
+/* ============================================================
+ * 我们独有：正文排版 / 区域字体与颜色 消费端（v0.10.12 补齐）
+ * atoms（typography-settings / markdown-font-size / area-styles）
+ * 只负责写入 CSS 变量，此处才是真正的渲染消费点：
+ * - AI 回复正文（.message-response）→ 正文排版 + 对话正文区域
+ * - 代码块（.code-block-wrapper pre / .shiki）→ 代码区域
+ * - 输入框（.rich-text-input）→ 输入框区域
+ * 现代（:root:not(.ui-classic)）与经典（.ui-classic）双主题都覆盖，
+ * 置于文件末尾保证特异性 ≥ 上游同层规则。
+ * ============================================================ */
+:root:not(.ui-classic) .message-response,
+:root.ui-classic .message-response {
+  font-size: var(--area-body-font-size, var(--md-body-font-size, 15px));
+  line-height: var(--md-body-line-height, 1.65);
+  letter-spacing: var(--md-body-letter-spacing, 0px);
+  color: var(--area-body-color, var(--md-body-color, inherit));
+}
+
+:root:not(.ui-classic) .message-response :is(p, li),
+:root.ui-classic .message-response :is(p, li) {
+  margin-top: 0;
+  margin-bottom: var(--md-body-paragraph-spacing, 6px);
+}
+
+:root:not(.ui-classic) .code-block-wrapper pre,
+:root.ui-classic .code-block-wrapper pre,
+:root:not(.ui-classic) .shiki,
+:root.ui-classic .shiki {
+  font-size: var(--area-code-font-size, inherit);
+  color: var(--area-code-color, inherit);
+}
+
+:root:not(.ui-classic) .rich-text-input,
+:root.ui-classic .rich-text-input {
+  font-size: var(--area-input-font-size, inherit);
+  color: var(--area-input-color, inherit);
 }

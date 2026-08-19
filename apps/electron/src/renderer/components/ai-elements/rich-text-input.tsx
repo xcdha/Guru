@@ -627,7 +627,7 @@ export const RichTextInput = forwardRef<RichTextInputHandle, RichTextInputProps>
       attributes: {
         class: cn(
           'prose dark:prose-invert max-w-none focus:outline-none',
-          'w-full leading-[1.6]',
+          'w-full leading-[1.6] text-[length:var(--area-input-font-size)] text-[color:var(--area-input-color)]',
           '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
           '[&_pre]:rounded-md [&_pre]:p-3',
           '[&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-sm [&_code]:text-foreground',
@@ -1167,7 +1167,10 @@ export const RichTextInput = forwardRef<RichTextInputHandle, RichTextInputProps>
         }
         .ProseMirror p {
           font-style: normal;
-          margin: 0;
+          margin: 0 0 var(--md-body-paragraph-spacing);
+        }
+        .ProseMirror p:last-child {
+          margin-bottom: 0;
         }
         .ProseMirror ul,
         .ProseMirror ol {

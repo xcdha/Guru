@@ -450,6 +450,13 @@ export interface ElectronAPI {
   windowIsMaximized: () => Promise<boolean>
   /** 窗口是否处于原生全屏状态 */
   windowIsFullScreen: () => Promise<boolean>
+  /** 获取当前窗口页面缩放系数（webContents.getZoomFactor，100% 为 1） */
+  getZoomFactor: () => Promise<number>
+  /** 请求按增量缩放窗口（Ctrl/⌘+滚轮；delta 正=放大 负=缩小），主进程处理后广播新系数 */
+  zoomByDelta: (delta: number) => void
+  /** 订阅页面缩放系数变化（Cmd+/Cmd-、菜单缩放、滚轮/触控板缩放） */
+  onZoomFactorChange: (callback: (zoomFactor: number) => void) => () => void
+
   /** 订阅窗口尺寸变化事件 */
   onWindowResize: (callback: () => void) => () => void
 
@@ -1943,6 +1950,20 @@ const electronAPI: ElectronAPI = {
 
   windowIsFullScreen: () => {
     return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_IS_FULLSCREEN)
+  },
+
+  getZoomFactor: () => {
+    return ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ZOOM_FACTOR)
+  },
+
+  zoomByDelta: (delta: number) => {
+    ipcRenderer.send(IPC_CHANNELS.WINDOW_ZOOM_BY_DELTA, delta)
+  },
+
+  onZoomFactorChange: (callback: (zoomFactor: number) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, zoomFactor: number): void => callback(zoomFactor)
+    ipcRenderer.on(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, listener)
+    return () => { ipcRenderer.removeListener(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, listener) }
   },
 
   onWindowResize: (callback: () => void) => {

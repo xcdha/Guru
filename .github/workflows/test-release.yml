@@ -1,0 +1,252 @@
+# GitHub Actions: debug 测试版自动打包分发
+#
+# 触发条件：推送 debug 分支（测试版）/ 手动 dispatch
+# 与正式版 release.yml 的差异：
+#   - 只构建 debug 分支，产物发布为 **pre-release**（测试版）
+#   - Release tag 形如 v<version>-debug（如 v0.7.7-debug），不与正式 tag 冲突
+#   - 不要求 macOS 签名证书（无证书时产出未签名包，供客户端测试）
+#
+# 所需 Secrets：与 release.yml 相同（MAC_CERTS 等可选）；GITHUB_TOKEN 自动提供
+
+name: Test Release (debug)
+
+run-name: "debug test build v${{ github.event.inputs.version || '' }}"
+
+on:
+  push:
+    branches:
+      - debug
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '测试版版本号（默认读 apps/electron/package.json，tag 为 v<version>-debug）'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  validate-test-version:
+    name: validate test version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 读取应用版本
+        id: version
+        run: |
+          app_version="$(node -p "require('./apps/electron/package.json').version")"
+          if [[ -z "$app_version" ]]; then
+            echo "读取 apps/electron/package.json version 失败" >&2
+            exit 1
+          fi
+          echo "version=${app_version}" >> "$GITHUB_OUTPUT"
+          echo "测试版版本：$app_version（Release tag 将使用 v${app_version}-debug）"
+
+      - name: 校验应用内测试版 release note 已归档
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          bundled="apps/electron/resources/release-notes/${version}.md"
+          if [[ ! -f "$bundled" ]]; then
+            echo "缺少应用内版本历史文件：$bundled" >&2
+            exit 1
+          fi
+          echo "应用内 release note 校验通过：$bundled"
+
+      - name: 创建/复用 pre-release（v<version>-debug）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          tag="v${version}-debug"
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            echo "pre-release ${tag} 已存在，复用"
+          else
+            # --target 必须指向触发构建的 debug 提交，否则 GitHub 默认锚定
+            # 默认分支 master（旧代码），导致 tag/release 指向错误 commit
+            gh release create "${tag}" \
+              --prerelease \
+              --title "MyYoda v${version} 测试版" \
+              --target "$GITHUB_SHA" \
+              --notes-file apps/electron/RELEASE_NOTES.md
+            echo "已创建 pre-release ${tag}"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+  build-mac-arm64:
+    name: build (macos-latest, mac, arm64, --arm64)
+    runs-on: macos-latest
+    needs: validate-test-version
+    env:
+      MAC_CERTS: ${{ secrets.MAC_CERTS }}
+      MAC_CERTS_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 安装依赖
+        run: bun install --frozen-lockfile
+
+      - name: 导入 macOS 签名证书（可选，无证书时跳过）
+        if: env.MAC_CERTS != ''
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$MAC_CERTS" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -P "$MAC_CERTS_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          rm $RUNNER_TEMP/cert.p12
+
+      - name: 构建 Electron 应用
+        run: bun run electron:build
+        working-directory: .
+
+      - name: 打包 (macOS arm64 测试版，不自动发布)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.MAC_CERTS != '' }}
+        run: |
+          for i in 1 2 3; do
+            if npx electron-builder --mac --arm64 --publish never; then
+              exit 0
+            fi
+            if [ "$i" -lt 3 ]; then
+              echo "Attempt $i failed, retrying in 10s..."
+              sleep 10
+            fi
+          done
+          echo "macOS ARM64 packaging failed after 3 attempts"
+          exit 1
+        working-directory: apps/electron
+
+      - name: 上传产物到 pre-release (v<version>-debug)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ needs.validate-test-version.outputs.version }}"
+          tag="v${version}-debug"
+          # 显式上传到 debug 专属 pre-release，避免 electron-builder 自动定位
+          # 到同 commit 的正式 tag（v0.7.7 与 v0.7.7-debug 指向同一提交）
+          # 只上传文件，跳过子目录（electron-builder 产物在 out/）（gh 不能上传目录）
+          for f in out/*; do
+            if [ -f "$f" ]; then
+              gh release upload "${tag}" "$f" --clobber
+            fi
+          done
+        working-directory: apps/electron
+
+  build-linux:
+    name: build (ubuntu-latest, linux, x64)
+    runs-on: ubuntu-latest
+    needs: validate-test-version
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 安装依赖
+        run: bun install --frozen-lockfile
+
+      - name: 构建 Electron 应用
+        run: bun run electron:build
+        working-directory: .
+
+      - name: 打包 (Linux/Ubuntu 测试版，不自动发布)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --x64 --publish never
+        working-directory: apps/electron
+
+      - name: 上传产物到 pre-release (v<version>-debug)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ needs.validate-test-version.outputs.version }}"
+          tag="v${version}-debug"
+          # 只上传文件，跳过子目录（electron-builder 产物在 out/）
+          for f in out/*; do
+            if [ -f "$f" ]; then
+              gh release upload "${tag}" "$f" --clobber
+            fi
+          done
+        working-directory: apps/electron
+
+  build-windows-x64:
+    name: build (windows-latest, win, x64, --x64)
+    runs-on: windows-latest
+    needs: validate-test-version
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 安装依赖
+        run: bun install --frozen-lockfile
+
+      - name: 构建 Electron 应用
+        run: bun run electron:build
+        working-directory: .
+
+      - name: 打包 (Windows 测试版，不自动发布)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --x64 --publish never
+        working-directory: apps/electron
+
+      - name: 上传产物到 pre-release (v<version>-debug)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ needs.validate-test-version.outputs.version }}"
+          tag="v${version}-debug"
+          # 只上传文件，跳过子目录（electron-builder 产物在 out/）
+          for f in out/*; do
+            if [ -f "$f" ]; then
+              gh release upload "${tag}" "$f" --clobber
+            fi
+          done
+        working-directory: apps/electron

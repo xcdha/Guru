@@ -24,11 +24,13 @@ export const markdownFontSizeAtom = atom<MarkdownFontSize>(DEFAULT_MARKDOWN_FONT
  * 将字号档位写入 :root CSS 变量
  *
  * 渲染组件通过 var(--md-preview-font-size) 读取，inline code / 代码块用
- * em 相对单位跟随缩放。
+ * em 相对单位跟随缩放。同时同步 --md-body-font-size：精细排版（typography）
+ * 未显式设置字号时，正文以档位字号为准。
  */
 export function applyMarkdownFontSizeToDOM(size: MarkdownFontSize): void {
   const px = FONT_SIZE_PX[size]
   document.documentElement.style.setProperty('--md-preview-font-size', `${px}px`)
+  document.documentElement.style.setProperty('--md-body-font-size', `${px}px`)
 }
 
 /**

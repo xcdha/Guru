@@ -134,6 +134,7 @@ import {
 } from './lib/voice-dictation-window'
 import { registerGlobalShortcut, unregisterAllGlobalShortcuts } from './lib/global-shortcut-service'
 import { setAppVersion } from '@myyoda/core'
+import { IPC_CHANNELS } from '@myyoda/shared'
 import { canRecoverRenderer, RENDERER_RECOVERY_WINDOW_MS } from './lib/renderer-process-recovery'
 import { TRAY_IPC_CHANNELS } from '../types'
 
@@ -312,6 +313,25 @@ function installWindowsZoomInFallback(win: BrowserWindow): void {
 }
 
 /**
+ * 页面缩放（Cmd+/Cmd-、滚轮/触控板缩放）会改变 renderer 的 CSS px ↔ 窗口 DIP 换算比例。
+ * 内嵌浏览器 WebContentsView.setBounds 用的是 DIP，renderer 侧 getBoundingClientRect
+ * 返回的是当前缩放下的 CSS px，二者只有缩放为 100% 时才相等——必须把缩放系数变化广播给
+ * renderer，由 BrowserPanel 按系数换算后再 setBounds，否则非 100% 缩放下视图会错位/超出
+ * 覆盖到工具栏（见 packages/shared/src/types/runtime.ts 的 WINDOW_ZOOM_FACTOR_CHANGED）。
+ * 菜单缩放的广播见 menu.ts 的 applyZoomDelta；这里补齐滚轮/触控板缩放（webContents 原生
+ * 'zoom-changed' 事件仅在该场景触发，role/菜单缩放不会触发）。
+ */
+function installZoomFactorBroadcast(win: BrowserWindow): void {
+  win.webContents.on('zoom-changed', () => {
+    // 'zoom-changed' 在缩放实际生效前触发，下一个 tick 再读取才是新值。
+    setImmediate(() => {
+      if (win.isDestroyed()) return
+      win.webContents.send(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, win.webContents.getZoomFactor())
+    })
+  })
+}
+
+/**
  * 检查窗口是否在可用显示器范围内
  * 处理外接显示器断开后窗口位于不可见区域的情况
  */
@@ -446,6 +466,7 @@ function createWindow(): void {
       console.warn('[TaskRunner] 冷启动恢复失败:', error instanceof Error ? error.message : error)
     })
   installWindowsZoomInFallback(mainWindow)
+  installZoomFactorBroadcast(mainWindow)
   browserController.setOwnerWindow(mainWindow)
   agentTerminalController.setOwnerWindow(mainWindow)
 

@@ -804,7 +804,7 @@ export const UserMessageContent = React.memo(
     }, [])
 
     return (
-      <div className={cn('user-message-bubble relative w-max min-w-[4em] max-w-full whitespace-normal rounded-[12px] bg-secondary/75 px-3.5 py-2.5', className)} {...props}>
+      <div className={cn('user-message-bubble relative inline-block w-max min-w-max max-w-full whitespace-normal break-words rounded-[12px] bg-secondary/75 px-3.5 py-2.5', className)} {...props}>
         <div
           ref={contentRef}
           className={cn(
@@ -813,7 +813,7 @@ export const UserMessageContent = React.memo(
             shouldCollapse && !isExpanded && 'max-h-[6.5em]'
           )}
         >
-          <MessageResponse className="prose-p:my-0.5 prose-headings:my-1.5" remarkPlugins={USER_REMARK_PLUGINS}>{children}</MessageResponse>
+          <MessageResponse className="prose-p:my-0.5 prose-headings:my-1.5 [text-wrap:wrap]" remarkPlugins={USER_REMARK_PLUGINS}>{children}</MessageResponse>
         </div>
         {shouldCollapse && (
           <button

@@ -486,6 +486,13 @@ export const IPC_CHANNELS = {
   WINDOW_IS_MAXIMIZED: 'window:is-maximized',
   /** 窗口是否处于原生全屏 */
   WINDOW_IS_FULLSCREEN: 'window:is-fullscreen',
+  /** 获取当前窗口的页面缩放系数（webContents.getZoomFactor） */
+  WINDOW_GET_ZOOM_FACTOR: 'window:get-zoom-factor',
+  /** 按增量缩放窗口（渲染进程滚轮缩放请求；delta 正=放大 负=缩小） */
+  WINDOW_ZOOM_BY_DELTA: 'window:zoom-by-delta',
+  /** 页面缩放系数变化推送（Cmd+/Cmd-、菜单缩放、Windows Ctrl+= 兜底等） */
+  WINDOW_ZOOM_FACTOR_CHANGED: 'window:zoom-factor-changed',
+
   /** 在系统剪贴板中写入纯文本 */
   WRITE_CLIPBOARD_TEXT: 'clipboard:write-text',
   /** 截图导出：将 HTML 渲染为 PNG 图片 */

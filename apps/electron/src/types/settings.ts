@@ -125,7 +125,7 @@ export interface VoiceDictationShownEvent {
 
 /** 外部应用听写状态条的实时显示数据。 */
 export interface VoiceDictationIndicatorEvent {
-  state: 'preparing' | 'recording' | 'stopping'
+  state: 'recording' | 'stopping'
   /** 已归一化、平滑处理后的麦克风音量（0~1）。 */
   volume: number
   /** 尚未提交给第三方应用的实时转写文本。 */
@@ -353,6 +353,69 @@ export type MarkdownFontSize = 'small' | 'medium' | 'large'
 /** 默认 Markdown 字号档位 */
 export const DEFAULT_MARKDOWN_FONT_SIZE: MarkdownFontSize = 'small'
 
+/**
+ * 正文字体排版设置（作用于 AI 回复与 Markdown 编辑器）。
+ * 独立于 MarkdownFontSize 档位：档位提供快捷切换，此处提供精细调节。
+ * fontSize 为 undefined 时跟随 MarkdownFontSize 档位。
+ */
+export interface TypographySettings {
+  /** 正文字号（px，undefined = 跟随 Markdown 字号档位；范围 12~24） */
+  fontSize?: number
+  /** 行距倍率（默认 1.65，范围 1.2~2.4） */
+  lineHeight?: number
+  /** 字距（px，默认 0，范围 -1~2） */
+  letterSpacing?: number
+  /** 段距（px，默认 6，范围 0~24）——Markdown 段落之间的垂直间距 */
+  paragraphSpacing?: number
+  /** 正文文字颜色（CSS 颜色值；空/undefined 表示跟随主题） */
+  textColor?: string
+}
+
+/** 默认排版设置（fontSize undefined = 跟随档位） */
+export const DEFAULT_TYPOGRAPHY_SETTINGS: TypographySettings = {
+  fontSize: undefined,
+  lineHeight: 1.65,
+  letterSpacing: 0,
+  paragraphSpacing: 6,
+  textColor: undefined,
+}
+
+/** 可自定义样式的 UI 区域 */
+export type StyleAreaId = 'ui' | 'body' | 'input' | 'code'
+
+/** 单个区域的字体/颜色设置（所有字段可选，undefined = 跟随主题默认） */
+export interface AreaStyleSettings {
+  /** 区域字号（px） */
+  fontSize?: number
+  /** 区域文字颜色（CSS 颜色值） */
+  color?: string
+}
+
+/** 按区域划分的字体/颜色自定义设置 */
+export type AreaStyleMap = Partial<Record<StyleAreaId, AreaStyleSettings>>
+
+/** 区域显示名（设置页 UI） */
+export const AREA_LABELS: Record<StyleAreaId, string> = {
+  ui: '界面文字',
+  body: '对话正文',
+  input: '输入框',
+  code: '代码块',
+}
+
+/** 区域字号应用范围（px） */
+export const AREA_FONT_SIZE_LIMITS = { min: 11, max: 26 } as const
+
+/** 默认区域样式（全部跟随主题） */
+export const DEFAULT_AREA_STYLES: AreaStyleMap = {}
+
+/** 区域样式 → CSS 变量映射（applyAreaStylesToDOM 使用） */
+export const AREA_CSS_VARIABLES: Record<StyleAreaId, { fontSize: string; color: string }> = {
+  ui: { fontSize: '--area-ui-font-size', color: '--area-ui-color' },
+  body: { fontSize: '--area-body-font-size', color: '--area-body-color' },
+  input: { fontSize: '--area-input-font-size', color: '--area-input-color' },
+  code: { fontSize: '--area-code-font-size', color: '--area-code-color' },
+}
+
 /** CodeClaw 桌面助手偏好。 */
 export interface CodeClawSettings {
   /** 是否启用 CodeClaw 桌面助手，默认 false，避免首次启动时打扰主界面。 */
@@ -396,11 +459,10 @@ export interface AppSettings {
   agentModelId?: string
   /** 标题生成供应商；默认跟随当前会话渠道。 */
   titleProvider?: 'session' | ProviderType
+  /** Claude Agent 可用渠道 ID 列表（由渠道启用状态与协议兼容性派生） */
+  agentChannelIds?: string[]
   /** Agent 当前工作区 ID */
   agentWorkspaceId?: string
-  /** 默认工作区目录：未绑定 Project 的会话 / Workspace Task 回退的工程代码目录；未设置时回退到默认工作区。
-   * 2026-08-15 起从工作区 config.json 的 defaultWorkingDirectory 迁移到应用设置，设置优先。 */
-  agentDefaultWorkingDirectory?: string
   /** 新 Agent 会话默认使用的 runtime；历史会话缺省仍按 claude 兼容。 */
   agentRuntime?: AgentRuntime
   /** Windows 上 Agent Bash 工具的运行环境；默认自动选择 Git Bash，WSL 需用户显式启用。 */
@@ -438,6 +500,9 @@ export interface AppSettings {
   /** 代码图谱工具开关（repo map 注入 + Graphify 知识图谱，2026-08-13）：
    * 默认关闭；首次创建仅由对话栏按钮主动触发；关闭只停注入不删产物 */
   repoMapTools?: boolean
+  /** 默认工作区目录：未绑定 Project 的会话 / Workspace Task 回退的工程代码目录；未设置时回退到默认工作区。
+   * 2026-08-15 起从工作区 config.json 的 defaultWorkingDirectory 迁移到应用设置，设置优先。 */
+  agentDefaultWorkingDirectory?: string
   /** Agent 最大预算（美元/次） */
   agentMaxBudgetUsd?: number
   /** Agent 最大轮次（0 或 undefined = SDK 默认） */
@@ -460,6 +525,10 @@ export interface AppSettings {
   sessionHoverPreviewEnabled?: boolean
   /** Markdown 预览字号档位（默认 'small'，对应 13px） */
   markdownFontSize?: MarkdownFontSize
+  /** 正文排版精细调节（AI 回复 + Markdown 编辑器；空值回落档位默认） */
+  typography?: TypographySettings
+  /** 按区域自定义字体/颜色（界面/正文/输入框/代码块） */
+  areaStyles?: AreaStyleMap
   /** 上次是否在 Scratch Pad 页（用于重启恢复） */
   scratchPadActive?: boolean
   /** 应用图标变体 ID（dock + window icon），'default' 或 logo 变体 id */
@@ -482,7 +551,7 @@ export interface AppSettings {
   autoCleanupArchivedDays?: number
   /**
    * Agent 代创建 git commit / PR 时是否附加 MyYoda 推广标识。
-   * 默认 true：commit trailer `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>`，PR body 末尾含 https://github.com/GeoffBao/MyYoda。
+   * 默认 true：commit trailer `Co-Authored-By: <模型名> in MyYoda`，PR body 末尾含 https://github.com/xcdha/MyYoda。
    * 关闭后不注入任何 MyYoda 归因，并覆盖 Claude SDK 默认 Co-Authored-By。
    */
   gitAttributionEnabled?: boolean

@@ -1,5 +1,4 @@
 import MarkdownIt from 'markdown-it'
-import { normalizeMalformedStrongDelimiters } from './markdown-emphasis'
 
 const VIDEO_EXT_RE = /\.(mp4|webm|ogg|ogv|mov|m4v)(?:[?#].*)?$/i
 const PREVIEW_BLOCK_RE = /^<div\s+[^>]*data-type=(["'])(?:raw-html-block|math-block)\1/i
@@ -7,7 +6,7 @@ const DETAILS_BLOCK_RE = /<details(\s[^>]*)?>\s*<summary>([\s\S]*?)<\/summary>([
 const STANDALONE_HTML_MEDIA_RE = /^\s*<(?:img|video)\b[^>]*(?:\/?>|>.*?<\/video>)\s*$/i
 const LEADING_FRONTMATTER_RE = /^(?:\ufeff)?---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?=\r?\n|$)/
 
-export const MARKDOWN_RENDERER_VERSION = 5
+export const MARKDOWN_RENDERER_VERSION = 4
 
 const EMOJI_SHORTCODES: Record<string, string> = {
   '+1': '👍',
@@ -333,9 +332,7 @@ function preprocessMarkdown(markdown: string): string {
   return splitMarkdownCodeRegions(wrapLeadingFrontmatterBlock(markdown))
     .map((chunk) => chunk.code
       ? chunk.text
-      : wrapMarkdownDetailsBlocks(separateStandaloneHtmlMediaBlocks(
-        normalizeMarkdownLinePrefixes(normalizeMalformedStrongDelimiters(chunk.text))
-      )))
+      : wrapMarkdownDetailsBlocks(separateStandaloneHtmlMediaBlocks(normalizeMarkdownLinePrefixes(chunk.text))))
     .join('')
 }
 

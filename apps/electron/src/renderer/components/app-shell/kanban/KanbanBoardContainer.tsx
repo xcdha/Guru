@@ -43,6 +43,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useCloseTab } from '@/hooks/useCloseTab'
+import { detectIsWindows } from '@/lib/platform'
+import { cn } from '@/lib/utils'
 import { BoardListToggle } from './BoardListToggle'
 import { activeBoardItems, consumeFirstNotification, DEFAULT_KANBAN_COLUMNS, type KanbanColumnDefinition } from './board-model'
 import { buildKanbanModelCatalog } from './kanban-model-catalog'
@@ -86,6 +88,7 @@ export function KanbanBoardContainer({
 }: KanbanBoardContainerProps): React.ReactElement {
   const items = useAtomValue(kanbanItemsAtom)
   const projects = useAtomValue(serverKanbanProjectsAtom)
+  const isWindows = React.useMemo(() => detectIsWindows(), [])
   // 隐藏容器 Project（home/ad-hoc）只用于卡片归属展示，不应出现在筛选器/任务编辑器的项目选择里。
   const pickableProjects = React.useMemo(() => filterPickableKanbanProjects(projects), [projects])
   const setProjects = useSetAtom(serverKanbanProjectsAtom)
@@ -426,7 +429,7 @@ export function KanbanBoardContainer({
       <header className="mb-4 space-y-3">
         {/* pt-14：内容整体让到 AppShell 全局 drag 层（0–50px, z-50）下方，同时避免
             与 Windows 自定义 WindowControls（fixed 右上角）视觉重叠，四个模块页面统一此规范。 */}
-        <div className="titlebar-drag-region flex flex-wrap items-center justify-between gap-3 pt-14">
+        <div className={cn('titlebar-drag-region flex flex-wrap items-center justify-between gap-3 pt-14', isWindows && 'mr-[126px]')}>
           <div className="titlebar-no-drag flex items-center gap-2.5">
             <LayoutDashboard className="size-6 text-foreground/70" />
             <div>
