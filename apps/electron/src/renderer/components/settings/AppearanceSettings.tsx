@@ -569,7 +569,7 @@ function StylePreview(): React.ReactElement {
         <span className="ml-2 text-[10px] text-muted-foreground">MyYoda · 预览</span>
       </div>
 
-      <div className="flex h-[220px]">
+      <div className="flex h-[260px]">
         {/* 模拟侧边栏（ui 区域） */}
         <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-r border-border/60 bg-[hsl(var(--sidebar-surface))] py-3 text-[length:var(--area-ui-font-size)] text-[color:var(--area-ui-color)]">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-semibold">Y</span>
@@ -594,7 +594,7 @@ function StylePreview(): React.ReactElement {
                 <span>复制</span>
               </div>
               <pre
-                className="m-0 overflow-x-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
+                className="m-0 min-h-[64px] overflow-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
                 style={{ color: 'var(--area-code-color, #e1e4e8)' }}
               >
                 <code>{`const greet = (name: string) => \`你好, \${name}\``}</code>
