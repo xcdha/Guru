@@ -1793,6 +1793,9 @@ export class PiAgentAdapter implements AgentProviderAdapter {
             }
             case 'message_update': {
               if (!isAssistantPiMessage(event.message)) break
+              // 用户已请求停止后，不再转发流式增量事件。Pi SDK 的 abort 信号
+              // 传播到底层 HTTP fetch 可能有延迟，在此期间 SSE 仍会产出 delta。
+              if (active.abortRequested) break
               const assistantUuid = assistantUuidFor()
               const delta = serializePiAssistantDelta(event.assistantMessageEvent)
               if (delta) {

@@ -23,6 +23,8 @@ type PendingQuery = {
   accepted: boolean
   ended: boolean
   runtimeFailed: boolean
+  /** 用户已请求停止；后续来自 utility process 的流式事件不应再转发给 renderer。 */
+  abortRequested: boolean
 }
 
 type CapabilityRequest = {
@@ -63,6 +65,7 @@ export class PiUtilityAdapter {
       accepted: false,
       ended: false,
       runtimeFailed: false,
+      abortRequested: false,
     }
     this.pendingQueries.set(queryId, pending)
     client.setRequestHandler((request) => this.handleRuntimeRequest(request))
@@ -102,6 +105,10 @@ export class PiUtilityAdapter {
   abort(sessionId: string): void {
     for (const pending of this.pendingQueries.values()) {
       if (pending.sessionId !== sessionId) continue
+      // 立即标记：utility process 的 abort 是异步 RPC，信号传播到底层 fetch
+      // 可能有数百毫秒延迟。在此期间 Pi SDK 仍可能推送 assistant_delta 等流式
+      // 事件；这些事件不应再转发给 renderer，否则 UI 上 AI 会继续回复。
+      pending.abortRequested = true
       void pending.client.call<QueryAbortResponse>(
         AGENT_RUNTIME_METHODS.QUERY_ABORT,
         { queryId: pending.queryId, sessionId },
@@ -251,7 +258,19 @@ export class PiUtilityAdapter {
 
     if (event.method === AGENT_RUNTIME_METHODS.EVENT_QUERY) {
       const message = payload?.message
-      if (message && typeof message === 'object') pending.queue.push(message as SDKMessage)
+      if (!message || typeof message !== 'object') return
+      // 用户已请求停止后，不再转发流式增量事件（assistant_delta）。
+      // 这些事件来自 utility process 中尚未被 abort 信号中断的 Pi SDK SSE 流。
+      // assistant 完整消息（message_end 终态）仍需放行--它是 UI 最后一轮
+      // turn 正常收尾的依赖（配合 stoppedByUser 徽章），过滤会导致 turn 悬空。
+      // system / result 也必须放行，orchestrator 的 completeRun 链
+      // （EVENT_QUERY_END -> 迭代器 return -> STREAM_COMPLETE ->
+      // streaming=false -> isStopping 复位）依赖终态事件畅通。
+      if (pending.abortRequested) {
+        const type = (message as Record<string, unknown>).type
+        if (type === 'assistant_delta') return
+      }
+      pending.queue.push(message as SDKMessage)
       return
     }
     if (event.method === AGENT_RUNTIME_METHODS.EVENT_QUERY_END) {
