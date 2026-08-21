@@ -30,6 +30,8 @@ import {
   stopRegisteredAgent,
 } from './agent-headless-runner-registry'
 import {
+  DEFAULT_DELEGATION_WAIT_SECONDS,
+  MAX_DELEGATION_WAIT_SECONDS,
   MAX_RUNNING_DELEGATIONS_PER_PARENT,
   buildRecoveredDelegationState,
   buildDelegationTaskWithSharedContext,
@@ -74,8 +76,6 @@ interface DelegationRecord {
 
 type ZodModule = typeof import('zod')
 
-const MAX_WAIT_SECONDS = 2 * 60 * 60
-const DEFAULT_WAIT_SECONDS = 30 * 60
 const RESULT_SUMMARY_CHAR_LIMIT = 50_000
 const DELEGATION_GOAL_CHAR_LIMIT = 1_000
 /** live Map 中保留的已结束委派上限，超出时按完成时间清理最老的（持久化仍可回查） */
@@ -175,7 +175,7 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
         for (const be of blockedEvents.values()) {
           if (be.resolved) continue
           if (be.askUserRequestId === requestId || be.permissionRequestId === requestId) {
-            be.resolved = true
+            blockedEvents.delete(be.id)
             break
           }
         }
@@ -194,6 +194,12 @@ function getBlockedEventById(blockedEventId: string): BlockedEvent | undefined {
   return blockedEvents.get(blockedEventId)
 }
 
+function deleteBlockedEventsForDelegation(delegationId: string): void {
+  for (const [blockedEventId, blockedEvent] of blockedEvents) {
+    if (blockedEvent.delegationId === delegationId) blockedEvents.delete(blockedEventId)
+  }
+}
+
 /**
  * 清理内存中过多的已结束委派，避免 live Map 无界增长。
  * 仅清理 status !== 'running' 的记录；被清理项仍可通过持久化会话回查。
@@ -205,7 +211,10 @@ function pruneFinishedDelegations(): void {
   finished
     .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
     .slice(0, excess)
-    .forEach((item) => delegations.delete(item.delegationId))
+    .forEach((item) => {
+      delegations.delete(item.delegationId)
+      deleteBlockedEventsForDelegation(item.delegationId)
+    })
 }
 
 function jsonResult(payload: unknown): CollaborationToolResult {
@@ -354,6 +363,7 @@ function markDelegationFinished(
   record.error = fields.error
   record.resultSummary = fields.resultSummary
   updateAgentSessionMeta(record.childSessionId, { delegationStatus: status })
+  deleteBlockedEventsForDelegation(record.delegationId)
   record.resolveCompletion()
 }
 
@@ -766,7 +776,7 @@ function buildCollaborationSchemas(z: ZodModule['z']) {
       delegationIds: z.array(z.string()).optional().describe('要等待的委派 ID；不传则等待当前父会话当前运行中的全部委派'),
       mode: z.enum(['all', 'any']).optional().describe('等待模式：all 等全部完成，any 等至少 minCompleted 个完成'),
       minCompleted: z.number().int().min(1).max(MAX_RUNNING_DELEGATIONS_PER_PARENT).optional().describe('mode=any 时至少等待完成的数量，默认 1'),
-      timeoutSeconds: z.number().int().min(1).max(MAX_WAIT_SECONDS).optional().describe('最长等待秒数，默认 1800，最大 7200'),
+      timeoutSeconds: z.number().int().min(1).max(MAX_DELEGATION_WAIT_SECONDS).optional().describe('最长等待秒数，默认 3600，最大 7200'),
     },
     list: {
       includeCompleted: z.boolean().optional().describe('是否包含已完成委派，默认 true'),
@@ -930,7 +940,7 @@ export function buildPiCollaborationTools(
         delegationIds: Type.Optional(Type.Array(Type.String(), { description: '要等待的委派 ID' })),
         mode: Type.Optional(Type.Union([Type.Literal('all'), Type.Literal('any')])),
         minCompleted: Type.Optional(Type.Number({ description: 'mode=any 时至少等待完成的数量，默认 1' })),
-        timeoutSeconds: Type.Optional(Type.Number({ description: '最长等待秒数，默认 1800' })),
+        timeoutSeconds: Type.Optional(Type.Number({ description: '最长等待秒数，默认 3600；最大 7200' })),
       }),
       async execute(_toolCallId: string, params: unknown) {
         const args = params as { delegationIds?: string[]; mode?: 'all' | 'any'; minCompleted?: number; timeoutSeconds?: number }
@@ -946,7 +956,10 @@ export function buildPiCollaborationTools(
         }
         const mode = args.mode ?? 'all'
         const minCompleted = args.minCompleted ?? 1
-        const timeoutSeconds = Math.min(args.timeoutSeconds ?? DEFAULT_WAIT_SECONDS, MAX_WAIT_SECONDS)
+        const timeoutSeconds = Math.min(
+          args.timeoutSeconds ?? DEFAULT_DELEGATION_WAIT_SECONDS,
+          MAX_DELEGATION_WAIT_SECONDS,
+        )
         const targetCompleted = mode === 'all' ? totalTargets : Math.max(1, Math.min(minCompleted, totalTargets))
         const liveTarget = Math.max(0, targetCompleted - settled.length)
         const waitResult = liveRecords.length > 0
@@ -1035,7 +1048,7 @@ export function buildPiCollaborationTools(
       async execute(_toolCallId: string, params: unknown) {
         const args = params as { delegationId: string; blockedEventId: string; answers?: Record<string, string>; permissionBehavior?: 'allow' | 'deny' }
         const blocked = getBlockedEventById(args.blockedEventId)
-        if (!blocked) throw new Error(`阻塞事件不存在: ${args.blockedEventId}`)
+        if (!blocked) return piJsonResult({ answered: false, note: '该阻塞事件不存在或已被解决' })
         if (blocked.resolved) return piJsonResult({ answered: false, note: '该阻塞事件已被解决' })
 
         const record = delegations.get(blocked.delegationId)
@@ -1054,6 +1067,7 @@ export function buildPiCollaborationTools(
               event: { type: 'ask_user_resolved', requestId: blocked.askUserRequestId },
             })
           }
+          if (blocked.resolved) blockedEvents.delete(blocked.id)
           return piJsonResult({ answered: blocked.resolved, type: 'ask_user' })
         }
 
@@ -1068,6 +1082,7 @@ export function buildPiCollaborationTools(
               event: { type: 'permission_resolved', requestId: blocked.permissionRequestId, behavior },
             })
           }
+          if (blocked.resolved) blockedEvents.delete(blocked.id)
           return piJsonResult({ answered: blocked.resolved, type: 'permission', behavior })
         }
 
@@ -1131,7 +1146,10 @@ export function buildPiCollaborationTools(
           })
         })
 
-        const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), DEFAULT_WAIT_SECONDS * 1000))
+        const timeout = new Promise<'timeout'>((resolve) => setTimeout(
+          () => resolve('timeout'),
+          DEFAULT_DELEGATION_WAIT_SECONDS * 1000,
+        ))
         await Promise.race([record.completion, timeout])
 
         return piJsonResult({

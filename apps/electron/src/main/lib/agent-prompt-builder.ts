@@ -16,7 +16,7 @@ import { formatProjectContextForPrompt } from '@myyoda/shared/projects'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { getUserProfile } from './user-profile-service'
-import { getWorkspaceMcpConfig } from './agent-workspace-manager'
+import { getEffectiveMcpConfig, hasProjectMcpServers, getProjectMcpConfig } from './agent-workspace-manager'
 import { getConfigDirName } from './config-paths'
 import { buildGitAttributionPromptSection, isGitAttributionEnabled } from './agent-git-attribution'
 import { buildGitWorktreePromptSection } from './agent-git-worktree-policy'
@@ -31,6 +31,7 @@ const TOOL_USAGE_GUIDELINES = `## 工具使用指南
   - **不要用 TodoWrite 做常规追踪**：它是整表快照兼容接口，容易覆盖已有任务；本产品的任务追踪一律使用 TaskCreate / TaskUpdate。
   - **术语不要混淆**：TaskCreate / TaskUpdate 是 MyYoda 的可见进度工具；\`Task\` 是 SDK 的临时子 Agent 工具，两者不同。
   - **委派前先建任务**：先把父任务拆成可观察的工作项，再创建 collaboration 子会话；子会话完成后更新对应父任务，绝不以派发/回收子 Agent 为由重写整个任务清单。
+- **进度更新要可感知且及时**：TaskCreate 的 \`subject\` 写稳定的任务目标，\`description\` 写清范围或预期产出；开始任务时立即设为 \`in_progress\` 并用 \`activeForm\` 描述正在做的具体动作。每完成一个用户可感知的阶段（如完成调研、读取/检索结束、开始或完成实现、开始验证、进入等待/阻塞）立即 TaskUpdate；阻塞须写明原因，完成须收束状态。不要为每个 token、文件块或重复轮询刷新，避免制造无意义的高频更新。
 - **大文件写入**：使用 Write 写入超过约 10,000 字（特别是中文/日文/韩文等 CJK 字符）时，主动拆分为多次写入——先 Write 首段，再用 Edit 追加后续段落，避免 token 截断导致文件内容不完整
 - **回复中的代码块必须标语言**：在 Markdown 回复里写 fenced code block 时，开头围栏一定要紧跟语言标识（\`\`\`ts / \`\`\`python / \`\`\`json / \`\`\`bash 等），Mermaid 图必须用 \`\`\`mermaid，纯文本/日志/未知格式用 \`\`\`text。不写语言会导致前端无法语法高亮，用户体验下降；如果实在不知道语言，宁可写 \`\`\`text 也不要留空围栏`
 
@@ -394,6 +395,8 @@ export function buildSyntheticWorkspaceProjectContext(
 interface DynamicContext {
   workspaceName?: string
   workspaceSlug?: string
+  /** 会话绑定的嵌套 Project ID；仅用于判断 MCP 服务器列表是否需要用项目级覆盖全局（与 buildMcpServers 保持一致） */
+  projectId?: string
   agentCwd?: string
   /** 会话绑定项目的提示词上下文（每次实时构建） */
   projectContext?: ProjectPromptContext
@@ -437,8 +440,12 @@ export function buildDynamicContext(ctx: DynamicContext): string {
       wsLines.push(`工作区: ${ctx.workspaceName}`)
     }
 
-    // MCP 服务器列表
-    const mcpConfig = getWorkspaceMcpConfig(ctx.workspaceSlug)
+    // MCP 服务器列表：与 buildMcpServers 同样的 fallback 规则（项目自己配置过才用项目级，
+    // 否则读生效的全局配置）。不能用 getWorkspaceMcpConfig——工作区级 mcp.json 迁移后已改名，
+    // 继续读旧路径会让模型看到的服务器列表长期为空，即使全局配置里实际存在。
+    const mcpConfig = ctx.projectId && hasProjectMcpServers(ctx.workspaceSlug, ctx.projectId)
+      ? getProjectMcpConfig(ctx.workspaceSlug, ctx.projectId)
+      : getEffectiveMcpConfig(ctx.workspaceSlug)
     const serverEntries = Object.entries(mcpConfig.servers ?? {})
     if (serverEntries.length > 0) {
       wsLines.push('MCP 服务器:')

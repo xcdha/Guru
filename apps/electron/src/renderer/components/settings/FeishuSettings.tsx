@@ -55,7 +55,7 @@ import {
   type FeishuBindingTypeFilter,
   type FeishuBindingViewMode,
 } from '@/lib/feishu-bindings'
-import type { AgentSessionMeta, AgentWorkspace, FeishuTestResult, FeishuChatBinding, FeishuBotConfig, FeishuBotBridgeState, FeishuRegisterAppQRCode, FeishuRegisterAppStatus, FeishuSessionMirrorSettings, FeishuSessionSyncMode } from '@myyoda/shared'
+import type { AgentSessionMeta, AgentWorkspace, FeishuTestResult, FeishuChatBinding, FeishuBotConfig, FeishuBotBridgeState, FeishuDomain, FeishuRegisterAppQRCode, FeishuRegisterAppStatus, FeishuSessionMirrorSettings, FeishuSessionSyncMode } from '@myyoda/shared'
 
 // ===== 常量 =====
 
@@ -868,8 +868,8 @@ function CliRecommendationCard(): React.ReactElement {
 interface RegisterFeishuDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** 注册成功后回调，返回主进程拿到的 App ID/Secret 与扫码用户身份；上层应在此处保存配置并启动 Bot */
-  onSuccess: (result: { appId: string; appSecret: string; operatorOpenId?: string }) => void
+  /** 注册成功后回调，返回主进程拿到的 App ID/Secret、平台域与扫码用户身份；上层应在此处保存配置并启动 Bot */
+  onSuccess: (result: { appId: string; appSecret: string; tenantBrand?: FeishuDomain; operatorOpenId?: string }) => void
 }
 
 /** 扫码注册飞书 Bot：弹窗内全程引导，扫码成功后自动保存配置并启动 Bot */
@@ -911,6 +911,7 @@ function RegisterFeishuDialog({ open, onOpenChange, onSuccess }: RegisterFeishuD
         onSuccessRef.current({
           appId: result.appId,
           appSecret: result.appSecret,
+          tenantBrand: result.tenantBrand,
           operatorOpenId: result.operatorOpenId,
         })
       })
@@ -1192,10 +1193,32 @@ function BotConfigCard({ bot, state, onSaved, onRemoved }: BotConfigCardProps): 
   const setBotStates = useSetAtom(feishuBotStatesAtom)
   const [name, setName] = React.useState(bot.name)
   const [appId, setAppId] = React.useState(bot.appId)
+  const [domain, setDomain] = React.useState<FeishuDomain>(bot.domain ?? 'feishu')
   const [appSecret, setAppSecret] = React.useState('')
   const [testing, setTesting] = React.useState(false)
   const [testResult, setTestResult] = React.useState<FeishuTestResult | null>(null)
   const [expanded, setExpanded] = React.useState(!bot.appId) // 新建的 Bot 默认展开
+  const botConnectionPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
+  const botConnectionTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const botConnectionGenerationRef = React.useRef(0)
+  const toggleInFlightRef = React.useRef(false)
+  const mountedRef = React.useRef(true)
+
+  const clearBotConnectionPolling = React.useCallback(() => {
+    botConnectionGenerationRef.current += 1
+    if (botConnectionPollRef.current) clearInterval(botConnectionPollRef.current)
+    if (botConnectionTimeoutRef.current) clearTimeout(botConnectionTimeoutRef.current)
+    botConnectionPollRef.current = null
+    botConnectionTimeoutRef.current = null
+  }, [])
+
+  React.useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      clearBotConnectionPolling()
+    }
+  }, [clearBotConnectionPolling])
 
   // 加载已有 secret（使用 bot-specific API）
   React.useEffect(() => {
@@ -1223,6 +1246,7 @@ function BotConfigCard({ bot, state, onSaved, onRemoved }: BotConfigCardProps): 
         enabled: true,
         appId: appId.trim(),
         appSecret: appSecret || '',
+        domain,
         defaultWorkspaceId: bot.defaultWorkspaceId,
         defaultChannelId: bot.defaultChannelId,
         defaultModelId: bot.defaultModelId,
@@ -1232,69 +1256,87 @@ function BotConfigCard({ bot, state, onSaved, onRemoved }: BotConfigCardProps): 
     } catch {
       toast.error('保存配置失败')
     }
-  }, [bot.id, name, appId, appSecret, onSaved])
+  }, [bot.id, name, appId, appSecret, domain, onSaved])
 
   const handleTest = React.useCallback(async () => {
     if (!appId.trim() || !appSecret.trim()) return
     setTesting(true)
     setTestResult(null)
     try {
-      const result = await window.electronAPI.testFeishuConnection(appId.trim(), appSecret.trim())
+      const result = await window.electronAPI.testFeishuConnection(appId.trim(), appSecret.trim(), domain)
       setTestResult(result)
     } catch (err) {
       setTestResult({ success: false, message: `测试失败: ${err instanceof Error ? err.message : String(err)}` })
     } finally {
       setTesting(false)
     }
-  }, [appId, appSecret])
+  }, [appId, appSecret, domain])
 
   /** 操作完成后主动拉取最新状态，确保 UI 同步 */
-  const refreshBotStates = React.useCallback(async () => {
+  const refreshBotStates = React.useCallback(async (expectedGeneration?: number): Promise<boolean> => {
     try {
       const multiState = await window.electronAPI.getFeishuMultiStatus?.()
-      if (multiState?.bots) {
-        setBotStates(multiState.bots)
-      }
+      if (!mountedRef.current) return false
+      if (expectedGeneration !== undefined && expectedGeneration !== botConnectionGenerationRef.current) return false
+      if (!multiState?.bots) return false
+      setBotStates(multiState.bots)
+      return true
     } catch { /* 忽略 */ }
+    return false
   }, [setBotStates])
 
   const handleToggle = React.useCallback(async () => {
-    if (isConnected) {
-      await window.electronAPI.stopFeishuBot(bot.id)
-      toast.success(`Bot "${bot.name}" 已停止`)
-      await refreshBotStates()
-    } else {
-      // 启动是异步的（10-15秒），不阻塞等待完成
-      // 先发起启动请求，然后轮询状态直到连接成功或失败
-      window.electronAPI.startFeishuBot(bot.id).catch((err: unknown) => {
-        toast.error(err instanceof Error ? err.message : '启动失败')
-        refreshBotStates()
-      })
-      // 短暂等待让主进程设置 connecting 状态
-      await new Promise((r) => setTimeout(r, 300))
-      await refreshBotStates()
-      // 轮询直到状态不再是 connecting
-      const poll = setInterval(async () => {
-        try {
-          const multiState = await window.electronAPI.getFeishuMultiStatus?.()
-          if (multiState?.bots) {
-            setBotStates(multiState.bots)
-            const botState = multiState.bots[bot.id]
-            if (!botState || botState.status !== 'connecting') {
-              clearInterval(poll)
-              if (botState?.status === 'connected') {
-                toast.success(`Bot "${bot.name}" 已连接`)
+    if (toggleInFlightRef.current) return
+    toggleInFlightRef.current = true
+    clearBotConnectionPolling()
+    const pollGeneration = botConnectionGenerationRef.current
+    try {
+      if (isConnected) {
+        await window.electronAPI.stopFeishuBot(bot.id)
+        if (!mountedRef.current || pollGeneration !== botConnectionGenerationRef.current) return
+        toast.success(`Bot "${bot.name}" 已停止`)
+        await refreshBotStates(pollGeneration)
+      } else {
+        // 启动是异步的（10-15秒），不阻塞等待完成
+        // 先发起启动请求，然后轮询状态直到连接成功或失败
+        window.electronAPI.startFeishuBot(bot.id).catch((err: unknown) => {
+          if (!mountedRef.current || pollGeneration !== botConnectionGenerationRef.current) return
+          toast.error(err instanceof Error ? err.message : '启动失败')
+          void refreshBotStates(pollGeneration)
+        })
+        // 短暂等待让主进程设置 connecting 状态
+        await new Promise((r) => setTimeout(r, 300))
+        if (!mountedRef.current || pollGeneration !== botConnectionGenerationRef.current) return
+        await refreshBotStates(pollGeneration)
+        if (!mountedRef.current || pollGeneration !== botConnectionGenerationRef.current) return
+        // 轮询直到状态不再是 connecting
+        botConnectionPollRef.current = setInterval(async () => {
+          try {
+            const multiState = await window.electronAPI.getFeishuMultiStatus?.()
+            if (!mountedRef.current || pollGeneration !== botConnectionGenerationRef.current) return
+            if (multiState?.bots) {
+              setBotStates(multiState.bots)
+              const botState = multiState.bots[bot.id]
+              if (!botState || botState.status !== 'connecting') {
+                clearBotConnectionPolling()
+                if (botState?.status === 'connected') {
+                  toast.success(`Bot "${bot.name}" 已连接`)
+                }
               }
             }
+          } catch {
+            if (pollGeneration === botConnectionGenerationRef.current) {
+              clearBotConnectionPolling()
+            }
           }
-        } catch {
-          clearInterval(poll)
-        }
-      }, 1000)
-      // 安全超时：60秒后停止轮询
-      setTimeout(() => clearInterval(poll), 60_000)
+        }, 1000)
+        // 安全超时：60秒后停止轮询
+        botConnectionTimeoutRef.current = setTimeout(clearBotConnectionPolling, 60_000)
+      }
+    } finally {
+      toggleInFlightRef.current = false
     }
-  }, [bot.id, bot.name, isConnected, refreshBotStates, setBotStates])
+  }, [bot.id, bot.name, clearBotConnectionPolling, isConnected, refreshBotStates, setBotStates])
 
   const handleRemove = React.useCallback(async () => {
     try {
@@ -1359,6 +1401,19 @@ function BotConfigCard({ bot, state, onSaved, onRemoved }: BotConfigCardProps): 
             onChange={setAppSecret}
             placeholder="输入 App Secret"
           />
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">平台</label>
+            <Select value={domain} onValueChange={(value) => setDomain(value as FeishuDomain)}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="feishu">飞书中国大陆</SelectItem>
+                <SelectItem value="lark">Lark 国际版</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="flex items-center gap-3">
             <Button size="sm" variant="outline" onClick={handleTest}
@@ -1481,7 +1536,7 @@ function FeishuConfigTab(): React.ReactElement {
   const [registerOpen, setRegisterOpen] = React.useState(false)
 
   /** 扫码成功后：保存配置 + 自动启动 Bot */
-  const handleRegisterSuccess = React.useCallback(async (result: { appId: string; appSecret: string; operatorOpenId?: string }) => {
+  const handleRegisterSuccess = React.useCallback(async (result: { appId: string; appSecret: string; tenantBrand?: FeishuDomain; operatorOpenId?: string }) => {
     try {
       const saved = await window.electronAPI.saveFeishuBotConfig({
         name: defaultBotName(bots.length),
@@ -1491,6 +1546,7 @@ function FeishuConfigTab(): React.ReactElement {
         defaultWorkspaceId: undefined,
         defaultChannelId: undefined,
         defaultModelId: undefined,
+        domain: result.tenantBrand === 'lark' ? 'lark' : 'feishu',
         operatorOpenId: result.operatorOpenId,
       })
       setBots((prev) => [...prev, saved])

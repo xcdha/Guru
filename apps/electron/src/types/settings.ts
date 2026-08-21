@@ -9,8 +9,11 @@ import type { AgentRuntime, AgentThinkingLevel, EnvironmentCheckResult, Thinking
 /** 通知音场景类型 */
 export type NotificationSoundType = 'taskComplete' | 'permissionRequest' | 'exitPlanMode' | 'planningReminder'
 
+/** UI SFX 音效主题。旧 ID 保留用于兼容已有设置。 */
+export type NotificationSoundPackId = 'minimal' | 'soft' | 'glass' | 'arcade' | 'mechanical' | 'organic' | 'dreamy' | 'scifi' | 'rubber' | 'cinematic' | 'studio' | 'zen'
+
 /** 可选通知音 ID */
-export type NotificationSoundId = 'ding' | 'ding-dong' | 'discord' | 'done' | 'down-power' | 'food' | 'lite' | 'quiet' | 'none'
+export type NotificationSoundId = NotificationSoundPackId | 'ding' | 'ding-dong' | 'discord' | 'done' | 'down-power' | 'food' | 'lite' | 'quiet' | 'none'
 
 /** 各场景通知音配置 */
 export interface NotificationSoundSettings {
@@ -352,7 +355,6 @@ export type MarkdownFontSize = 'small' | 'medium' | 'large'
 
 /** 默认 Markdown 字号档位 */
 export const DEFAULT_MARKDOWN_FONT_SIZE: MarkdownFontSize = 'small'
-
 /**
  * 正文字体排版设置（作用于 AI 回复与 Markdown 编辑器）。
  * 独立于 MarkdownFontSize 档位：档位提供快捷切换，此处提供精细调节。
@@ -463,6 +465,9 @@ export interface AppSettings {
   agentChannelIds?: string[]
   /** Agent 当前工作区 ID */
   agentWorkspaceId?: string
+  /** 默认工作区目录：未绑定 Project 的会话 / Workspace Task 回退的工程代码目录；未设置时回退到默认工作区。
+   * 2026-08-15 起从工作区 config.json 的 defaultWorkingDirectory 迁移到应用设置，设置优先。 */
+  agentDefaultWorkingDirectory?: string
   /** 新 Agent 会话默认使用的 runtime；历史会话缺省仍按 claude 兼容。 */
   agentRuntime?: AgentRuntime
   /** Windows 上 Agent Bash 工具的运行环境；默认自动选择 Git Bash，WSL 需用户显式启用。 */
@@ -500,9 +505,6 @@ export interface AppSettings {
   /** 代码图谱工具开关（repo map 注入 + Graphify 知识图谱，2026-08-13）：
    * 默认关闭；首次创建仅由对话栏按钮主动触发；关闭只停注入不删产物 */
   repoMapTools?: boolean
-  /** 默认工作区目录：未绑定 Project 的会话 / Workspace Task 回退的工程代码目录；未设置时回退到默认工作区。
-   * 2026-08-15 起从工作区 config.json 的 defaultWorkingDirectory 迁移到应用设置，设置优先。 */
-  agentDefaultWorkingDirectory?: string
   /** Agent 最大预算（美元/次） */
   agentMaxBudgetUsd?: number
   /** Agent 最大轮次（0 或 undefined = SDK 默认） */
@@ -551,7 +553,7 @@ export interface AppSettings {
   autoCleanupArchivedDays?: number
   /**
    * Agent 代创建 git commit / PR 时是否附加 MyYoda 推广标识。
-   * 默认 true：commit trailer `Co-Authored-By: <模型名> in MyYoda`，PR body 末尾含 https://github.com/xcdha/MyYoda。
+   * 默认 true：commit trailer `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>`，PR body 末尾含 https://github.com/GeoffBao/MyYoda。
    * 关闭后不注入任何 MyYoda 归因，并覆盖 Claude SDK 默认 Co-Authored-By。
    */
   gitAttributionEnabled?: boolean

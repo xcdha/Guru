@@ -92,6 +92,7 @@ import {
 } from './feishu/prompt-builder'
 
 import { redactSensitiveLogText, redactSensitiveLogValue } from './bridge-log-redaction'
+import { getFeishuApiBaseUrl, normalizeFeishuDomain } from './feishu-domain'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
 import { Type } from 'typebox'
 import type { AgentToolResult } from '@earendil-works/pi-agent-core'
@@ -151,6 +152,8 @@ class FeishuBridge {
 
   /** 连接状态 */
   private status: FeishuBridgeState = { status: 'disconnected', activeBindings: 0 }
+  /** start/stop 代际；异步 start 只能提交当前代结果。 */
+  private lifecycleGeneration = 0
 
   /** Bot 自身的 open_id（连接时获取，用于群聊 @Bot 精确检测） */
   private botOpenId: string | null = null
@@ -220,6 +223,7 @@ class FeishuBridge {
   // ===== 生命周期 =====
 
   async start(): Promise<void> {
+    const generation = ++this.lifecycleGeneration
     const { appId, appSecret } = this.botConfig
     if (!appId || !appSecret) {
       throw new Error('请先配置 App ID 和 App Secret')
@@ -227,18 +231,22 @@ class FeishuBridge {
 
     this.updateStatus({ status: 'connecting' })
 
+    let channel: import('@larksuiteoapi/node-sdk').LarkChannel | null = null
     try {
       const plainSecret = getDecryptedBotAppSecret(this.botConfig.id)
       const lark = await import('@larksuiteoapi/node-sdk')
+      if (generation !== this.lifecycleGeneration) return
+      const domain = normalizeFeishuDomain(this.botConfig.domain)
+      const apiBaseUrl = getFeishuApiBaseUrl(domain)
 
       // 用 createLarkChannel 替代 lark.Client + lark.WSClient + EventDispatcher 老组合
       // 关键收益：channel.on({cardAction}) 能拿到卡片按钮回调（老 WSClient.handleEventData
       // 只处理 MessageType.event 通道，会直接丢掉 MessageType.card 帧）
       // 其余调用通过 channel.rawClient 路由，所有现有 client.* API 零改动
-      this.channel = lark.createLarkChannel({
+      channel = lark.createLarkChannel({
         appId,
         appSecret: plainSecret,
-        domain: lark.Domain.Feishu,
+        domain: domain === 'lark' ? lark.Domain.Lark : lark.Domain.Feishu,
         loggerLevel: lark.LoggerLevel.warn,
         policy: {
           dmMode: 'open',
@@ -250,7 +258,18 @@ class FeishuBridge {
         // 接 raw event 用于把 NormalizedMessage 反构成旧 handleFeishuMessage 形态
         includeRawEvent: true,
       })
-      this.client = this.channel.rawClient
+      const liveChannel = channel
+      this.channel = liveChannel
+      this.client = liveChannel.rawClient
+      const abandonIfStale = async (): Promise<boolean> => {
+        if (generation === this.lifecycleGeneration && this.channel === liveChannel) return false
+        await liveChannel.disconnect().catch(() => {})
+        if (this.channel === liveChannel) {
+          this.channel = null
+          this.client = null
+        }
+        return true
+      }
 
       // 获取 Bot 自身的 open_id（用于群聊 @Bot 精确检测）
       try {
@@ -260,7 +279,7 @@ class FeishuBridge {
           data?: { bot?: { open_id?: string; app_name?: string } }
         }>({
           method: 'GET',
-          url: 'https://open.feishu.cn/open-apis/bot/v3/info/',
+          url: `${apiBaseUrl}/open-apis/bot/v3/info/`,
         })
         console.log('[飞书 Bridge] Bot info 响应:', redactSensitiveLogValue(botInfoResp))
         // 飞书 API 返回 bot 在顶层，Lark SDK 可能包装在 data 下，兼容两种
@@ -273,11 +292,12 @@ class FeishuBridge {
       } catch (error) {
         console.warn('[飞书 Bridge] 获取 Bot info 失败（非致命）:', redactSensitiveLogValue(error))
       }
+      if (await abandonIfStale()) return
 
       // 注册消息接收（cardAction 暂时不接：飞书 cardAction 不通过长连接推送，
       // 需要单独配置 HTTP 回调 URL；本期保留 LarkChannel 抽象但卡片改用文本
       // 命令 /stop 终止，未来 Phase 3 权限审批做差异化时再评估）
-      this.channel.on({
+      liveChannel.on({
         message: (msg) => {
           // 把 NormalizedMessage 反构成旧 handleFeishuMessage 期望的 raw 形态，
           // 这样 700 行业务逻辑一行不动；msg.raw 含原始 RawMessageEvent 全字段
@@ -288,7 +308,8 @@ class FeishuBridge {
         },
       })
 
-      await this.channel.connect()
+      await liveChannel.connect()
+      if (await abandonIfStale()) return
 
       // 注册 EventBus 监听器
       this.eventBusUnsubscribe = agentEventBus.on((sessionId, payload) => {
@@ -302,7 +323,24 @@ class FeishuBridge {
 
       this.updateStatus({ status: 'connected', connectedAt: Date.now() })
       console.log('[飞书 Bridge] 已连接')
+      if (await abandonIfStale()) {
+        this.eventBusUnsubscribe?.()
+        this.eventBusUnsubscribe = null
+        return
+      }
     } catch (error) {
+      if (generation !== this.lifecycleGeneration) {
+        await channel?.disconnect().catch(() => {})
+        if (channel && this.channel === channel) {
+          this.channel = null
+          this.client = null
+        }
+        return
+      }
+      const failedChannel = channel ?? this.channel
+      this.channel = null
+      this.client = null
+      await failedChannel?.disconnect().catch(() => {})
       const message = redactSensitiveLogText(error instanceof Error ? error.message : String(error))
       this.updateStatus({ status: 'error', errorMessage: message })
       console.error('[飞书 Bridge] 启动失败:', redactSensitiveLogValue(error))
@@ -310,6 +348,7 @@ class FeishuBridge {
   }
 
   stop(): void {
+    this.lifecycleGeneration += 1
     // 取消 EventBus 监听
     this.eventBusUnsubscribe?.()
     this.eventBusUnsubscribe = null
@@ -341,6 +380,8 @@ class FeishuBridge {
     this.recentMessageIds.clear()
     this.recentEventIds.clear()
     this.processingChats.clear()
+    this.pendingImages.clear()
+    this.pendingFiles.clear()
     this.lastUserMessageId.clear()
     this.groupInfoCache.clear()
     this.userNameCache.clear()
@@ -616,12 +657,13 @@ class FeishuBridge {
 
   // ===== 连接测试 =====
 
-  async testConnection(appId: string, appSecret: string): Promise<FeishuTestResult> {
+  async testConnection(appId: string, appSecret: string, domain?: FeishuBotConfig['domain']): Promise<FeishuTestResult> {
     try {
       const lark = await import('@larksuiteoapi/node-sdk')
       const client = new lark.Client({
         appId,
         appSecret,
+        domain: normalizeFeishuDomain(domain) === 'lark' ? lark.Domain.Lark : lark.Domain.Feishu,
         appType: lark.AppType.SelfBuild,
       })
 
@@ -2074,7 +2116,7 @@ class FeishuBridge {
           data?: { bot?: { open_id?: string } }
         }>({
           method: 'GET',
-          url: 'https://open.feishu.cn/open-apis/bot/v3/info/',
+          url: `${getFeishuApiBaseUrl(this.botConfig.domain)}/open-apis/bot/v3/info/`,
         })
         this.botOpenId = botInfoResp?.bot?.open_id ?? botInfoResp?.data?.bot?.open_id ?? null
         if (this.botOpenId) {
