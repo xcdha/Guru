@@ -1414,9 +1414,11 @@ html.theme-custom body {
   box-shadow: inset 0 0 0 0.5px hsl(var(--destructive) / 0.15);
 }
 
-/* 用户气泡：纯墨水填充，无描边无高光 */
+/* 用户气泡：纯墨水填充，无描边无高光。
+   宽度上限不在这里设百分比：max-width:% 相对父容器，而父容器(MessageContent)
+   又收缩到内容宽 → 循环依赖导致气泡被错误钳在 ~80%×389px 处折行（2026-08-22 实测）。
+   上限改由 MessageContent 的 group-[.is-user]:max-w-[min(80%,48rem)] 承担（其参照 Message 是 w-full 定宽） */
 :root:not(.ui-classic) .user-message-bubble {
-  max-width: min(80%, 48rem);
   color: var(--ink-text-hi);
   background: hsl(var(--foreground) / 0.05);
   box-shadow: none;

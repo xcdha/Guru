@@ -131,6 +131,7 @@ export function MessageContent({
       className={cn(
         'message-body flex max-w-full min-w-0 flex-col gap-2 overflow-hidden',
         'group-[.is-user]:text-foreground group-[.is-user]:items-end',
+        'group-[.is-user]:max-w-[min(80%,48rem)]',
         'group-[.is-assistant]:w-full group-[.is-assistant]:text-foreground',
         className
       )}
