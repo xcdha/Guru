@@ -18,6 +18,8 @@ import {
 import { CODECLAW_THEMES, type CodeClawSize } from '@myyoda/shared'
 
 let tray: Tray | null = null
+/** 保存 actions 引用：切换桌宠开关后需主动重建托盘菜单（Windows 下 setContextMenu 会吞掉 click/right-click 事件，不重建则菜单永远停留在旧状态） */
+let trayActions: TrayActions | null = null
 
 export interface TrayActions {
   showMainWindow: () => void
@@ -79,6 +81,20 @@ function enableCodeClaw(): void {
   updateSettings({ codeClaw: { ...current, enabled: true } })
   // tray 直接 updateSettings 不走 ipc settings:update handler，需主动发布让桌宠窗口出现。
   publishCodeClawNow()
+  refreshTrayMenu()
+}
+
+/** 关闭 CodeClaw 桌宠（写设置后主动发布，pushState 会因 visible=false 隐藏窗口）。 */
+function disableCodeClaw(): void {
+  const current = getSettings().codeClaw ?? {}
+  updateSettings({ codeClaw: { ...current, enabled: false } })
+  publishCodeClawNow()
+  refreshTrayMenu()
+}
+
+/** 用最新状态重建托盘菜单（无 tray 时静默跳过）。 */
+function refreshTrayMenu(): void {
+  if (trayActions) updateTrayMenu(trayActions)
 }
 
 /** 构建托盘「桌宠」控制菜单组（复用 codeclaw-service 的控制能力）。 */
@@ -125,6 +141,11 @@ function buildCodeClawTrayGroup(): Electron.MenuItemConstructorOptions[] {
               type: 'checkbox' as const,
               checked: snapshot.soundEnabled,
               click: (item) => setCodeClawSound(item.checked),
+            },
+            { type: 'separator' },
+            {
+              label: '关闭 CodeClaw 桌宠',
+              click: () => disableCodeClaw(),
             },
           ]
         : [
@@ -212,6 +233,7 @@ function updateTrayMenu(actions: TrayActions): Menu | null {
 export function createTray(actionsInput?: Partial<TrayActions>): Tray | null {
   const iconPath = getTrayIconPath()
   const actions = { ...getDefaultTrayActions(), ...actionsInput }
+  trayActions = actions
 
   if (!existsSync(iconPath)) {
     console.warn('Tray icon not found at:', iconPath)
