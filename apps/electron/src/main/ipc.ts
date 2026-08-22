@@ -3117,6 +3117,24 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // 测试内置连接器依赖（Chrome / npx 等，不拉起完整 MCP 会话）
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.TEST_BUILTIN_CONNECTOR,
+    async (_, id: string): Promise<{ success: boolean; message: string }> => {
+      if (id === 'chrome-devtools') {
+        const { resolveChromeDevtoolsAvailability } = await import('./lib/builtin-mcp/chrome-devtools-availability')
+        const result = resolveChromeDevtoolsAvailability()
+        return {
+          success: result.available,
+          message: result.available
+            ? '已检测到 Chrome 与 npx，可以启动浏览器连接器'
+            : (result.reason ?? '浏览器连接器不可用'),
+        }
+      }
+      return { success: false, message: '该连接器请在配置表单中测试' }
+    }
+  )
+
   // 启用或关闭 MyYoda 内置 MCP
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SET_BUILTIN_MCP_ENABLED,
@@ -6405,6 +6423,7 @@ export function registerIpcHandlers(): void {
     if (!id || typeof id !== 'string') throw new Error('提醒 id 必填')
     const reminder = acknowledgePlanningReminder(id); if (reminder) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return reminder
   })
+
   ipcMain.handle(
     IPC_CHANNELS.WINDOW_GET_ZOOM_FACTOR,
     async (event) => event.sender.getZoomFactor(),
@@ -6421,6 +6440,7 @@ export function registerIpcHandlers(): void {
     wc.setZoomLevel(nextLevel)
     wc.send(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, wc.getZoomFactor())
   })
+
   ipcMain.handle(PLANNING_IPC_CHANNELS.SNOOZE_REMINDER, async (_, input: SnoozePlanningReminderInput): Promise<PlanningReminder | undefined> => {
     if (!input || typeof input.id !== 'string' || !Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > 10080) throw new Error('推迟分钟数非法')
     const reminder = snoozePlanningReminder(input.id, input.minutes); if (reminder) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return reminder
