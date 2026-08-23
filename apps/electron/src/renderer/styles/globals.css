@@ -3160,3 +3160,45 @@ html.theme-custom body {
   font-size: var(--area-input-font-size, inherit);
   color: var(--area-input-color, inherit);
 }
+
+/* ===== 我们独有：Markdown 结构元素颜色——编辑器侧消费（与 AI 回复 .message-response 一致） =====
+ * MarkdownRichEditor 的 ProseMirror 元素挂了 .markdown-editor 类（编辑态与预览态共用）。
+ * .prose 类被多个组件复用（发布说明/skills 等），不能全局挂，故用 .markdown-editor 限定。
+ * 未设置时回落 hsl(var(--foreground)) / inherit，保持原有层级对比。 */
+:root:not(.ui-classic) .markdown-editor :is(h1, h2, h3, h4, h5, h6),
+:root.ui-classic .markdown-editor :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--md-heading-color, hsl(var(--foreground) / 0.94));
+}
+
+:root:not(.ui-classic) .markdown-editor blockquote,
+:root.ui-classic .markdown-editor blockquote {
+  color: var(--md-quote-color, hsl(var(--foreground) / 0.66));
+}
+
+:root:not(.ui-classic) .markdown-editor th,
+:root.ui-classic .markdown-editor th {
+  color: var(--md-table-head-color, hsl(var(--foreground) / 0.78));
+}
+
+:root:not(.ui-classic) .markdown-editor li::marker,
+:root.ui-classic .markdown-editor li::marker {
+  color: var(--md-list-marker-color, hsl(var(--foreground) / 0.38));
+}
+
+:root:not(.ui-classic) .markdown-editor a,
+:root.ui-classic .markdown-editor a,
+:root:not(.ui-classic) .markdown-editor a:visited,
+:root.ui-classic .markdown-editor a:visited {
+  color: var(--md-link-color, hsl(var(--accent)));
+  text-decoration-color: color-mix(in srgb, var(--md-link-color, hsl(var(--accent))) 50%, transparent);
+}
+
+:root:not(.ui-classic) .markdown-editor hr,
+:root.ui-classic .markdown-editor hr {
+  border-color: var(--md-hr-color, hsl(var(--foreground) / 0.07));
+}
+
+:root:not(.ui-classic) .markdown-editor :not(pre) > code,
+:root.ui-classic .markdown-editor :not(pre) > code {
+  color: var(--md-inline-code-color, inherit);
+}

@@ -670,9 +670,31 @@ function StylePreview(): React.ReactElement {
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
             {/* 模拟 AI 回复（body 区域） */}
             <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-muted/60 px-3 py-2 text-[length:var(--area-body-font-size)] leading-[var(--md-body-line-height)] tracking-[var(--md-body-letter-spacing)] text-[color:var(--md-body-color)]">
-              <p className="text-[10px] text-muted-foreground">AI 回复</p>
-              <p className="my-[var(--md-body-paragraph-spacing)]">这是对话正文的实时预览，字号、行距、字距、段距与颜色会随左侧设置即时变化。</p>
-              <p className="my-[var(--md-body-paragraph-spacing)]">调整"段距"滑块可以看到两个段落之间的距离实时改变。</p>
+              <h4
+                className="text-[11px] font-semibold"
+                style={{ color: 'var(--md-heading-color, hsl(var(--foreground) / 0.94))' }}
+              >
+                AI 回复
+              </h4>
+              <p className="my-[var(--md-body-paragraph-spacing)]">
+                这是对话正文的实时预览，支持{' '}
+                <a href="#" onClick={(e) => e.preventDefault()} style={{ color: 'var(--md-link-color, hsl(var(--accent)))' }}>
+                  链接
+                </a>
+                、{' '}
+                <code style={{ color: 'var(--md-inline-code-color, inherit)' }}>行内代码</code>
+                {' '}的颜色随左侧设置即时变化。
+              </p>
+              <blockquote
+                className="my-[var(--md-body-paragraph-spacing)]"
+                style={{
+                  color: 'var(--md-quote-color, hsl(var(--foreground) / 0.66))',
+                  borderLeft: '2px solid hsl(var(--primary) / 0.42)',
+                  padding: '0.15em 0 0.15em 1em',
+                }}
+              >
+                调整「引用」色块可看到引用块颜色实时改变。
+              </blockquote>
             </div>
             {/* 模拟代码块（code 区域） */}
             <div className="overflow-hidden rounded-lg border border-border/60">

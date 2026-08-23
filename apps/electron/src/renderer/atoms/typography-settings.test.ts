@@ -134,6 +134,13 @@ describe('globals.css 消费规则（合并丢失回归防护）', () => {
     // 行距逐元素应用规则（Tailwind typography 覆盖防护）
     expect(css).toContain(':is(p, li, h1, h2, h3, h4, blockquote, pre, ul, ol)')
   })
+
+  test('Markdown 编辑器侧 .markdown-editor 也消费结构色变量', () => {
+    expect(css).toContain('.markdown-editor :is(h1, h2, h3, h4, h5, h6)')
+    expect(css).toContain('.markdown-editor blockquote')
+    expect(css).toContain('.markdown-editor th')
+    expect(css).toContain('.markdown-editor a')
+  })
 })
 
 describe('updateTypographySettings', () => {

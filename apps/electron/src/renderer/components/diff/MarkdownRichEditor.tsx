@@ -114,7 +114,7 @@ export function MarkdownRichEditor({
       autolink: true,
       linkOnPaste: true,
       HTMLAttributes: {
-        class: 'text-primary underline',
+        class: 'underline',
       },
     }),
     Markdown.configure({
@@ -132,7 +132,7 @@ export function MarkdownRichEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'prose prose-sm dark:prose-invert max-w-none min-h-full cursor-text focus:outline-none',
+          'markdown-editor prose prose-sm dark:prose-invert max-w-none min-h-full cursor-text focus:outline-none',
           'px-4 py-3 text-[length:var(--md-preview-font-size,15px)] leading-relaxed',
           '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
           '[&_pre]:rounded-md [&_pre]:p-3',
