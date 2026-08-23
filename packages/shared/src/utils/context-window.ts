@@ -124,6 +124,9 @@ const CONTEXT_WINDOW_CONFIG = {
     'kimi-k3',
     // 已废弃的 MiMo V2 Pro 仅保留历史显示推断，不主动启用 SDK 1M 变体
     'mimo-v2-pro',
+    // Ox Alpha（stealth 模型）规格标称 1,048,576 上下文；仅自定义渠道使用真实 ID，
+    // 无需 `[1m]` 后缀，故只加显示推断规则
+    'ox-alpha',
   ] as const,
 } as const
 
