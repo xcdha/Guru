@@ -1150,6 +1150,13 @@ html.theme-custom body {
   backdrop-filter: var(--app-sidebar-backdrop-filter, none);
 }
 
+/* 暗色模式：--foreground 为近白奶油 #F4F1EC，foreground 系 hairline
+   (inset -1px 0 0) 会在左栏右缘画出白色竖线；改用 --border（灰棕 #3D332B）
+   与左侧窄条分隔线 bg-border dark:bg-border/80 保持一致。 */
+:root.dark:not(.ui-classic) .refined-sidebar {
+  box-shadow: inset -1px 0 0 hsl(var(--border) / 0.6);
+}
+
 /* 左栏采用逐级缩进与材质差异建立信息层级，不改变主题色。 */
 :root:not(.ui-classic) .sidebar-module-zone + .sidebar-module-zone {
   padding-top: 1px;
@@ -1449,10 +1456,11 @@ html.theme-custom body {
 
 /* 强调文字（strong/em/b/i）：Tailwind Typography 用 --tw-prose-bold 给 strong 独立色，
    绕过 --md-body-color 继承致其不变色；这里显式接管，支持 --md-emphasis-color 覆盖，
-   未设置时回落 --tw-prose-bold（跟随正文）。 */
+   未设置时回落正文色链（--md-emphasis-color 本身是独立档位，用户没设时跟随正文色，
+   不回落 --tw-prose-bold——它是 Tailwind 固定色，与正文色无关）。 */
 :root:not(.ui-classic) .message-response :is(strong, em, b, i),
 :root.ui-classic .message-response :is(strong, em, b, i) {
-  color: var(--md-emphasis-color, var(--tw-prose-bold, inherit));
+  color: var(--md-emphasis-color, var(--area-body-color, var(--md-body-color, inherit)));
 }
 
 /* text-wrap: pretty/balance 是为长报告排版设计的换行优化算法，用于避免大段文字末行
@@ -3213,5 +3221,5 @@ html.theme-custom body {
 
 :root:not(.ui-classic) .markdown-editor :is(strong, em, b, i),
 :root.ui-classic .markdown-editor :is(strong, em, b, i) {
-  color: var(--md-emphasis-color, var(--tw-prose-bold, inherit));
+  color: var(--md-emphasis-color, var(--area-body-color, var(--md-body-color, inherit)));
 }
