@@ -3951,19 +3951,41 @@ export function registerIpcHandlers(): void {
         const { getToolCredentials: getCredentials } = await import('./lib/chat-tool-config')
         const credentials = getCredentials('nano-banana')
         if (!credentials.apiKey) {
-          return { success: false, message: '请先填写 Gemini API Key' }
+          return { success: false, message: '请先填写 API Key' }
         }
         try {
+          // ===== OpenAI Images 协议分支 =====
+          if (credentials.provider === 'openai-images') {
+            const baseUrl = (credentials.baseUrl?.trim() || 'https://api.openai.com/v1').replace(/\/$/, '')
+            const model = credentials.model?.trim() || 'gpt-image-2'
+            // 用 GET /models 验证 key 有效性（不消耗生图额度）
+            const response = await fetch(`${baseUrl}/models`, {
+              headers: { Authorization: `Bearer ${credentials.apiKey}` },
+              signal: AbortSignal.timeout(15_000),
+            })
+            if (!response.ok) {
+              const errorText = await response.text()
+              return { success: false, message: `API 请求失败 (${response.status}): ${errorText.slice(0, 200)}` }
+            }
+            return { success: true, message: `连接成功，模型 ${model} 将在生成时调用` }
+          }
+
+          // ===== Gemini 协议分支 =====
           const baseUrl = credentials.baseUrl?.trim() || 'https://generativelanguage.googleapis.com'
           const model = credentials.model?.trim() || 'gemini-3.1-flash-image-preview'
-          const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${credentials.apiKey}`
+          const url = `${baseUrl}/v1beta/models/${model}:generateContent`
           const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              // 与调用路径一致：header 认证兼容官方与 nbility 等中转
+              'x-goog-api-key': credentials.apiKey,
+            },
             body: JSON.stringify({
               contents: [{ role: 'user', parts: [{ text: 'Hi' }] }],
               generationConfig: { maxOutputTokens: 10 },
             }),
+            signal: AbortSignal.timeout(15_000),
           })
           if (!response.ok) {
             const errorText = await response.text()

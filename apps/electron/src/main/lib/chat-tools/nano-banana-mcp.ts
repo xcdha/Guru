@@ -211,13 +211,17 @@ async function callGeminiAndBuildResult(
     imageSize: options.imageSize,
     numberOfImages: options.numberOfImages,
   })
-  const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${credentials.apiKey}`
+  const url = `${baseUrl}/v1beta/models/${model}:generateContent`
 
   console.log(`[Nano Banana MCP] 调用 Gemini API: model=${model}, prompt="${prompt.slice(0, 50)}..."`)
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // 与 nano-banana-tool.ts 保持一致：header 认证兼容官方与 nbility 等中转
+      'x-goog-api-key': credentials.apiKey ?? '',
+    },
     body: JSON.stringify(requestBody),
   })
 

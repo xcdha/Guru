@@ -204,8 +204,9 @@ export function WebSearchSettings({ embedded = false }: EmbeddedToolSettingsProp
   )
 }
 
-/** Nano Banana 生图工具设置区域 */
+/** AI 生图工具设置区域（Gemini Nano Banana / OpenAI Images 双协议） */
 export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedToolSettingsProps): React.ReactElement {
+  const [provider, setProvider] = React.useState<'gemini' | 'openai-images'>('gemini')
   const [apiKey, setApiKey] = React.useState('')
   const [baseUrl, setBaseUrl] = React.useState('')
   const [model, setModel] = React.useState('')
@@ -216,7 +217,7 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
   const [testResult, setTestResult] = React.useState<{ success: boolean; message: string } | null>(null)
   const setChatTools = useSetAtom(chatToolsAtom)
 
-  const savedCredentialsRef = React.useRef({ apiKey: '', baseUrl: '', model: '' })
+  const savedCredentialsRef = React.useRef({ apiKey: '', baseUrl: '', model: '', provider: 'gemini' })
 
   React.useEffect(() => {
     Promise.all([
@@ -228,10 +229,12 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
       if (credentials.apiKey) setApiKey(credentials.apiKey)
       if (credentials.baseUrl) setBaseUrl(credentials.baseUrl)
       if (credentials.model) setModel(credentials.model)
+      setProvider(credentials.provider === 'openai-images' ? 'openai-images' : 'gemini')
       savedCredentialsRef.current = {
         apiKey: credentials.apiKey || '',
         baseUrl: credentials.baseUrl || '',
         model: credentials.model || '',
+        provider: credentials.provider || 'gemini',
       }
     }).catch((err: unknown) => {
       console.error('[Nano Banana 设置] 加载失败:', err)
@@ -242,19 +245,33 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
 
   /** 静默保存凭据（blur 时触发） */
   const handleBlurSave = React.useCallback(async (): Promise<void> => {
-    const current = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim() }
+    const current = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim(), provider }
     const saved = savedCredentialsRef.current
-    if (current.apiKey === saved.apiKey && current.baseUrl === saved.baseUrl && current.model === saved.model) return
+    if (current.apiKey === saved.apiKey && current.baseUrl === saved.baseUrl && current.model === saved.model && current.provider === saved.provider) return
     try {
       await window.electronAPI.updateChatToolCredentials('nano-banana', current)
       savedCredentialsRef.current = current
       await refreshChatTools(setChatTools)
       onChanged?.()
-      toast.success('Nano Banana 设置已保存')
+      toast.success('AI 生图设置已保存')
     } catch (error) {
-      console.error('[Nano Banana 设置] 保存失败:', error)
+      console.error('[AI 生图设置] 保存失败:', error)
     }
-  }, [apiKey, baseUrl, model, setChatTools, onChanged])
+  }, [apiKey, baseUrl, model, provider, setChatTools, onChanged])
+
+  /** 切换协议时立即保存（不同协议的默认地址/模型不同） */
+  const handleProviderChange = async (next: 'gemini' | 'openai-images'): Promise<void> => {
+    setProvider(next)
+    try {
+      const current = { apiKey: apiKey.trim(), baseUrl: '', model: '', provider: next }
+      await window.electronAPI.updateChatToolCredentials('nano-banana', { ...current, baseUrl: baseUrl.trim(), model: model.trim() })
+      savedCredentialsRef.current = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim(), provider: next }
+      await refreshChatTools(setChatTools)
+      onChanged?.()
+    } catch (error) {
+      console.error('[AI 生图设置] 切换协议失败:', error)
+    }
+  }
 
   const handleToggle = async (checked: boolean): Promise<void> => {
     try {
@@ -268,16 +285,16 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
 
   const handleTest = async (): Promise<void> => {
     // 先保存可能的变更
-    const current = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim() }
+    const current = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim(), provider }
     const saved = savedCredentialsRef.current
-    if (current.apiKey !== saved.apiKey || current.baseUrl !== saved.baseUrl || current.model !== saved.model) {
+    if (current.apiKey !== saved.apiKey || current.baseUrl !== saved.baseUrl || current.model !== saved.model || current.provider !== saved.provider) {
       try {
         await window.electronAPI.updateChatToolCredentials('nano-banana', current)
         savedCredentialsRef.current = current
         await refreshChatTools(setChatTools)
         onChanged?.()
       } catch (error) {
-        console.error('[Nano Banana 设置] 保存失败:', error)
+        console.error('[AI 生图设置] 保存失败:', error)
       }
     }
 
@@ -297,10 +314,12 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
     return <div className="text-sm text-muted-foreground py-8 text-center">加载中...</div>
   }
 
+  const isOpenAI = provider === 'openai-images'
+
   return (
     <SettingsSection
-      title="Nano Banana"
-      description="启用后 AI 可以生成和编辑图片（基于 Gemini Image Generation）"
+      title="AI 生图"
+      description="启用后 AI 可以生成和编辑图片（支持 Gemini Nano Banana / GPT-Image 双协议）"
       embedded={embedded}
       action={
         embedded ? undefined : (
@@ -315,25 +334,46 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
         <div className="space-y-4 p-4">
           {/* 引导说明 */}
           <div className="rounded-lg bg-muted/50 p-3 space-y-2 text-sm text-muted-foreground">
-            <p>Nano Banana 基于 <span className="font-medium text-foreground">Gemini Image Generation</span> 提供 AI 图片生成与编辑能力。</p>
+            {isOpenAI ? (
+              <p>当前协议为 <span className="font-medium text-foreground">OpenAI Images 兼容</span>（默认模型 gpt-image-2），支持官方及各类中转（如 nbility.ai）。</p>
+            ) : (
+              <p>当前协议为 <span className="font-medium text-foreground">Gemini Image Generation</span>（Nano Banana），支持官方及兼容中转。</p>
+            )}
             <p className="text-xs">配置步骤：</p>
             <ol className="text-xs list-decimal list-inside space-y-1">
-              <li>
-                访问{' '}
-                <a
-                  href="https://aistudio.google.com/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-0.5"
-                >
-                  Google AI Studio
-                  <ExternalLink size={10} />
-                </a>
-                {' '}获取 Gemini API Key
-              </li>
-              <li>将 API Key 填入下方，可选修改 API 地址和模型</li>
+              {!isOpenAI && (
+                <li>
+                  访问{' '}
+                  <a
+                    href="https://aistudio.google.com/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  >
+                    Google AI Studio
+                    <ExternalLink size={10} />
+                  </a>
+                  {' '}获取 Gemini API Key（或直接使用中转服务的 Key）
+                </li>
+              )}
+              {isOpenAI && <li>准备 OpenAI 协议兼容的 API Key（官方或中转）</li>}
+              <li>将 API Key 填入下方，可选修改接口协议、API 地址和模型</li>
               <li>开启开关即可在对话中使用生图能力</li>
             </ol>
+          </div>
+
+          {/* 接口协议 */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">接口协议</label>
+            <select
+              value={provider}
+              onChange={(e) => void handleProviderChange(e.target.value as 'gemini' | 'openai-images')}
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="gemini">Gemini（Nano Banana，含官方与中转）</option>
+              <option value="openai-images">OpenAI Images 兼容（gpt-image 系列）</option>
+            </select>
+            <p className="text-xs text-muted-foreground">切换后 API 地址与模型的默认值会随之变化</p>
           </div>
 
           <div className="space-y-1.5">
@@ -351,7 +391,7 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
             <div className="relative">
               <Input
                 type={showApiKey ? 'text' : 'password'}
-                placeholder="AIza..."
+                placeholder={isOpenAI ? 'sk-...' : 'AIza...'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 onBlur={handleBlurSave}
@@ -372,24 +412,24 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
             <label className="text-sm font-medium">API 地址</label>
             <Input
               type="text"
-              placeholder="https://generativelanguage.googleapis.com"
+              placeholder={isOpenAI ? 'https://api.openai.com/v1' : 'https://generativelanguage.googleapis.com'}
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               onBlur={handleBlurSave}
             />
-            <p className="text-xs text-muted-foreground">留空则使用 Gemini 官方地址</p>
+            <p className="text-xs text-muted-foreground">{isOpenAI ? '留空则使用 OpenAI 官方地址；中转填到 /v1 为止（如 https://api.nbility.ai/v1）' : '留空则使用 Gemini 官方地址'}</p>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium">模型</label>
             <Input
               type="text"
-              placeholder="gemini-3.1-flash-image-preview"
+              placeholder={isOpenAI ? 'gpt-image-2' : 'gemini-3.1-flash-image-preview'}
               value={model}
               onChange={(e) => setModel(e.target.value)}
               onBlur={handleBlurSave}
             />
-            <p className="text-xs text-muted-foreground">留空则使用默认模型 gemini-3.1-flash-image-preview</p>
+            <p className="text-xs text-muted-foreground">{isOpenAI ? '留空则使用默认模型 gpt-image-2（可选 gpt-image-2-vip / gpt-image-2-official 等）' : '留空则使用默认模型 gemini-3.1-flash-image-preview'}</p>
           </div>
 
           {testResult && (

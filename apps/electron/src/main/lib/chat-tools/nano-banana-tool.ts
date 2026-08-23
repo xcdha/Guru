@@ -11,6 +11,7 @@ import type { ChatToolMeta, FileAttachment } from '@myyoda/shared'
 import { randomUUID } from 'node:crypto'
 import { getToolCredentials } from '../chat-tool-config'
 import { saveAttachment, readAttachmentAsBase64, isImageAttachment } from '../attachment-service'
+import { callOpenAIImages, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from './openai-images-provider'
 
 // ===== Gemini API 类型（REST API 使用 camelCase） =====
 
@@ -75,8 +76,8 @@ const DEFAULT_MODEL = 'gemini-3.1-flash-image-preview'
 
 export const NANO_BANANA_TOOL_META: ChatToolMeta = {
   id: 'nano-banana',
-  name: 'Nano Banana',
-  description: 'AI 图片生成与编辑（基于 Gemini Image Generation）',
+  name: 'AI 生图',
+  description: 'AI 图片生成与编辑（支持 Gemini Nano Banana 与 GPT-Image 双协议，设置中可切换）',
   params: [
     { name: 'prompt', type: 'string', description: '图片生成/编辑描述', required: true },
   ],
@@ -84,8 +85,8 @@ export const NANO_BANANA_TOOL_META: ChatToolMeta = {
   category: 'builtin',
   executorType: 'builtin',
   systemPromptAppend: `
-<nano_banana_instructions>
-你拥有 AI 图片生成和编辑能力（Nano Banana）。
+<image_generation_instructions>
+你拥有 AI 图片生成和编辑能力（后端协议由用户配置：Gemini Nano Banana 或 GPT-Image 系列）。
 
 **generate_image — 生成/编辑图片：**
 当用户需要创建或修改图片时调用：
@@ -104,7 +105,7 @@ export const NANO_BANANA_TOOL_META: ChatToolMeta = {
 - 生成新图片时用详细的英文描述
 - 编辑图片时设置 useReferenceImages: true，并在 prompt 中描述要做的修改
 - 支持连续修改：多次调用时会自动保持上下文
-</nano_banana_instructions>`,
+</image_generation_instructions>`,
 }
 
 // ===== 工具定义（ToolDefinition 格式，传给 Provider） =====
@@ -193,7 +194,7 @@ function collectReferenceImages(context: NanoBananaContext): GeminiPart[] {
         },
       })
     } catch (error) {
-      console.warn(`[Nano Banana] 读取参考图失败: ${attachment.localPath}`, error)
+      console.warn(`[AI 生图] 读取参考图失败: ${attachment.localPath}`, error)
     }
   }
 
@@ -277,7 +278,7 @@ export async function executeNanoBananaTool(
   if (!credentials.apiKey) {
     return {
       toolCallId: toolCall.id,
-      content: 'Nano Banana 未配置 API Key',
+      content: 'AI 生图未配置 API Key',
       isError: true,
     }
   }
@@ -301,7 +302,61 @@ export async function executeNanoBananaTool(
 
     const baseUrl = credentials.baseUrl?.trim() || DEFAULT_BASE_URL
     const model = credentials.model?.trim() || DEFAULT_MODEL
+    const provider = credentials.provider?.trim() || 'gemini'
 
+    // ===== OpenAI Images 协议分支（gpt-image 系列）=====
+    if (provider === 'openai-images') {
+      const openaiBaseUrl = baseUrl === DEFAULT_BASE_URL ? OPENAI_IMAGES_DEFAULT_BASE_URL : baseUrl
+      const openaiModel = model === DEFAULT_MODEL ? OPENAI_IMAGES_DEFAULT_MODEL : model
+      // 参考图：从 GeminiPart 格式提取 inlineData（复用现有收集逻辑）
+      const refImages = useReferenceImages
+        ? collectReferenceImages(context)
+            .map((p) => p.inlineData)
+            .filter((d): d is NonNullable<typeof d> => !!d)
+        : []
+
+      console.log(`[AI 生图] 调用 OpenAI Images API: model=${openaiModel}, prompt="${prompt.slice(0, 50)}..."`)
+
+      try {
+        const result = await callOpenAIImages({
+          baseUrl: openaiBaseUrl,
+          apiKey: credentials.apiKey,
+          model: openaiModel,
+          prompt,
+          refImages,
+          aspectRatio,
+          imageSize,
+          numberOfImages,
+        })
+
+        const generatedAttachments: FileAttachment[] = []
+        for (const img of result.images) {
+          const ext = img.mimeType === 'image/jpeg' ? '.jpg' : '.png'
+          const saved = saveAttachment({
+            conversationId: context.conversationId,
+            filename: `ai-image-${randomUUID().slice(0, 8)}${ext}`,
+            mediaType: img.mimeType,
+            data: img.data,
+          })
+          generatedAttachments.push(saved.attachment)
+        }
+
+        const imageCount = generatedAttachments.length
+        const noteText = result.notes.length > 0 ? `\n\n说明: ${result.notes.join('; ')}` : ''
+        return {
+          toolCallId: toolCall.id,
+          content: imageCount > 0 ? `图片已成功生成（${imageCount} 张）${noteText}` : `未生成图片内容${noteText}`,
+          isError: imageCount === 0,
+          generatedAttachments: imageCount > 0 ? generatedAttachments : undefined,
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        console.error('[AI 生图] OpenAI Images 执行失败:', error)
+        return { toolCallId: toolCall.id, content: `图片生成失败: ${msg}`, isError: true }
+      }
+    }
+
+    // ===== Gemini 协议分支 =====
     // 收集参考图
     const referenceImageParts = useReferenceImages ? collectReferenceImages(context) : []
 
@@ -315,19 +370,24 @@ export async function executeNanoBananaTool(
       numberOfImages,
     })
 
-    const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${credentials.apiKey}`
+    const url = `${baseUrl}/v1beta/models/${model}:generateContent`
 
-    console.log(`[Nano Banana] 调用 Gemini API: model=${model}, prompt="${prompt.slice(0, 50)}..."`)
+    console.log(`[AI 生图] 调用 Gemini API: model=${model}, prompt="${prompt.slice(0, 50)}..."`)
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // 用 header 认证而非 ?key= 查询参数：Google 官方与 nbility 等中转均支持 x-goog-api-key，
+        // 部分中转（如 nbility）不接受查询参数形式的 key
+        'x-goog-api-key': credentials.apiKey,
+      },
       body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`[Nano Banana] API 请求失败 (${response.status}):`, errorText)
+      console.error(`[AI 生图] Gemini API 请求失败 (${response.status}):`, errorText)
       return {
         toolCallId: toolCall.id,
         content: `Gemini API 请求失败 (${response.status}): ${errorText.slice(0, 200)}`,
@@ -355,7 +415,7 @@ export async function executeNanoBananaTool(
     }
 
     const parts = candidate.content.parts
-    console.log(`[Nano Banana] 响应包含 ${parts.length} 个 parts，类型:`, parts.map((p) => p.inlineData ? `image(${p.inlineData.mimeType})` : `text(${(p.text ?? '').slice(0, 30)})`))
+    console.log(`[AI 生图] 响应包含 ${parts.length} 个 parts，类型:`, parts.map((p) => p.inlineData ? `image(${p.inlineData.mimeType})` : `text(${(p.text ?? '').slice(0, 30)})`))
     const generatedAttachments: FileAttachment[] = []
     const textParts: string[] = []
 
@@ -367,7 +427,7 @@ export async function executeNanoBananaTool(
         const ext = part.inlineData.mimeType === 'image/jpeg' ? '.jpg' : '.png'
         const result = saveAttachment({
           conversationId: context.conversationId,
-          filename: `nano-banana-${randomUUID().slice(0, 8)}${ext}`,
+          filename: `ai-image-${randomUUID().slice(0, 8)}${ext}`,
           mediaType: part.inlineData.mimeType,
           data: part.inlineData.data,
         })
@@ -403,7 +463,7 @@ export async function executeNanoBananaTool(
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
-    console.error(`[Nano Banana] 执行失败:`, error)
+    console.error(`[AI 生图] 执行失败:`, error)
     return {
       toolCallId: toolCall.id,
       content: `图片生成失败: ${msg}`,
