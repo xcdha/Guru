@@ -742,7 +742,7 @@ function StylePreview(): React.ReactElement {
         <span className="ml-2 text-[10px] text-muted-foreground">MyYoda · 预览</span>
       </div>
 
-      <div className="flex h-[260px]">
+      <div className="flex min-h-[260px] items-stretch">
         {/* 模拟侧边栏（ui 区域） */}
         <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-r border-border/60 bg-[hsl(var(--sidebar-surface))] py-3 text-[length:var(--area-ui-font-size)] text-[color:var(--area-ui-color)]">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-semibold">Y</span>
@@ -752,8 +752,8 @@ function StylePreview(): React.ReactElement {
 
         {/* 模拟内容区 */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* 内容超高时整体纵向滚动（保底完整显示，避免 flex 布局压缩导致空白） */}
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+          {/* 内容超高时随内容自然伸展（不再固定高度+滚动），字体变大时预览撑高而非出滚动条 */}
+          <div className="space-y-2 px-3 py-3">
             {/* 模拟 AI 回复（body 区域） */}
             <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-muted/60 px-3 py-2 text-[length:var(--area-body-font-size)] leading-[var(--md-body-line-height)] tracking-[var(--md-body-letter-spacing)] text-[color:var(--md-body-color)]">
               <h4
@@ -799,7 +799,7 @@ function StylePreview(): React.ReactElement {
           </div>
 
           {/* 模拟输入框（input 区域） */}
-          <div className="border-t border-border/60 px-3 py-2.5 text-[length:var(--area-input-font-size)] text-[color:var(--area-input-color)]">
+          <div className="mt-auto border-t border-border/60 px-3 py-2.5 text-[length:var(--area-input-font-size)] text-[color:var(--area-input-color)]">
             <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
               <span className="text-[11px] text-muted-foreground">输入消息…</span>
               <span className="ml-2 text-[10px] text-muted-foreground/60">Ctrl+Enter 发送</span>
