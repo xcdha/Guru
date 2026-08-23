@@ -93,8 +93,8 @@
     {
       "id": "nano-banana",
       "name": "nano_banana",
-      "displayName": "Nano Banana 生图",
-      "description": "通过 Gemini Image Generation 为 Agent 提供图片生成和编辑能力。",
+      "displayName": "AI 生图",
+      "description": "为 Agent 提供图片生成和编辑能力（支持 Gemini Nano Banana / GPT-Image 双协议，可在设置中配置接口协议与模型）。",
       "category": "media",
       "kind": "internal",
       "deletable": false,

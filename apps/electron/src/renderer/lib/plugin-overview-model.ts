@@ -182,8 +182,8 @@ export function buildPluginOverviewModel(input: PluginOverviewInput): PluginOver
       },
       {
         id: 'nano-banana',
-        title: 'Nano Banana 生图',
-        description: '用 Gemini 生成和编辑图片。',
+        title: 'AI 生图',
+        description: '生成和编辑图片（Gemini / GPT-Image 双协议）。',
         action: 'open-connector',
         actionTab: 'connectors',
         actionConnectorId: 'builtin:nano-banana',

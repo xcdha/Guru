@@ -202,7 +202,7 @@ export function ConnectorsTab({
           </section>
         ))}
         <p className="text-[12px] leading-relaxed text-foreground/45">
-          当前内置 Chrome 浏览器、联网搜索、Nano Banana 生图。更多第三方连接后续加入；现在可添加本地/远程服务或自定义 HTTP。
+          当前内置 Chrome 浏览器、联网搜索、AI 生图。更多第三方连接后续加入；现在可添加本地/远程服务或自定义 HTTP。
         </p>
       </div>
     )

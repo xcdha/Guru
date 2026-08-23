@@ -45,7 +45,7 @@ function resolveAvailability(
     return {
       enabled: userEnabled,
       available,
-      availabilityReason: available ? undefined : '需要配置 Gemini API Key',
+      availabilityReason: available ? undefined : '需要配置 API Key',
     }
   }
 
