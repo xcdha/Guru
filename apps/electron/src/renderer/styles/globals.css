@@ -1441,7 +1441,7 @@ html.theme-custom body {
   text-wrap: pretty;
 }
 
-:root:not(.ui-classic) .message-response :is(h1, h2, h3) {
+:root:not(.ui-classic) .message-response :is(h1, h2, h3, h4, h5, h6) {
   color: var(--md-heading-color, hsl(var(--foreground) / 0.94));
   font-weight: 680;
   text-wrap: balance;

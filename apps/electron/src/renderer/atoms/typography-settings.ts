@@ -41,11 +41,17 @@ export function applyTypographyToDOM(settings: TypographySettings): void {
   if (settings.fontSize != null) {
     root.setProperty('--md-body-font-size', `${settings.fontSize}px`)
   }
+  // fontSize 为 undefined 时不移除（档位逻辑负责）；lineHeight/letterSpacing 无档位接管，
+  // 必须在空值时移除，否则重置后变量残留、UI 显示「默认」但渲染仍是旧值。
   if (settings.lineHeight != null) {
     root.setProperty('--md-body-line-height', `${settings.lineHeight}`)
+  } else {
+    root.removeProperty('--md-body-line-height')
   }
   if (settings.letterSpacing != null) {
     root.setProperty('--md-body-letter-spacing', `${settings.letterSpacing}px`)
+  } else {
+    root.removeProperty('--md-body-letter-spacing')
   }
   if (settings.paragraphSpacing != null) {
     root.setProperty('--md-body-paragraph-spacing', `${settings.paragraphSpacing}px`)

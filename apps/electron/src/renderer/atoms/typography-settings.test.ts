@@ -1,4 +1,7 @@
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
+import { readFileSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { getDefaultStore } from 'jotai'
 import {
   typographySettingsAtom,
@@ -102,6 +105,34 @@ describe('applyTypographyToDOM 写入 / 移除结构元素颜色变量', () => {
     const vars = fakeStyle.toVarMap()
     expect(vars['--md-heading-color']).toBeUndefined()
     expect(vars['--md-inline-code-color']).toBeUndefined()
+  })
+})
+
+describe('globals.css 消费规则（合并丢失回归防护）', () => {
+  // skill 已知坑：三路合并 globals.css 极易静默丢失独有消费规则。
+  // 这里直接读源文件，断言 7 个结构色变量 + 正文/行距的消费规则存在。
+  const css = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../styles/globals.css'),
+    'utf8',
+  )
+
+  test('标题/引用/表头消费 --md-heading-color / --md-quote-color / --md-table-head-color', () => {
+    expect(css).toContain('var(--md-heading-color')
+    expect(css).toContain('var(--md-quote-color')
+    expect(css).toContain('var(--md-table-head-color')
+  })
+
+  test('列表标记/链接/分隔线/行内代码消费各自变量', () => {
+    expect(css).toContain('var(--md-list-marker-color')
+    expect(css).toContain('var(--md-link-color')
+    expect(css).toContain('var(--md-hr-color')
+    expect(css).toContain('var(--md-inline-code-color')
+  })
+
+  test('正文排版消费规则标记仍在（我们独有：正文排版）且标题规则覆盖 h1-h6', () => {
+    expect(css).toContain(':is(h1, h2, h3, h4, h5, h6)')
+    // 行距逐元素应用规则（Tailwind typography 覆盖防护）
+    expect(css).toContain(':is(p, li, h1, h2, h3, h4, blockquote, pre, ul, ol)')
   })
 })
 

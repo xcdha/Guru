@@ -372,7 +372,7 @@ export interface TypographySettings {
   /** 正文文字颜色（CSS 颜色值；空/undefined 表示跟随主题） */
   textColor?: string
   /** Markdown 结构元素颜色（undefined = 跟随主题默认）。
-   *  作用于 AI 回复 / Markdown 编辑器里的标题(h1-h4)、引用(blockquote)、表格表头(th)、
+   *  作用于 AI 回复 / Markdown 编辑器里的标题(h1-h6)、引用(blockquote)、表格表头(th)、
    *  列表标记(li::marker)、链接(a)、分隔线(hr)、行内代码(code)。 */
   headingColor?: string
   quoteColor?: string
