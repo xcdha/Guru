@@ -11,7 +11,7 @@ import type { ChatToolMeta, FileAttachment } from '@myyoda/shared'
 import { randomUUID } from 'node:crypto'
 import { getToolCredentials } from '../chat-tool-config'
 import { saveAttachment, readAttachmentAsBase64, isImageAttachment } from '../attachment-service'
-import { callOpenAIImages, extractGeminiImageParts, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from './openai-images-provider'
+import { callOpenAIImages, extractGeminiImageParts, stripGeminiTrailingV1, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from './openai-images-provider'
 
 // ===== Gemini API 类型（REST API 使用 camelCase） =====
 
@@ -377,7 +377,7 @@ export async function executeNanoBananaTool(
       numberOfImages,
     })
 
-    const url = `${baseUrl}/v1beta/models/${model}:generateContent`
+    const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
 
     console.log(`[AI 生图] 调用 Gemini API: model=${model}, prompt="${prompt.slice(0, 50)}..."`)
 

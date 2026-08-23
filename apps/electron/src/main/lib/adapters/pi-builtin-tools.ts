@@ -75,7 +75,7 @@ import { browserController } from '../browser-controller'
 import { resolveBrowserProfileKey } from '../browser-profile-policy'
 import { getToolCredentials } from '../chat-tool-config'
 import { saveAttachment, isImageAttachment } from '../attachment-service'
-import { callOpenAIImages, extractGeminiImageParts, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from '../chat-tools/openai-images-provider'
+import { callOpenAIImages, extractGeminiImageParts, stripGeminiTrailingV1, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from '../chat-tools/openai-images-provider'
 import {
   automationCreateToolParameters,
   discardInapplicableAutomationScheduleFields,
@@ -1214,7 +1214,7 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
             contents: [{ role: 'user', parts }],
             generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(Object.keys(imageConfig).length > 0 ? { imageConfig } : {}) },
           }
-          const url = `${baseUrl.replace(/\/$/, '')}/v1beta/models/${model}:generateContent`
+          const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credentials.apiKey! },

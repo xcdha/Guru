@@ -187,6 +187,16 @@ export function openAIImageEndpoint(baseUrl: string, resource: 'generations' | '
 }
 
 /**
+ * 归一化 Gemini 协议 baseUrl：剥掉尾部 /v1（若带了），再拼 /v1beta。
+ * Gemini 端点形如 {base}/v1beta/models/...，若用户把 OpenAI 的 /v1 base 填进来
+ * 会拼成 /v1/v1beta 报 404。
+ */
+export function stripGeminiTrailingV1(baseUrl: string): string {
+  const base = baseUrl.replace(/\/$/, '')
+  return base.endsWith('/v1') ? base.slice(0, -3) : base
+}
+
+/**
  * Gemini 协议响应图片提取器。
  *
  * 兼容两种图片载体：
