@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { mapToOpenAISize, openAIImageEndpoint } from './openai-images-provider'
+import { mapToOpenAISize, openAIImageEndpoint, extractGeminiImageParts } from './openai-images-provider'
 
 describe('mapToOpenAISize', () => {
   test('默认/1K 档按方向映射', () => {
@@ -46,5 +46,16 @@ describe('openAIImageEndpoint', () => {
   test('baseUrl 不带 /v1 则补上', () => {
     expect(openAIImageEndpoint('https://api.nbility.ai', 'generations')).toBe('https://api.nbility.ai/v1/images/generations')
     expect(openAIImageEndpoint('https://api.nbility.ai/', 'edits')).toBe('https://api.nbility.ai/v1/images/edits')
+  })
+})
+
+describe('extractGeminiImageParts', () => {
+  test('inlineData 直接提取', async () => {
+    const img = await extractGeminiImageParts([{ inlineData: { mimeType: 'image/png', data: 'aGk=' } }])
+    expect(img[0]).toEqual({ mimeType: 'image/png', data: 'aGk=' })
+  })
+  test('thought part 跳过，text part 不产出图片', async () => {
+    const img = await extractGeminiImageParts([{ thought: true }, { text: 'hi' }])
+    expect(img).toEqual([undefined, undefined])
   })
 })

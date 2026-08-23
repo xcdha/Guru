@@ -75,7 +75,7 @@ import { browserController } from '../browser-controller'
 import { resolveBrowserProfileKey } from '../browser-profile-policy'
 import { getToolCredentials } from '../chat-tool-config'
 import { saveAttachment, isImageAttachment } from '../attachment-service'
-import { callOpenAIImages, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from '../chat-tools/openai-images-provider'
+import { callOpenAIImages, extractGeminiImageParts, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from '../chat-tools/openai-images-provider'
 import {
   automationCreateToolParameters,
   discardInapplicableAutomationScheduleFields,
@@ -1225,15 +1225,14 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
             throw new Error(`Gemini API 请求失败 (${response.status}): ${(await response.text()).slice(0, 300)}`)
           }
           const data = (await response.json()) as {
-            candidates?: Array<{ content?: { parts?: Array<{ text?: string; inlineData?: { mimeType: string; data: string }; thought?: boolean }> } }>
+            candidates?: Array<{ content?: { parts?: Array<{ text?: string; inlineData?: { mimeType: string; data: string }; fileData?: { mimeType: string; fileUri: string }; thought?: boolean }> } }>
             error?: { message?: string }
           }
           if (data.error?.message) throw new Error(`Gemini API 错误: ${data.error.message}`)
           const outParts = data.candidates?.[0]?.content?.parts ?? []
-          for (const p of outParts) {
-            if (p.thought) continue
-            if (p.inlineData) images.push(p.inlineData)
-          }
+          // 兼容 inlineData（官方）和 fileData（nbility 中转），后者需下载 URL 转 base64
+          const extracted = await extractGeminiImageParts(outParts)
+          for (const img of extracted) if (img) images.push(img)
         }
 
         if (images.length === 0) throw new Error('未生成任何图片')

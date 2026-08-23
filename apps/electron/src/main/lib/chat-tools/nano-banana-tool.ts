@@ -11,7 +11,7 @@ import type { ChatToolMeta, FileAttachment } from '@myyoda/shared'
 import { randomUUID } from 'node:crypto'
 import { getToolCredentials } from '../chat-tool-config'
 import { saveAttachment, readAttachmentAsBase64, isImageAttachment } from '../attachment-service'
-import { callOpenAIImages, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from './openai-images-provider'
+import { callOpenAIImages, extractGeminiImageParts, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from './openai-images-provider'
 
 // ===== Gemini API 类型（REST API 使用 camelCase） =====
 
@@ -23,12 +23,19 @@ interface GeminiInlineData {
 interface GeminiPart {
   text?: string
   inlineData?: GeminiInlineData
+  /** nbility 等中转返回的图片文件引用：fileUri 为 CDN 图片 URL */
+  fileData?: GeminiFileData
   /** Gemini 多轮对话必需：模型生成图片时附带的签名，回传时原样保留 */
   thoughtSignature?: string
   /** snake_case 兼容（部分 API 版本） */
   thought_signature?: string
   /** Flash 思考模式下的 reasoning part，不应作为输出图展示 */
   thought?: boolean
+}
+
+interface GeminiFileData {
+  mimeType: string
+  fileUri: string
 }
 
 interface GeminiContent {
@@ -415,24 +422,28 @@ export async function executeNanoBananaTool(
     }
 
     const parts = candidate.content.parts
-    console.log(`[AI 生图] 响应包含 ${parts.length} 个 parts，类型:`, parts.map((p) => p.inlineData ? `image(${p.inlineData.mimeType})` : `text(${(p.text ?? '').slice(0, 30)})`))
+    console.log(`[AI 生图] 响应包含 ${parts.length} 个 parts，类型:`, parts.map((p) => p.inlineData ? `image(${p.inlineData.mimeType})` : (p.fileData ? `image-file(${p.fileData.mimeType})` : `text(${(p.text ?? '').slice(0, 30)})`)))
     const generatedAttachments: FileAttachment[] = []
     const textParts: string[] = []
 
     // 解析响应：提取图片和文本（跳过 thought parts，它们是推理过程图，不作为输出）
+    // 图片 part 兼容 inlineData（官方）和 fileData（nbility 中转，需下载 URL 转 base64）
+    const imageParts = await extractGeminiImageParts(parts)
+    for (const img of imageParts) {
+      if (!img) continue
+      const ext = img.mimeType === 'image/jpeg' ? '.jpg' : '.png'
+      const result = saveAttachment({
+        conversationId: context.conversationId,
+        filename: `ai-image-${randomUUID().slice(0, 8)}${ext}`,
+        mediaType: img.mimeType,
+        data: img.data,
+      })
+      generatedAttachments.push(result.attachment)
+    }
     for (const part of parts) {
       if (part.thought) continue
-      if (part.inlineData) {
-        // 保存生成的图片为附件
-        const ext = part.inlineData.mimeType === 'image/jpeg' ? '.jpg' : '.png'
-        const result = saveAttachment({
-          conversationId: context.conversationId,
-          filename: `ai-image-${randomUUID().slice(0, 8)}${ext}`,
-          mediaType: part.inlineData.mimeType,
-          data: part.inlineData.data,
-        })
-        generatedAttachments.push(result.attachment)
-      } else if (part.text) {
+      if (part.inlineData || part.fileData) continue
+      if (part.text) {
         textParts.push(part.text)
       }
     }

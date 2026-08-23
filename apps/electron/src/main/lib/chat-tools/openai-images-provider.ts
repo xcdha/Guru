@@ -187,6 +187,31 @@ export function openAIImageEndpoint(baseUrl: string, resource: 'generations' | '
 }
 
 /**
+ * Gemini 协议响应图片提取器。
+ *
+ * 兼容两种图片载体：
+ * - inlineData（Google 官方）：{ inlineData: { mimeType, data(base64) } }
+ * - fileData（nbility 中转）：{ fileData: { mimeType, fileUri(url) } }，需下载 url 转 base64
+ *
+ * 返回 [{ mimeType, data(base64) }, ...]，跳过的 part 返回 undefined。
+ */
+export async function extractGeminiImageParts(
+  parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string }; fileData?: { mimeType: string; fileUri: string }; thought?: boolean }>,
+): Promise<Array<{ mimeType: string; data: string } | undefined>> {
+  return Promise.all(parts.map(async (part) => {
+    if (part.thought) return undefined
+    if (part.inlineData) return { mimeType: part.inlineData.mimeType, data: part.inlineData.data }
+    if (part.fileData?.fileUri) {
+      const res = await fetch(part.fileData.fileUri, { signal: AbortSignal.timeout(120_000) })
+      if (!res.ok) throw new Error(`下载 fileData 图片失败 (${res.status}): ${part.fileData.fileUri.slice(0, 120)}`)
+      const buf = Buffer.from(await res.arrayBuffer())
+      return { mimeType: part.fileData.mimeType || 'image/png', data: buf.toString('base64') }
+    }
+    return undefined
+  }))
+}
+
+/**
  * 调用 OpenAI Images 兼容接口生成/编辑图片。
  * 有参考图走 /v1/images/edits（multipart），否则走 /v1/images/generations（JSON）。
  */
