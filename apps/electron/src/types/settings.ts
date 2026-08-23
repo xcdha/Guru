@@ -429,7 +429,7 @@ export const AREA_LABELS: Record<StyleAreaId, string> = {
 }
 
 /** 区域字号应用范围（px） */
-export const AREA_FONT_SIZE_LIMITS = { min: 11, max: 26 } as const
+export const AREA_FONT_SIZE_LIMITS = { min: 8, max: 26 } as const
 
 /** 默认区域样式（全部跟随主题） */
 export const DEFAULT_AREA_STYLES: AreaStyleMap = {}

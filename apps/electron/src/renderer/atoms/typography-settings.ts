@@ -21,7 +21,7 @@ export const typographySettingsAtom = atom<TypographySettings>(DEFAULT_TYPOGRAPH
 
 /** 各精细值的应用范围（px / 倍率 / px / px / 颜色值） */
 export const TYPOGRAPHY_LIMITS = {
-  fontSize: { min: 12, max: 24 },
+  fontSize: { min: 8, max: 24 },
   lineHeight: { min: 1.2, max: 2.4 },
   letterSpacing: { min: -1, max: 2 },
   paragraphSpacing: { min: 0, max: 24 },

@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import { useAtom, useAtomValue } from 'jotai'
-import { Check } from 'lucide-react'
+import { Check, Pipette } from 'lucide-react'
 import {
   SettingsSection,
   SettingsCard,
@@ -112,6 +112,7 @@ export function AppearanceSettings(): React.ReactElement {
   const [previewModePref, setPreviewModePref] = useAtom(previewModePreferenceAtom)
   const [typography, setTypography] = useAtom(typographySettingsAtom)
   const [areaStyles, setAreaStyles] = useAtom(areaStylesAtom)
+  const customTextInputRef = React.useRef<HTMLInputElement>(null)
   const isCustomActive = themeMode === 'special' && themeStyle === 'custom'
   // "主题模式"标签不再单列"主题风格"选项：选中某个预设时 themeMode 内部仍是 'special'
   // （legacy 主题的 CSS class 应用逻辑依赖这个值），标签显示哪个变体则由 themeActiveVariantAtom
@@ -326,6 +327,35 @@ export function AppearanceSettings(): React.ReactElement {
                     </button>
                   )
                 })}
+                {/* 自定义正文颜色 */}
+                <button
+                  type="button"
+                  title="自定义正文颜色"
+                  onClick={() => customTextInputRef.current?.click()}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
+                    typography.textColor && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === typography.textColor?.toLowerCase())
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+                  )}
+                >
+                  <span className="size-3.5 rounded-full border border-border/60" style={{ background: typography.textColor || 'conic-gradient(#666, #999, #666)' }} />
+                  <span className="flex items-center gap-1">
+                    <Pipette className="size-3" />
+                    自定义
+                  </span>
+                </button>
+                <input
+                  ref={customTextInputRef}
+                  type="color"
+                  value={typography.textColor || '#888888'}
+                  onChange={(e) => {
+                    const c = e.target.value
+                    if (areaStyles.body?.color) void updateAreaStyle('body', { color: undefined }).then(setAreaStyles)
+                    void updateTypographySettings({ textColor: c }).then(setTypography)
+                  }}
+                  className="sr-only"
+                />
               </div>
             </div>
 
@@ -528,6 +558,45 @@ function TypographySlider({
   )
 }
 
+/** 自定义取色按钮：点击弹出系统原生取色器（复用 Pipette 图标风格）。 */
+function CustomColorButton({
+  value,
+  onChange,
+  title,
+  className,
+}: {
+  value?: string
+  onChange: (color: string | undefined) => void
+  title: string
+  className?: string
+}): React.ReactElement {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const isCustom = Boolean(value) && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === (value ?? '').toLowerCase())
+  return (
+    <button
+      type="button"
+      title={`${title} · 自定义颜色`}
+      aria-label={`${title}自定义颜色`}
+      onClick={() => inputRef.current?.click()}
+      className={cn(
+        'flex items-center justify-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-transform hover:scale-110 hover:text-foreground',
+        isCustom && 'ring-2 ring-primary/40 border-solid',
+        className,
+      )}
+      style={isCustom ? { background: value } : undefined}
+    >
+      {isCustom ? <Check className="size-3 text-white drop-shadow" /> : <Pipette className="size-3" />}
+      <input
+        ref={inputRef}
+        type="color"
+        value={value && isCustom ? value : '#888888'}
+        onChange={(e) => onChange(e.target.value)}
+        className="sr-only"
+      />
+    </button>
+  )
+}
+
 /** Markdown 结构元素（标题/引用/表头/列表/链接/分隔线/行内码/强调）的颜色选择行：色块按钮 + 重置。 */
 function MarkdownStructureColorRow({
   label,
@@ -540,7 +609,7 @@ function MarkdownStructureColorRow({
 }): React.ReactElement {
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-8 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <span className="w-10 shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">{label}</span>
       <div className="flex flex-wrap items-center gap-2">
         {TEXT_COLOR_PRESETS.map((preset) => {
           const isActive = (value ?? '') === preset.value
@@ -559,6 +628,12 @@ function MarkdownStructureColorRow({
             />
           )
         })}
+        <CustomColorButton
+          value={value}
+          onChange={onChange}
+          title={label}
+          className="size-5"
+        />
       </div>
       {value && (
         <button
@@ -640,6 +715,12 @@ function AreaStyleEditor({
               />
             )
           })}
+          <CustomColorButton
+            value={color}
+            onChange={(c) => onChange({ color: c })}
+            title={label}
+            className="size-5"
+          />
         </div>
       </div>
     </div>
