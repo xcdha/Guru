@@ -206,12 +206,29 @@ function DetailBody({
 }: DetailBodyProps): React.ReactElement {
   const chatTools = useAtomValue(chatToolsAtom)
   const setChatTools = useSetAtom(chatToolsAtom)
+  // AI 生图当前协议：详情文案随设置中的接口协议联动
+  const [imageProvider, setImageProvider] = React.useState<'gemini' | 'openai-images'>('gemini')
+  React.useEffect(() => {
+    if (item?.id !== 'builtin:nano-banana') return
+    let cancelled = false
+    window.electronAPI.getChatToolCredentials('nano-banana')
+      .then((c) => { if (!cancelled) setImageProvider(c.provider === 'openai-images' ? 'openai-images' : 'gemini') })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [item?.id])
+
+  const reloadImageProvider = React.useCallback((): void => {
+    window.electronAPI.getChatToolCredentials('nano-banana')
+      .then((c) => setImageProvider(c.provider === 'openai-images' ? 'openai-images' : 'gemini'))
+      .catch(() => {})
+    onUserMcpChanged?.()
+  }, [onUserMcpChanged])
 
   if (!item) {
     return <p className="text-sm text-muted-foreground">未选择连接器。</p>
   }
 
-  const meta = describeConnectorDetail(item)
+  const meta = describeConnectorDetail(item, imageProvider)
   const credentialForm = credentialFormOf(item)
   const builtin = item.kind === 'builtin-mcp' ? builtinServers.find((server) => server.id === item.sourceId) : undefined
   const userEntry = item.kind === 'user-mcp' ? userEntries.find(([name]) => name === item.sourceId)?.[1] : undefined
@@ -279,7 +296,7 @@ function DetailBody({
       )}
 
       {credentialForm === 'web-search' && <WebSearchSettings embedded />}
-      {credentialForm === 'nano-banana' && <NanoBananaSettings embedded onChanged={onUserMcpChanged} />}
+      {credentialForm === 'nano-banana' && <NanoBananaSettings embedded onChanged={reloadImageProvider} />}
 
       {item.kind === 'user-mcp' && userEntry && (
         <div className="flex flex-col gap-3">

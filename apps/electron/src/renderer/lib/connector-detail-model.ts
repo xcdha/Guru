@@ -7,7 +7,11 @@ export interface ConnectorDetailMeta {
   nextStep?: string
 }
 
-export function describeConnectorDetail(item: ConnectorItem): ConnectorDetailMeta {
+export function describeConnectorDetail(
+  item: ConnectorItem,
+  /** AI 生图当前协议（仅 builtin:nano-banana 使用；不传按 gemini） */
+  imageProvider: 'gemini' | 'openai-images' = 'gemini',
+): ConnectorDetailMeta {
   // 按带 kind 命名空间的完整 id 判定，避免用户自建同名 MCP（如 mcp:web-search）误拿内置连接器的配置文案。
   switch (item.id) {
     case 'builtin:chrome-devtools':
@@ -18,12 +22,19 @@ export function describeConnectorDetail(item: ConnectorItem): ConnectorDetailMet
         nextStep: nextStepOf(item, '安装 Google Chrome 后点启用，或检查本机是否有 Node.js（npx）'),
       }
     case 'builtin:nano-banana':
-      return {
-        permissionLabel: '网络 · 调用 Gemini 生成或编辑图片',
-        configMethodLabel: 'Gemini API Key',
-        capabilities: ['按描述生成图片', '在已有图片上继续编辑'],
-        nextStep: nextStepOf(item, '填写 Gemini API Key，然后启用'),
-      }
+      return imageProvider === 'openai-images'
+        ? {
+            permissionLabel: '网络 · 调用 OpenAI Images 兼容接口生成或编辑图片',
+            configMethodLabel: 'OpenAI 协议 API Key（gpt-image 系列）',
+            capabilities: ['按描述生成图片', '在已有图片上继续编辑'],
+            nextStep: nextStepOf(item, '填写 API Key，然后启用'),
+          }
+        : {
+            permissionLabel: '网络 · 调用 Gemini 生成或编辑图片',
+            configMethodLabel: 'Gemini API Key',
+            capabilities: ['按描述生成图片', '在已有图片上继续编辑'],
+            nextStep: nextStepOf(item, '填写 Gemini API Key，然后启用'),
+          }
     case 'api:web-search':
       return {
         permissionLabel: '网络 · 调用搜索 API',
