@@ -57,10 +57,14 @@ export function applyTypographyToDOM(settings: TypographySettings): void {
   } else {
     root.removeProperty('--md-body-color')
   }
-  // Markdown 结构元素颜色（标题/引用/表格表头），undefined = 跟随主题默认
+  // Markdown 结构元素颜色（标题/引用/表格表头/列表标记/链接/分隔线/行内代码），undefined = 跟随主题默认
   setOrRemove(root, '--md-heading-color', settings.headingColor)
   setOrRemove(root, '--md-quote-color', settings.quoteColor)
   setOrRemove(root, '--md-table-head-color', settings.tableHeaderColor)
+  setOrRemove(root, '--md-list-marker-color', settings.listMarkerColor)
+  setOrRemove(root, '--md-link-color', settings.linkColor)
+  setOrRemove(root, '--md-hr-color', settings.hrColor)
+  setOrRemove(root, '--md-inline-code-color', settings.inlineCodeColor)
 }
 
 /** 设置或移除一个 :root CSS 变量（空值移除，回落到主题默认）。 */

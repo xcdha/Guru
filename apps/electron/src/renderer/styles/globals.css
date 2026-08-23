@@ -1133,12 +1133,14 @@ html.theme-custom body {
   backdrop-filter: var(--app-sidebar-backdrop-filter, none);
 }
 
-/* Markdown 链接默认无自定义色，会退化成浏览器原生蓝/紫，与 Scenic 暖色玻璃背景冲突；
-   统一走主题 accent（Haze 为暖琥珀）。当前只有 Haze 是 Scenic，不影响其他主题。 */
-.theme-scenic .message-response a,
-.theme-scenic .message-response a:visited {
-  color: hsl(var(--accent));
-  text-decoration-color: hsl(var(--accent) / 0.5);
+/* Markdown 链接：统一走主题 accent（避免退化浏览器原生蓝/紫），
+   支持 --md-link-color 覆盖（正文排版·结构元素颜色）。
+   原 Scenic 主题用 accent 是避免与暖色玻璃背景冲突；此处统一让所有主题的链接
+   都走 accent 兜底且可被 md-link-color 覆盖。 */
+.message-response a,
+.message-response a:visited {
+  color: var(--md-link-color, hsl(var(--accent)));
+  text-decoration-color: color-mix(in srgb, var(--md-link-color, hsl(var(--accent))) 50%, transparent);
 }
 
 :root:not(.ui-classic) .refined-sidebar {
@@ -1492,7 +1494,7 @@ html.theme-custom body {
 }
 
 :root:not(.ui-classic) .message-response li::marker {
-  color: hsl(var(--foreground) / 0.38);
+  color: var(--md-list-marker-color, hsl(var(--foreground) / 0.38));
 }
 
 :root:not(.ui-classic) .message-response blockquote {
@@ -1508,7 +1510,14 @@ html.theme-custom body {
 }
 
 :root:not(.ui-classic) .message-response hr {
-  border-color: hsl(var(--foreground) / 0.07);
+  border-color: var(--md-hr-color, hsl(var(--foreground) / 0.07));
+}
+
+/* 行内代码文字色（排除代码块 pre 内的 code——那走 --area-code-*），
+   支持 --md-inline-code-color 覆盖，默认跟随正文色。 */
+:root:not(.ui-classic) .message-response :not(pre) > code,
+:root.ui-classic .message-response :not(pre) > code {
+  color: var(--md-inline-code-color, inherit);
 }
 
 :root:not(.ui-classic) .message-response .code-block-wrapper {

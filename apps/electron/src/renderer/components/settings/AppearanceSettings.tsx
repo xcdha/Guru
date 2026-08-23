@@ -329,7 +329,7 @@ export function AppearanceSettings(): React.ReactElement {
               </div>
             </div>
 
-            {/* Markdown 结构元素颜色（标题/引用/表头）：单独覆盖，不影响正文色 */}
+            {/* Markdown 结构元素颜色（标题/引用/表头/列表/链接/分隔线/行内码）：单独覆盖，不影响正文色 */}
             <div>
               <div className="mb-2 text-[11px] font-medium text-muted-foreground">Markdown 结构元素颜色</div>
               <div className="space-y-1.5">
@@ -347,6 +347,26 @@ export function AppearanceSettings(): React.ReactElement {
                   label="表头"
                   value={typography.tableHeaderColor}
                   onChange={async (v) => setTypography(await updateTypographySettings({ tableHeaderColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="列表"
+                  value={typography.listMarkerColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ listMarkerColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="链接"
+                  value={typography.linkColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ linkColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="分隔线"
+                  value={typography.hrColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ hrColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="行内码"
+                  value={typography.inlineCodeColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ inlineCodeColor: v }))}
                 />
               </div>
             </div>
