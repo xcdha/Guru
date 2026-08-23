@@ -214,29 +214,30 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
 
   console.log(`[OpenAI Images] ${isEdit ? 'edits(multipart)' : 'generations'}: model=${options.model}, size=${size}, refs=${refImages.length}`)
 
-  let response: Response
-  if (isEdit) {
-    const form = new FormData()
-    form.append('model', options.model)
-    form.append('prompt', prompt)
-    form.append('n', String(n))
-    if (size && size !== 'auto') form.append('size', size)
-    form.append('response_format', 'b64_json')
-    // 单图用 image 字段，多图用 image[] 数组字段（与主流网关兼容）
-    const fieldName = refImages.length > 1 ? 'image[]' : 'image'
-    for (const img of refImages) {
-      const bytes = Buffer.from(img.data, 'base64')
-      const ext = img.mimeType === 'image/jpeg' ? 'jpg' : 'png'
-      form.append(fieldName, new Blob([new Uint8Array(bytes)], { type: img.mimeType }), `reference.${ext}`)
+  // 单次构建请求体 + 发送；返回 response 或抛错。
+  const buildAndSend = (): Promise<Response> => {
+    if (isEdit) {
+      const form = new FormData()
+      form.append('model', options.model)
+      form.append('prompt', prompt)
+      form.append('n', String(n))
+      if (size && size !== 'auto') form.append('size', size)
+      form.append('response_format', 'b64_json')
+      // 单图用 image 字段，多图用 image[] 数组字段（与主流网关兼容）
+      const fieldName = refImages.length > 1 ? 'image[]' : 'image'
+      for (const img of refImages) {
+        const bytes = Buffer.from(img.data, 'base64')
+        const ext = img.mimeType === 'image/jpeg' ? 'jpg' : 'png'
+        form.append(fieldName, new Blob([new Uint8Array(bytes)], { type: img.mimeType }), `reference.${ext}`)
+      }
+      return fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${options.apiKey}` },
+        body: form,
+        signal: AbortSignal.timeout(600_000),
+      })
     }
-    response = await fetch(url, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${options.apiKey}` },
-      body: form,
-      signal: AbortSignal.timeout(600_000),
-    })
-  } else {
-    response = await fetch(url, {
+    return fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${options.apiKey}`,
@@ -253,13 +254,56 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
     })
   }
 
-  if (!response.ok) {
+  /** 网络/服务端类错误（可重试）：fetch 失败、超时、429、5xx。业务 4xx 不重试。 */
+  const isRetryable = (err: unknown): boolean => {
+    if (err instanceof Error) {
+      const msg = err.message
+      // fetch 失败/超时/连接中断
+      if (/fetch failed|abort|timed out|ECONN|ECONNRESET|socket|network/i.test(msg)) return true
+      return false
+    }
+    return false
+  }
+
+  const MAX_ATTEMPTS = 2
+  let lastRetryable = false
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let response: Response
+    try {
+      response = await buildAndSend()
+    } catch (err) {
+      lastRetryable = isRetryable(err)
+      if (attempt < MAX_ATTEMPTS && lastRetryable) {
+        notes.push('网络抖动，已自动重试')
+        await sleep(RETRY_DELAY_MS)
+        continue
+      }
+      throw err
+    }
+
+    if (response.ok) {
+      const payload = await response.json()
+      const parsed = await parseImageResponse(payload, options.apiKey)
+      return { images: parsed.images, notes: [...notes, ...parsed.notes] }
+    }
+
     const errorText = await response.text()
+    // 429 / 5xx 视为可重试
+    const retryableStatus = response.status === 429 || response.status >= 500
+    if (attempt < MAX_ATTEMPTS && retryableStatus) {
+      notes.push(`服务端 ${response.status}，已自动重试`)
+      await sleep(RETRY_DELAY_MS)
+      continue
+    }
     throw new Error(`请求失败 (${response.status}): ${errorText.slice(0, 300)}`)
   }
 
-  const payload = await response.json()
-  const parsed = await parseImageResponse(payload, options.apiKey)
+  throw new Error('请求失败（重试次数已耗尽）')
+}
 
-  return { images: parsed.images, notes: [...notes, ...parsed.notes] }
+/** 自动重试间隔（毫秒） */
+const RETRY_DELAY_MS = 5000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
