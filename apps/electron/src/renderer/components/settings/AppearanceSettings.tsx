@@ -112,7 +112,6 @@ export function AppearanceSettings(): React.ReactElement {
   const [previewModePref, setPreviewModePref] = useAtom(previewModePreferenceAtom)
   const [typography, setTypography] = useAtom(typographySettingsAtom)
   const [areaStyles, setAreaStyles] = useAtom(areaStylesAtom)
-  const customTextInputRef = React.useRef<HTMLInputElement>(null)
   const isCustomActive = themeMode === 'special' && themeStyle === 'custom'
   // "主题模式"标签不再单列"主题风格"选项：选中某个预设时 themeMode 内部仍是 'special'
   // （legacy 主题的 CSS class 应用逻辑依赖这个值），标签显示哪个变体则由 themeActiveVariantAtom
@@ -331,9 +330,8 @@ export function AppearanceSettings(): React.ReactElement {
                 <button
                   type="button"
                   title="自定义正文颜色"
-                  onClick={() => customTextInputRef.current?.click()}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
+                    'relative flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
                     typography.textColor && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === typography.textColor?.toLowerCase())
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
@@ -344,9 +342,10 @@ export function AppearanceSettings(): React.ReactElement {
                     <Pipette className="size-3" />
                     自定义
                   </span>
-                  {/* input 放按钮内部：系统取色器锚定在按钮处，避免取色器出现在窗口底部 */}
+                  {/* 透明 input 铺满按钮（不用 sr-only）：系统取色器锚定在 input 处，
+                      sr-only 会把 input 裁剪到不可预测位置导致弹窗出现在窗口底部；
+                      铺满后点击按钮即点击 input，无需 ref 转发 */}
                   <input
-                    ref={customTextInputRef}
                     type="color"
                     value={typography.textColor || '#888888'}
                     onChange={(e) => {
@@ -354,7 +353,7 @@ export function AppearanceSettings(): React.ReactElement {
                       if (areaStyles.body?.color) void updateAreaStyle('body', { color: undefined }).then(setAreaStyles)
                       void updateTypographySettings({ textColor: c }).then(setTypography)
                     }}
-                    className="sr-only"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   />
                 </button>
               </div>
@@ -571,28 +570,26 @@ function CustomColorButton({
   title: string
   className?: string
 }): React.ReactElement {
-  const inputRef = React.useRef<HTMLInputElement>(null)
   const isCustom = Boolean(value) && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === (value ?? '').toLowerCase())
   return (
     <button
       type="button"
       title={`${title} · 自定义颜色`}
       aria-label={`${title}自定义颜色`}
-      onClick={() => inputRef.current?.click()}
       className={cn(
-        'flex items-center justify-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-transform hover:scale-110 hover:text-foreground',
+        'relative flex items-center justify-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-transform hover:scale-110 hover:text-foreground',
         isCustom && 'ring-2 ring-primary/40 border-solid',
         className,
       )}
       style={isCustom ? { background: value } : undefined}
     >
       {isCustom ? <Check className="size-3 text-white drop-shadow" /> : <Pipette className="size-3" />}
+      {/* 透明 input 铺满按钮：取色器弹窗必然锚定在按钮处（sr-only 裁剪锚点不可控） */}
       <input
-        ref={inputRef}
         type="color"
         value={value && isCustom ? value : '#888888'}
         onChange={(e) => onChange(e.target.value)}
-        className="sr-only"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
       />
     </button>
   )

@@ -9,6 +9,9 @@
  */
 
 import { Type } from 'typebox'
+import { randomUUID } from 'node:crypto'
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
+import { extname, resolve, isAbsolute, join } from 'node:path'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
 import type { AgentToolResult } from '@earendil-works/pi-agent-core'
 import type { AgentRuntime, MyYodaPermissionMode } from '@myyoda/shared'
@@ -70,6 +73,9 @@ import {
 } from '../web-search-service'
 import { browserController } from '../browser-controller'
 import { resolveBrowserProfileKey } from '../browser-profile-policy'
+import { getToolCredentials } from '../chat-tool-config'
+import { saveAttachment, isImageAttachment } from '../attachment-service'
+import { callOpenAIImages, OPENAI_IMAGES_DEFAULT_BASE_URL, OPENAI_IMAGES_DEFAULT_MODEL } from '../chat-tools/openai-images-provider'
 import {
   automationCreateToolParameters,
   discardInapplicableAutomationScheduleFields,
@@ -1118,7 +1124,161 @@ export async function buildPiBuiltinTools(
     }
   }
 
-  // nano-banana 当前走外部 MCP stdio，不需要 in-process 桥接
+// ===== AI 生图（nano-banana / gpt-image 双协议） =====
+
+/** 已知图片扩展名 → MIME 类型映射 */
+const IMAGE_EXT_TO_MIME: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+}
+
+/** 从本地路径读参考图（相对路径基于 agentCwd 解析），返回 base64 + mime */
+function readRefImagesFromPaths(paths: unknown, cwd?: string): Array<{ mimeType: string; data: string }> {
+  const out: Array<{ mimeType: string; data: string }> = []
+  if (!Array.isArray(paths)) return out
+  for (const raw of paths) {
+    if (typeof raw !== 'string' || !raw) continue
+    try {
+      const filePath = isAbsolute(raw) ? raw : resolve(cwd ?? process.cwd(), raw)
+      if (!existsSync(filePath)) continue
+      const mimeType = IMAGE_EXT_TO_MIME[extname(filePath).toLowerCase()]
+      if (!mimeType || !isImageAttachment(mimeType)) continue
+      out.push({ mimeType, data: readFileSync(filePath).toString('base64') })
+    } catch (error) {
+      console.warn('[AI 生图] 读取参考图失败:', raw, error)
+    }
+  }
+  return out
+}
+
+/**
+ * AI 生图工具（Agent 模式）。
+ *
+ * 上游遗留问题：连接器里的 nano-banana 开关只记录状态，从未向 Pi 会话注入任何工具；
+ * nano-banana-mcp.ts 的执行体是 Claude SDK 时代遗留死代码。此处在开关开启且已配 key 时
+ * 注入 generate_image，复用 openai-images-provider 双协议适配。
+ */
+function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinition[] {
+  if (!isBuiltinMcpUserEnabled('nano-banana')) return []
+  const credentials = getToolCredentials('nano-banana')
+  if (!credentials.apiKey) return []
+
+  const provider = credentials.provider?.trim() || 'gemini'
+  const isOpenAI = provider === 'openai-images'
+  const baseUrl = credentials.baseUrl?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_BASE_URL : 'https://generativelanguage.googleapis.com')
+  const model = credentials.model?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_MODEL : 'gemini-3.1-flash-image-preview')
+
+  return [
+    sdk.defineTool({
+      name: 'generate_image',
+      label: '生成图片',
+      description: `Generate or edit images with AI (${isOpenAI ? 'OpenAI Images protocol' : 'Gemini image generation'}). Supports text-to-image and reference-image editing. For edits, pass local paths of reference images (e.g. previously generated images saved under generated-images/).`,
+      promptSnippet: 'generate_image: generate or edit images. Describe edits in English for best results; pass referenceImagePaths to edit existing images.',
+      parameters: Type.Object({
+        prompt: Type.String({ description: 'Detailed description of the image to generate or the edits to make.' }),
+        aspectRatio: Type.Optional(Type.Union(['1:1', '16:9', '4:3', '9:16', '3:4'].map((v) => Type.Literal(v)), { description: 'Aspect ratio. Default 1:1.' })),
+        imageSize: Type.Optional(Type.Union(['auto', '1K', '2K', '4K'].map((v) => Type.Literal(v)), { description: 'Resolution tier. Default auto.' })),
+        numberOfImages: Type.Optional(Type.Number({ description: 'Number of images to generate (1-4, default 1).' })),
+        referenceImagePaths: Type.Optional(Type.Array(Type.String(), { description: 'Local paths of images to edit/use as reference. Relative paths resolve against the agent working directory.' })),
+      }),
+      async execute(_toolCallId, params) {
+        const args = params as Record<string, unknown>
+        const prompt = typeof args.prompt === 'string' ? args.prompt.trim() : ''
+        if (!prompt) throw new Error('prompt 必填')
+        const aspectRatio = typeof args.aspectRatio === 'string' ? args.aspectRatio : undefined
+        const imageSize = typeof args.imageSize === 'string' ? args.imageSize : undefined
+        const numberOfImages = typeof args.numberOfImages === 'number' ? args.numberOfImages : 1
+        const refImages = readRefImagesFromPaths(args.referenceImagePaths, ctx.agentCwd)
+
+        let images: Array<{ mimeType: string; data: string }> = []
+        const notes: string[] = []
+
+        if (isOpenAI) {
+          const result = await callOpenAIImages({ baseUrl, apiKey: credentials.apiKey!, model, prompt, refImages, aspectRatio, imageSize, numberOfImages })
+          images = result.images
+          notes.push(...result.notes)
+        } else {
+          // Gemini 协议：header 认证 + responseModalities TEXT/IMAGE
+          const parts: Array<Record<string, unknown>> = [
+            ...refImages.map((img) => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
+            { text: prompt },
+          ]
+          const imageConfig: Record<string, unknown> = {}
+          if (aspectRatio && aspectRatio !== '1:1') imageConfig.aspectRatio = aspectRatio
+          if (imageSize && imageSize !== 'auto') imageConfig.imageSize = imageSize
+          const body = {
+            contents: [{ role: 'user', parts }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(Object.keys(imageConfig).length > 0 ? { imageConfig } : {}) },
+          }
+          const url = `${baseUrl.replace(/\/$/, '')}/v1beta/models/${model}:generateContent`
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credentials.apiKey! },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(600_000),
+          })
+          if (!response.ok) {
+            throw new Error(`Gemini API 请求失败 (${response.status}): ${(await response.text()).slice(0, 300)}`)
+          }
+          const data = (await response.json()) as {
+            candidates?: Array<{ content?: { parts?: Array<{ text?: string; inlineData?: { mimeType: string; data: string }; thought?: boolean }> } }>
+            error?: { message?: string }
+          }
+          if (data.error?.message) throw new Error(`Gemini API 错误: ${data.error.message}`)
+          const outParts = data.candidates?.[0]?.content?.parts ?? []
+          for (const p of outParts) {
+            if (p.thought) continue
+            if (p.inlineData) images.push(p.inlineData)
+          }
+        }
+
+        if (images.length === 0) throw new Error('未生成任何图片')
+
+        // 保存为会话附件 + 写入 Agent 工作目录（供后续编辑引用）
+        const content: Array<{ type: 'text' | 'image'; text?: string; data?: string; mimeType?: string }> = []
+        const savedPaths: string[] = []
+        for (const img of images.slice(0, 4)) {
+          saveAttachment({
+            conversationId: ctx.sessionId,
+            filename: `ai-image-${randomUUID().slice(0, 8)}${img.mimeType === 'image/jpeg' ? '.jpg' : '.png'}`,
+            mediaType: img.mimeType,
+            data: img.data,
+          })
+          content.push({ type: 'image', data: img.data, mimeType: img.mimeType })
+          if (ctx.agentCwd) {
+            try {
+              const imgDir = join(ctx.agentCwd, 'generated-images')
+              mkdirSync(imgDir, { recursive: true })
+              const wsPath = join(imgDir, `ai-image-${randomUUID().slice(0, 8)}${img.mimeType === 'image/jpeg' ? '.jpg' : '.png'}`)
+              writeFileSync(wsPath, Buffer.from(img.data, 'base64'))
+              savedPaths.push(wsPath)
+            } catch (err) {
+              console.warn('[AI 生图] 写入工作目录失败:', err)
+            }
+          }
+        }
+
+        const noteText = notes.length > 0 ? `\n说明: ${notes.join('; ')}` : ''
+        const pathText = savedPaths.length > 0 ? `\n图片已保存到工作目录:\n${savedPaths.map((p) => `- ${p}`).join('\n')}` : ''
+        content.push({ type: 'text', text: `图片已生成（${images.length} 张，展示前 4 张）${pathText}${noteText}` })
+        return { content, details: { count: images.length, savedPaths } } as unknown as AgentToolResult<unknown>
+      },
+    }),
+  ] as unknown as ToolDefinition[]
+}
+
+// ===== 视觉助手 / 受管浏览器等（原有内容） =====
+
+  // AI 生图桥接（连接器开关开启且已配 key 时注入，Gemini / GPT-Image 双协议）
+  try {
+    tools.push(...buildNanoBananaTools(sdk, ctx))
+  } catch (error) {
+    console.error('[Pi 桥接] 注入 AI 生图工具失败:', error)
+  }
 
   // Pi-native 受管浏览器不经过 MCP：网页 WebContents 和 CDP 永远停留在主进程。
   // 用户会话、自动任务与协作子会话共用同一套受管浏览器能力，仍受 URL、下载和权限策略约束。
