@@ -239,6 +239,11 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
 
   console.log(`[OpenAI Images] ${isEdit ? 'edits(multipart)' : 'generations'}: model=${options.model}, size=${size}, refs=${refImages.length}`)
 
+  // 生成使用 size || 默认 1024x1024：
+  // nbility 等中转在未显式传 size 时默认生成更大图，时延高（22-36s），
+  // 容易超过 Agent 工具执行超时。默认固定小图 1024x1024 显著提速。
+  const genSize = size && size !== 'auto' ? size : '1024x1024'
+
   // 单次构建请求体 + 发送；返回 response 或抛错。
   const buildAndSend = (): Promise<Response> => {
     if (isEdit) {
@@ -246,7 +251,7 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
       form.append('model', options.model)
       form.append('prompt', prompt)
       form.append('n', String(n))
-      if (size && size !== 'auto') form.append('size', size)
+      form.append('size', genSize)
       form.append('response_format', 'b64_json')
       // 单图用 image 字段，多图用 image[] 数组字段（与主流网关兼容）
       const fieldName = refImages.length > 1 ? 'image[]' : 'image'
@@ -272,7 +277,7 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
         model: options.model,
         prompt,
         n,
-        ...(size && size !== 'auto' ? { size } : {}),
+        size: genSize,
         response_format: 'b64_json',
       }),
       signal: AbortSignal.timeout(600_000),
