@@ -71,6 +71,7 @@ export function applyTypographyToDOM(settings: TypographySettings): void {
   setOrRemove(root, '--md-link-color', settings.linkColor)
   setOrRemove(root, '--md-hr-color', settings.hrColor)
   setOrRemove(root, '--md-inline-code-color', settings.inlineCodeColor)
+  setOrRemove(root, '--md-emphasis-color', settings.emphasisColor)
 }
 
 /** 设置或移除一个 :root CSS 变量（空值移除，回落到主题默认）。 */

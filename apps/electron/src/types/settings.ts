@@ -385,6 +385,8 @@ export interface TypographySettings {
   hrColor?: string
   /** 行内代码文字颜色 */
   inlineCodeColor?: string
+  /** 强调文字颜色（strong/em/b/i 加粗、斜体） */
+  emphasisColor?: string
 }
 
 /** 默认排版设置（fontSize undefined = 跟随档位） */
@@ -401,6 +403,7 @@ export const DEFAULT_TYPOGRAPHY_SETTINGS: TypographySettings = {
   linkColor: undefined,
   hrColor: undefined,
   inlineCodeColor: undefined,
+  emphasisColor: undefined,
 }
 
 /** 可自定义样式的 UI 区域 */

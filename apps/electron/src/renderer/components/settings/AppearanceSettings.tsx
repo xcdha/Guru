@@ -329,10 +329,10 @@ export function AppearanceSettings(): React.ReactElement {
               </div>
             </div>
 
-            {/* Markdown 结构元素颜色（标题/引用/表头/列表/链接/分隔线/行内码）：单独覆盖，不影响正文色 */}
+            {/* Markdown 结构元素颜色（标题/引用/表头/列表/链接/分隔线/行内码/强调）：单独覆盖，不影响正文色 */}
             <div>
               <div className="mb-2 text-[11px] font-medium text-muted-foreground">Markdown 结构元素颜色</div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <MarkdownStructureColorRow
                   label="标题"
                   value={typography.headingColor}
@@ -367,6 +367,11 @@ export function AppearanceSettings(): React.ReactElement {
                   label="行内码"
                   value={typography.inlineCodeColor}
                   onChange={async (v) => setTypography(await updateTypographySettings({ inlineCodeColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="强调"
+                  value={typography.emphasisColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ emphasisColor: v }))}
                 />
               </div>
             </div>
@@ -523,7 +528,7 @@ function TypographySlider({
   )
 }
 
-/** Markdown 结构元素（标题/引用/表头）的颜色选择行：色块按钮 + 重置。 */
+/** Markdown 结构元素（标题/引用/表头/列表/链接/分隔线/行内码/强调）的颜色选择行：色块按钮 + 重置。 */
 function MarkdownStructureColorRow({
   label,
   value,
@@ -534,9 +539,9 @@ function MarkdownStructureColorRow({
   onChange: (color: string | undefined) => void
 }): React.ReactElement {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 py-0.5">
       <span className="w-8 shrink-0 text-[11px] text-muted-foreground">{label}</span>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         {TEXT_COLOR_PRESETS.map((preset) => {
           const isActive = (value ?? '') === preset.value
           return (
@@ -683,7 +688,8 @@ function StylePreview(): React.ReactElement {
                 </a>
                 、{' '}
                 <code style={{ color: 'var(--md-inline-code-color, inherit)' }}>行内代码</code>
-                {' '}的颜色随左侧设置即时变化。
+                、<strong style={{ color: 'var(--md-emphasis-color, inherit)' }}>强调文字</strong>{' '}
+                的颜色随左侧设置即时变化。
               </p>
               <blockquote
                 className="my-[var(--md-body-paragraph-spacing)]"

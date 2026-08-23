@@ -1447,6 +1447,14 @@ html.theme-custom body {
   text-wrap: balance;
 }
 
+/* 强调文字（strong/em/b/i）：Tailwind Typography 用 --tw-prose-bold 给 strong 独立色，
+   绕过 --md-body-color 继承致其不变色；这里显式接管，支持 --md-emphasis-color 覆盖，
+   未设置时回落 --tw-prose-bold（跟随正文）。 */
+:root:not(.ui-classic) .message-response :is(strong, em, b, i),
+:root.ui-classic .message-response :is(strong, em, b, i) {
+  color: var(--md-emphasis-color, var(--tw-prose-bold, inherit));
+}
+
 /* text-wrap: pretty/balance 是为长报告排版设计的换行优化算法，用于避免大段文字末行
    出现孤字。对极短的用户回复（尤其是没有空格可断行的 CJK 文本）套用同一套启发式，
    反而会被 Chromium 的换行引擎判定为"需要断行"，出现「3 个字被拆成 2+1」这种反直觉
@@ -3201,4 +3209,9 @@ html.theme-custom body {
 :root:not(.ui-classic) .markdown-editor :not(pre) > code,
 :root.ui-classic .markdown-editor :not(pre) > code {
   color: var(--md-inline-code-color, inherit);
+}
+
+:root:not(.ui-classic) .markdown-editor :is(strong, em, b, i),
+:root.ui-classic .markdown-editor :is(strong, em, b, i) {
+  color: var(--md-emphasis-color, var(--tw-prose-bold, inherit));
 }

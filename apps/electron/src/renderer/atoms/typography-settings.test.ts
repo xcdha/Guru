@@ -53,7 +53,7 @@ afterEach(() => {
 })
 
 describe('TypographySettings 默认值（Markdown 结构元素颜色）', () => {
-  test('默认包含全部 7 个结构元素颜色字段，且均为 undefined（跟随主题）', () => {
+  test('默认包含全部 8 个结构元素颜色字段，且均为 undefined（跟随主题）', () => {
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.headingColor).toBeUndefined()
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.quoteColor).toBeUndefined()
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.tableHeaderColor).toBeUndefined()
@@ -61,6 +61,7 @@ describe('TypographySettings 默认值（Markdown 结构元素颜色）', () => 
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.linkColor).toBeUndefined()
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.hrColor).toBeUndefined()
     expect(DEFAULT_TYPOGRAPHY_SETTINGS.inlineCodeColor).toBeUndefined()
+    expect(DEFAULT_TYPOGRAPHY_SETTINGS.emphasisColor).toBeUndefined()
   })
 })
 
@@ -73,8 +74,9 @@ describe('applyTypographyToDOM 写入 / 移除结构元素颜色变量', () => {
       tableHeaderColor: '#1f4e5f',
       listMarkerColor: '#b7a4d4',
       linkColor: '#408abf',
-      hrColor: '#a89880',
+      hrColor: '#a89860',
       inlineCodeColor: '#f4f1ec',
+      emphasisColor: '#1f4e5f',
     })
 
     const vars = fakeStyle.toVarMap()
@@ -83,8 +85,9 @@ describe('applyTypographyToDOM 写入 / 移除结构元素颜色变量', () => {
     expect(vars['--md-table-head-color']).toBe('#1f4e5f')
     expect(vars['--md-list-marker-color']).toBe('#b7a4d4')
     expect(vars['--md-link-color']).toBe('#408abf')
-    expect(vars['--md-hr-color']).toBe('#a89880')
+    expect(vars['--md-hr-color']).toBe('#a89860')
     expect(vars['--md-inline-code-color']).toBe('#f4f1ec')
+    expect(vars['--md-emphasis-color']).toBe('#1f4e5f')
   })
 
   test('字段为空时移除对应变量（恢复到主题默认）', () => {
@@ -122,11 +125,12 @@ describe('globals.css 消费规则（合并丢失回归防护）', () => {
     expect(css).toContain('var(--md-table-head-color')
   })
 
-  test('列表标记/链接/分隔线/行内代码消费各自变量', () => {
+  test('列表标记/链接/分隔线/行内码/强调消费各自变量', () => {
     expect(css).toContain('var(--md-list-marker-color')
     expect(css).toContain('var(--md-link-color')
     expect(css).toContain('var(--md-hr-color')
     expect(css).toContain('var(--md-inline-code-color')
+    expect(css).toContain('var(--md-emphasis-color')
   })
 
   test('正文排版消费规则标记仍在（我们独有：正文排版）且标题规则覆盖 h1-h6', () => {
