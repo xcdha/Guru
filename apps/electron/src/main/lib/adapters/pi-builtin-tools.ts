@@ -1239,7 +1239,8 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
         if (images.length === 0) throw new Error('未生成任何图片')
 
         // 保存为会话附件 + 写入 Agent 工作目录（供后续编辑引用）
-        const content: Array<{ type: 'text' | 'image'; text?: string; data?: string; mimeType?: string }> = []
+        // 只回传文字结果（图片路径），不把图片塞进 content ——
+        // 否则图片会以 image_url 格式进入模型上下文，不支持视觉的对话模型会报 400。
         const savedPaths: string[] = []
         for (const img of images.slice(0, 4)) {
           saveAttachment({
@@ -1248,7 +1249,6 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
             mediaType: img.mimeType,
             data: img.data,
           })
-          content.push({ type: 'image', data: img.data, mimeType: img.mimeType })
           if (ctx.agentCwd) {
             try {
               const imgDir = join(ctx.agentCwd, 'generated-images')
@@ -1264,8 +1264,10 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
 
         const noteText = notes.length > 0 ? `\n说明: ${notes.join('; ')}` : ''
         const pathText = savedPaths.length > 0 ? `\n图片已保存到工作目录:\n${savedPaths.map((p) => `- ${p}`).join('\n')}` : ''
-        content.push({ type: 'text', text: `图片已生成（${images.length} 张，展示前 4 张）${pathText}${noteText}` })
-        return { content, details: { count: images.length, savedPaths } } as unknown as AgentToolResult<unknown>
+        return {
+          content: [{ type: 'text', text: `图片已生成（${images.length} 张，展示前 4 张）${pathText}${noteText}` }],
+          details: { count: images.length, savedPaths },
+        } as unknown as AgentToolResult<unknown>
       },
     }),
   ] as unknown as ToolDefinition[]
