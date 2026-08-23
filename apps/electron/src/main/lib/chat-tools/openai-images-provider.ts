@@ -172,11 +172,25 @@ async function parseImageResponse(payload: unknown, apiKey: string): Promise<{ i
 // ===== 主入口 =====
 
 /**
+ * 归一化 OpenAI 兼容 baseUrl 并生成资源端点。
+ *
+ * 兼容三种写法：
+ * - https://api.openai.com/v1  → https://api.openai.com/v1/images/generations
+ * - https://api.nbility.ai/v1  → https://api.nbility.ai/v1/images/generations
+ * - https://api.nbility.ai    → https://api.nbility.ai/v1/images/generations
+ * 避免 baseUrl 已带 /v1 时重复拼成 /v1/v1。
+ */
+export function openAIImageEndpoint(baseUrl: string, resource: 'generations' | 'edits'): string {
+  const base = baseUrl.replace(/\/$/, '')
+  const normalized = base.endsWith('/v1') ? base : `${base}/v1`
+  return `${normalized}/images/${resource}`
+}
+
+/**
  * 调用 OpenAI Images 兼容接口生成/编辑图片。
  * 有参考图走 /v1/images/edits（multipart），否则走 /v1/images/generations（JSON）。
  */
 export async function callOpenAIImages(options: OpenAIImageOptions): Promise<OpenAIImageResult> {
-  const base = options.baseUrl.replace(/\/$/, '')
   const notes: string[] = []
 
   // prompt 截断保护（gpt-image 系列上限 1000 字符）
@@ -196,7 +210,7 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
 
   const refImages = options.refImages ?? []
   const isEdit = refImages.length > 0
-  const url = isEdit ? `${base}/v1/images/edits` : `${base}/v1/images/generations`
+  const url = openAIImageEndpoint(options.baseUrl, isEdit ? 'edits' : 'generations')
 
   console.log(`[OpenAI Images] ${isEdit ? 'edits(multipart)' : 'generations'}: model=${options.model}, size=${size}, refs=${refImages.length}`)
 

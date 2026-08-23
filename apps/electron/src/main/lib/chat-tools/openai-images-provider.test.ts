@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { mapToOpenAISize } from './openai-images-provider'
+import { mapToOpenAISize, openAIImageEndpoint } from './openai-images-provider'
 
 describe('mapToOpenAISize', () => {
   test('默认/1K 档按方向映射', () => {
@@ -35,5 +35,16 @@ describe('mapToOpenAISize', () => {
     expect(unknown.size).toBe('1024x1024')
     expect(unknown.note).toContain('回退')
     expect(mapToOpenAISize('4:3', 'auto').note).toBeTruthy()
+  })
+})
+
+describe('openAIImageEndpoint', () => {
+  test('baseUrl 已带 /v1 不再重复拼', () => {
+    expect(openAIImageEndpoint('https://api.openai.com/v1', 'generations')).toBe('https://api.openai.com/v1/images/generations')
+    expect(openAIImageEndpoint('https://api.nbility.ai/v1', 'generations')).toBe('https://api.nbility.ai/v1/images/generations')
+  })
+  test('baseUrl 不带 /v1 则补上', () => {
+    expect(openAIImageEndpoint('https://api.nbility.ai', 'generations')).toBe('https://api.nbility.ai/v1/images/generations')
+    expect(openAIImageEndpoint('https://api.nbility.ai/', 'edits')).toBe('https://api.nbility.ai/v1/images/edits')
   })
 })
