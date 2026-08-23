@@ -488,7 +488,7 @@ export function MainArea(): React.ReactElement {
             >
               {!rightPanelClosing && (
                 <div
-                  className="w-[8px] cursor-col-resize bg-border/40 hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0 self-stretch"
+                  className="w-[8px] cursor-col-resize bg-border/40 hover:bg-border/60 active:bg-border/80 transition-colors flex-shrink-0 self-stretch"
                   onMouseDown={handlePreviewDragStart}
                 />
               )}
@@ -512,7 +512,7 @@ export function MainArea(): React.ReactElement {
                 )}
                 {showBothRightPanels && (
                   <div
-                    className="w-[8px] cursor-col-resize bg-border/40 hover:bg-primary/30 active:bg-primary/50 transition-colors flex-shrink-0 self-stretch"
+                    className="w-[8px] cursor-col-resize bg-border/40 hover:bg-border/60 active:bg-border/80 transition-colors flex-shrink-0 self-stretch"
                     onMouseDown={handleRightWorkspaceDragStart}
                   />
                 )}

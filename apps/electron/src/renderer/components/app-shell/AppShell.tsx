@@ -222,7 +222,7 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
                 <LeftSidebar width={clampedLeftSidebarWidth} noTransition={isDraggingLeftSidebar} />
                 <div
                   className={cn(
-                    'absolute right-0 top-0 bottom-0 w-4 translate-x-1/2 cursor-col-resize hover:bg-primary/5 active:bg-primary/50 transition-colors z-20'
+                    'absolute right-0 top-0 bottom-0 w-4 translate-x-1/2 cursor-col-resize hover:bg-border/40 active:bg-border/70 transition-colors z-20'
                   )}
                   onMouseDown={handleLeftSidebarMouseDown}
                 />
@@ -255,7 +255,7 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
                 {isPanelOpen && (
                   <div
                     className={cn(
-                      'absolute left-0 top-0 bottom-0 w-[8px] -translate-x-1/2 cursor-col-resize active:bg-primary/50 transition-colors',
+                      'absolute left-0 top-0 bottom-0 w-[8px] -translate-x-1/2 cursor-col-resize hover:bg-border/40 active:bg-border/70 transition-colors',
                       isClassic ? 'z-10' : 'z-20'
                     )}
                     onMouseDown={handleMouseDown}

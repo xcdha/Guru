@@ -594,7 +594,7 @@ function StylePreview(): React.ReactElement {
                 <span>复制</span>
               </div>
               <pre
-                className="m-0 min-h-[64px] overflow-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
+                className="m-0 min-h-[32px] overflow-auto bg-[hsl(var(--code-bg))] px-3 py-2 text-[length:var(--area-code-font-size)] leading-[1.6]"
                 style={{ color: 'var(--area-code-color, #e1e4e8)' }}
               >
                 <code>{`const greet = (name: string) => \`你好, \${name}\``}</code>
