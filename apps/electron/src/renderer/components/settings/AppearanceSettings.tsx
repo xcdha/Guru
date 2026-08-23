@@ -344,18 +344,19 @@ export function AppearanceSettings(): React.ReactElement {
                     <Pipette className="size-3" />
                     自定义
                   </span>
+                  {/* input 放按钮内部：系统取色器锚定在按钮处，避免取色器出现在窗口底部 */}
+                  <input
+                    ref={customTextInputRef}
+                    type="color"
+                    value={typography.textColor || '#888888'}
+                    onChange={(e) => {
+                      const c = e.target.value
+                      if (areaStyles.body?.color) void updateAreaStyle('body', { color: undefined }).then(setAreaStyles)
+                      void updateTypographySettings({ textColor: c }).then(setTypography)
+                    }}
+                    className="sr-only"
+                  />
                 </button>
-                <input
-                  ref={customTextInputRef}
-                  type="color"
-                  value={typography.textColor || '#888888'}
-                  onChange={(e) => {
-                    const c = e.target.value
-                    if (areaStyles.body?.color) void updateAreaStyle('body', { color: undefined }).then(setAreaStyles)
-                    void updateTypographySettings({ textColor: c }).then(setTypography)
-                  }}
-                  className="sr-only"
-                />
               </div>
             </div>
 
