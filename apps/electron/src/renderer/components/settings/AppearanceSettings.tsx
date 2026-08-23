@@ -326,25 +326,28 @@ export function AppearanceSettings(): React.ReactElement {
                     </button>
                   )
                 })}
-                {/* 自定义正文颜色 */}
-                <button
-                  type="button"
+                {/* 自定义正文颜色（div[role=button] 包裹：HTML 禁止 button 嵌套交互控件，
+                    input 铺满容器承担点击，视觉层 pointer-events-none） */}
+                <div
+                  role="button"
+                  tabIndex={0}
                   title="自定义正文颜色"
                   className={cn(
-                    'relative flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
+                    'relative flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors',
                     typography.textColor && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === typography.textColor?.toLowerCase())
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
                   )}
                 >
-                  <span className="size-3.5 rounded-full border border-border/60" style={{ background: typography.textColor || 'conic-gradient(#666, #999, #666)' }} />
-                  <span className="flex items-center gap-1">
-                    <Pipette className="size-3" />
-                    自定义
+                  <span className="pointer-events-none flex items-center gap-1.5">
+                    <span className="size-3.5 rounded-full border border-border/60" style={{ background: typography.textColor || 'conic-gradient(#666, #999, #666)' }} />
+                    <span className="flex items-center gap-1">
+                      <Pipette className="size-3" />
+                      自定义
+                    </span>
                   </span>
-                  {/* 透明 input 铺满按钮（不用 sr-only）：系统取色器锚定在 input 处，
-                      sr-only 会把 input 裁剪到不可预测位置导致弹窗出现在窗口底部；
-                      铺满后点击按钮即点击 input，无需 ref 转发 */}
+                  {/* 透明 input 铺满容器：系统取色器锚定在 input 处（sr-only 裁剪会导致
+                      弹窗回退到窗口底部）；input 是容器的直接子元素而非嵌在 button 内 */}
                   <input
                     type="color"
                     value={typography.textColor || '#888888'}
@@ -355,7 +358,7 @@ export function AppearanceSettings(): React.ReactElement {
                     }}
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   />
-                </button>
+                </div>
               </div>
             </div>
 
@@ -572,26 +575,29 @@ function CustomColorButton({
 }): React.ReactElement {
   const isCustom = Boolean(value) && !TEXT_COLOR_PRESETS.some((p) => p.value && p.value.toLowerCase() === (value ?? '').toLowerCase())
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       title={`${title} · 自定义颜色`}
       aria-label={`${title}自定义颜色`}
       className={cn(
-        'relative flex items-center justify-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-transform hover:scale-110 hover:text-foreground',
+        'relative flex cursor-pointer items-center justify-center rounded-full border border-dashed border-border/70 text-muted-foreground transition-transform hover:scale-110 hover:text-foreground',
         isCustom && 'ring-2 ring-primary/40 border-solid',
         className,
       )}
       style={isCustom ? { background: value } : undefined}
     >
-      {isCustom ? <Check className="size-3 text-white drop-shadow" /> : <Pipette className="size-3" />}
-      {/* 透明 input 铺满按钮：取色器弹窗必然锚定在按钮处（sr-only 裁剪锚点不可控） */}
+      <span className="pointer-events-none flex">
+        {isCustom ? <Check className="size-3 text-white drop-shadow" /> : <Pipette className="size-3" />}
+      </span>
+      {/* 透明 input 铺满容器：取色器弹窗必然锚定在此处；不嵌套进 button */}
       <input
         type="color"
         value={value && isCustom ? value : '#888888'}
         onChange={(e) => onChange(e.target.value)}
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
       />
-    </button>
+    </div>
   )
 }
 

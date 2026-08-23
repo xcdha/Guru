@@ -368,10 +368,10 @@ export function NanoBananaSettings({ embedded = false, onChanged }: EmbeddedTool
             <select
               value={provider}
               onChange={(e) => void handleProviderChange(e.target.value as 'gemini' | 'openai-images')}
-              className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-9 w-full rounded-md border border-input bg-popover px-3 py-1 text-sm text-popover-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="gemini">Gemini（Nano Banana，含官方与中转）</option>
-              <option value="openai-images">OpenAI Images 兼容（gpt-image 系列）</option>
+              <option value="gemini" className="bg-popover text-popover-foreground">Gemini（Nano Banana，含官方与中转）</option>
+              <option value="openai-images" className="bg-popover text-popover-foreground">OpenAI Images 兼容（gpt-image 系列）</option>
             </select>
             <p className="text-xs text-muted-foreground">切换后 API 地址与模型的默认值会随之变化</p>
           </div>
