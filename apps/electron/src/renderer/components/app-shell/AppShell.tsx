@@ -227,7 +227,7 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
                   onMouseDown={handleLeftSidebarMouseDown}
                 />
               </div>
-              {!isClassic && <div aria-hidden="true" className="relative z-[61] w-px flex-shrink-0 bg-foreground/[0.045]" />}
+              {!isClassic && <div aria-hidden="true" className="relative z-[61] w-px flex-shrink-0 bg-border dark:bg-border/80" />}
             </>
           )}
 
