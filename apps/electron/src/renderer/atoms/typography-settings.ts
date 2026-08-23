@@ -57,6 +57,16 @@ export function applyTypographyToDOM(settings: TypographySettings): void {
   } else {
     root.removeProperty('--md-body-color')
   }
+  // Markdown 结构元素颜色（标题/引用/表格表头），undefined = 跟随主题默认
+  setOrRemove(root, '--md-heading-color', settings.headingColor)
+  setOrRemove(root, '--md-quote-color', settings.quoteColor)
+  setOrRemove(root, '--md-table-head-color', settings.tableHeaderColor)
+}
+
+/** 设置或移除一个 :root CSS 变量（空值移除，回落到主题默认）。 */
+function setOrRemove(root: CSSStyleDeclaration, name: string, value?: string): void {
+  if (value) root.setProperty(name, value)
+  else root.removeProperty(name)
 }
 
 /** 从主进程加载排版设置并应用 */

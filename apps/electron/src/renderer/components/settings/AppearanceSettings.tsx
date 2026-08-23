@@ -328,6 +328,28 @@ export function AppearanceSettings(): React.ReactElement {
                 })}
               </div>
             </div>
+
+            {/* Markdown 结构元素颜色（标题/引用/表头）：单独覆盖，不影响正文色 */}
+            <div>
+              <div className="mb-2 text-[11px] font-medium text-muted-foreground">Markdown 结构元素颜色</div>
+              <div className="space-y-1.5">
+                <MarkdownStructureColorRow
+                  label="标题"
+                  value={typography.headingColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ headingColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="引用"
+                  value={typography.quoteColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ quoteColor: v }))}
+                />
+                <MarkdownStructureColorRow
+                  label="表头"
+                  value={typography.tableHeaderColor}
+                  onChange={async (v) => setTypography(await updateTypographySettings({ tableHeaderColor: v }))}
+                />
+              </div>
+            </div>
           </div>
 
           {/* 按区域自定义字体与颜色 */}
@@ -477,6 +499,51 @@ function TypographySlider({
         {Number.isInteger(value) ? value : value.toFixed(2)}
         {unit}
       </span>
+    </div>
+  )
+}
+
+/** Markdown 结构元素（标题/引用/表头）的颜色选择行：色块按钮 + 重置。 */
+function MarkdownStructureColorRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value?: string
+  onChange: (color: string | undefined) => void
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-8 shrink-0 text-[11px] text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {TEXT_COLOR_PRESETS.map((preset) => {
+          const isActive = (value ?? '') === preset.value
+          return (
+            <button
+              key={preset.name}
+              type="button"
+              title={`${label} · ${preset.name}`}
+              aria-label={`${label}颜色：${preset.name}`}
+              onClick={() => onChange(preset.value || undefined)}
+              className={cn(
+                'size-5 rounded-full border transition-transform hover:scale-110',
+                isActive ? 'border-primary ring-2 ring-primary/30' : 'border-border/70',
+              )}
+              style={{ background: preset.value || 'conic-gradient(#999, #666, #999)' }}
+            />
+          )
+        })}
+      </div>
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+        >
+          重置
+        </button>
+      )}
     </div>
   )
 }

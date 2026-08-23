@@ -371,6 +371,11 @@ export interface TypographySettings {
   paragraphSpacing?: number
   /** 正文文字颜色（CSS 颜色值；空/undefined 表示跟随主题） */
   textColor?: string
+  /** Markdown 结构元素颜色（undefined = 跟随主题默认）。
+   *  作用于 AI 回复 / Markdown 编辑器里的标题(h1-h4)、引用(blockquote)、表格表头(th)。 */
+  headingColor?: string
+  quoteColor?: string
+  tableHeaderColor?: string
 }
 
 /** 默认排版设置（fontSize undefined = 跟随档位） */
@@ -380,6 +385,9 @@ export const DEFAULT_TYPOGRAPHY_SETTINGS: TypographySettings = {
   letterSpacing: 0,
   paragraphSpacing: 6,
   textColor: undefined,
+  headingColor: undefined,
+  quoteColor: undefined,
+  tableHeaderColor: undefined,
 }
 
 /** 可自定义样式的 UI 区域 */
