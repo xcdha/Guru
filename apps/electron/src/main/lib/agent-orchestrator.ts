@@ -1921,7 +1921,8 @@ export class AgentOrchestrator {
           graphifyToolsReady: graphifyToolsReady,
           projectKnowledgeMaintenanceApproved: workspaceSlug ? isWorkspaceProjectKnowledgeMaintenanceApproved(workspaceSlug) : false,
           memoryGuidance: workspaceSlug && !automationContext && !input.triggeredBy ? getWorkspaceMemoryGuidance(workspaceSlug) : undefined,
-          memoryRefreshOpportunity: workspaceSlug && !automationContext && !input.triggeredBy ? claimWorkspaceMemoryRefreshOpportunity(workspaceSlug) : undefined
+          memoryRefreshOpportunity: workspaceSlug && !automationContext && !input.triggeredBy ? claimWorkspaceMemoryRefreshOpportunity(workspaceSlug) : undefined,
+          projectInstructionRoot: agentCwd
         }) +
         (automationContext ? `\n\n## 定时任务执行上下文\n\n${automationContext}` : '') +
         (workContext

@@ -19,6 +19,8 @@ import {
 } from '@/atoms/agent-atoms'
 import type { ChangedFileEntry, ChangedFileStatus, ChangeSource, UntrackedFileEntry, WorktreeInfo } from '@myyoda/shared'
 import { WorktreeSelector } from './WorktreeSelector'
+import { buildDiffFileTree } from './diff-file-tree'
+import type { DiffFileTreeNode } from './diff-file-tree'
 import { groupSessionFileChanges } from '@/lib/session-file-changes'
 import type { SessionFileChange } from '@/lib/session-file-changes'
 import { WORKSPACE_TERMS } from '@/lib/workspace-project-terminology'
@@ -42,6 +44,8 @@ interface FileGroup {
   totalAdditions: number
   totalDeletions: number
   sources: ChangeSource[]
+  /** 多级目录树（Proma diff-file-tree 移植） */
+  tree: Array<DiffFileTreeNode<GitFileEntry>>
 }
 
 interface DiffChangesListProps {
@@ -276,6 +280,7 @@ export const DiffChangesList = React.memo(function DiffChangesList({
       gitRoot,
       dirName: gitRoot ? gitRoot.split('/').pop() || gitRoot : '/',
       files: groupFiles,
+      tree: buildDiffFileTree(groupFiles),
       totalAdditions: groupFiles.reduce((sum, file) => sum + file.additions, 0),
       totalDeletions: groupFiles.reduce((sum, file) => sum + file.deletions, 0),
       sources: [...new Set(groupFiles.flatMap((file) => file.source ? [file.source] : []))],
@@ -389,24 +394,29 @@ export const DiffChangesList = React.memo(function DiffChangesList({
                   </span>
                 </button>
 
-                {/* 文件列表 */}
-                {!isCollapsed && group.files.map((file) => {
-                  const absPath = `${file.gitRoot || dirPath}/${file.filePath}`.replace(/\/+/g, '/')
-                  return (
-                    <FileRow
-                      key={`${file.gitRoot}:${file.filePath}`}
-                      file={file}
-                      isSelected={absPath === selectedFilePath || file.filePath === selectedFilePath}
-                      isUnseen={unseenFiles.has(absPath)}
-                      onClick={() => {
-                        markFileAsSeen(absPath)
-                        onFileClick(file.filePath, file.status === 'untracked', file.gitRoot)
-                      }}
-                      onRevert={file.status === 'untracked' ? undefined : () => handleRevert(file.filePath, file.gitRoot)}
-                      dirPath={dirPath}
-                    />
-                  )
-                })}
+                {/* 文件列表（多级目录树，Proma 移植） */}
+                {!isCollapsed && (
+                  <div className="pb-0.5">
+                    {group.tree.map((node) => (
+                      <GitFileTreeNode
+                        key={`${group.gitRoot}:${node.path}`}
+                        node={node}
+                        depth={0}
+                        gitRoot={group.gitRoot}
+                        dirPath={dirPath}
+                        selectedFilePath={selectedFilePath}
+                        unseenFiles={unseenFiles}
+                        collapsedDirs={collapsedDirs}
+                        onToggle={() => toggleDir(`${group.gitRoot}:${node.path}`)}
+                        onFileClick={(file, absPath) => {
+                          markFileAsSeen(absPath)
+                          onFileClick(file.filePath, file.status === 'untracked', file.gitRoot)
+                        }}
+                        onRevert={(file) => handleRevert(file.filePath, file.gitRoot)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -534,6 +544,7 @@ function FileRow({
   isSelected,
   isUnseen,
   dirPath,
+  depth = 0,
 }: {
   file: GitFileEntry
   onClick: () => void
@@ -541,6 +552,8 @@ function FileRow({
   isSelected?: boolean
   isUnseen?: boolean
   dirPath: string
+  /** 目录树深度，控制缩进（0=仓库根下第一层） */
+  depth?: number
 }): React.ReactElement {
   const parts = file.filePath.split('/')
   const fileName = parts.pop()!
@@ -553,11 +566,12 @@ function FileRow({
       role="button"
       tabIndex={0}
       className={cn(
-        'flex items-center w-full px-2 pl-3 h-[36px] text-[14px] transition-colors group',
+        'flex items-center w-full px-2 pr-2 h-[36px] text-[14px] transition-colors group',
         isSelected
           ? 'session-item-selected bg-primary/10 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
           : 'hover:bg-primary/5',
       )}
+      style={{ paddingLeft: 8 + depth * 16 }}
       onClick={onClick}
     >
       <span className="w-3 shrink-0 flex items-center justify-center">
@@ -631,5 +645,93 @@ function GitStatusMarker({
       </TooltipTrigger>
       <TooltipContent side="bottom">{description}</TooltipContent>
     </Tooltip>
+  )
+}
+
+/** 目录树中的一个节点（目录或文件），递归渲染。 */
+function GitFileTreeNode({
+  node,
+  depth,
+  gitRoot,
+  dirPath,
+  selectedFilePath,
+  unseenFiles,
+  collapsedDirs,
+  onToggle,
+  onFileClick,
+  onRevert,
+}: {
+  node: DiffFileTreeNode<GitFileEntry>
+  depth: number
+  gitRoot: string
+  dirPath: string
+  selectedFilePath?: string
+  unseenFiles: Set<string>
+  collapsedDirs: Set<string>
+  onToggle: (path: string) => void
+  onFileClick: (file: GitFileEntry, absPath: string) => void
+  onRevert: (file: GitFileEntry) => void
+}): React.ReactElement {
+  if (node.kind === 'file') {
+    const file = node.entry
+    const absPath = `${file.gitRoot || dirPath}/${file.filePath}`.replace(/\/+/g, '/')
+    return (
+      <FileRow
+        file={file}
+        depth={depth}
+        dirPath={dirPath}
+        isSelected={absPath === selectedFilePath || file.filePath === selectedFilePath}
+        isUnseen={unseenFiles.has(absPath)}
+        onClick={() => onFileClick(file, absPath)}
+        onRevert={file.status === 'untracked' ? undefined : () => onRevert(file)}
+      />
+    )
+  }
+
+  const stateKey = `${gitRoot}:${node.path}`
+  const isCollapsed = collapsedDirs.has(stateKey)
+  const rowPaddingLeft = 8 + depth * 16
+  const guideLeft = 23 + depth * 16
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={!isCollapsed}
+        title={node.name}
+        className="mx-2 flex h-8 items-center gap-1.5 rounded-md pr-2 text-left text-[13px] font-medium text-foreground/75 transition-colors hover:bg-accent/50"
+        style={{ paddingLeft: rowPaddingLeft }}
+        onClick={() => onToggle(stateKey)}
+      >
+        <ChevronRight
+          className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform duration-150', isCollapsed ? '' : 'rotate-90')}
+        />
+        <span className="min-w-0 flex-1 truncate">{node.name}</span>
+      </button>
+      {!isCollapsed && (
+        <div className="relative">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-1 top-0 w-px bg-border/70"
+            style={{ left: guideLeft }}
+          />
+          {node.children.map((child) => (
+            <GitFileTreeNode
+              key={`${gitRoot}:${child.path}`}
+              node={child}
+              depth={depth + 1}
+              gitRoot={gitRoot}
+              dirPath={dirPath}
+              selectedFilePath={selectedFilePath}
+              unseenFiles={unseenFiles}
+              collapsedDirs={collapsedDirs}
+              onToggle={onToggle}
+              onFileClick={onFileClick}
+              onRevert={onRevert}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
