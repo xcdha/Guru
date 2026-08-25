@@ -1,5 +1,5 @@
 {
-  "name": "myyoda",
+  "name": "guru",
   "version": "0.1.0",
   "description": "The next gen ai software with general agents",
   "type": "module",
@@ -9,11 +9,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run --filter='@myyoda/electron' dev",
-    "electron:dev": "bun run --filter='@myyoda/electron' dev",
-    "electron:build": "bun run --filter='@myyoda/electron' build",
-    "electron:start": "bun run --filter='@myyoda/electron' start",
-    "dist:mac": "bun run --filter='@myyoda/electron' dist:mac",
+    "dev": "bun run --filter='@guru/electron' dev",
+    "electron:dev": "bun run --filter='@guru/electron' dev",
+    "electron:build": "bun run --filter='@guru/electron' build",
+    "electron:start": "bun run --filter='@guru/electron' start",
+    "dist:mac": "bun run --filter='@guru/electron' dist:mac",
     "build": "bun run --filter='*' build",
     "typecheck": "bun run --filter='*' typecheck",
     "test": "bun test --timeout=15000",

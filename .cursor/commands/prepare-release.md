@@ -61,7 +61,7 @@ description: 根据上一 GitHub Release 之后的提交，递增版本号并写
    模板（按需删节章节；保留 macOS 未签名说明直至配置了 `MAC_CERTS`）：
 
    ```markdown
-   # MyYoda vX.Y.Z 更新
+   # Guru vX.Y.Z 更新
 
    相对 `vPREV`：<一句话总结>。
 
@@ -81,19 +81,19 @@ description: 根据上一 GitHub Release 之后的提交，递增版本号并写
 
    当前 Release **未配置 Apple Developer ID 签名/公证**。从浏览器下载后，macOS Gatekeeper 可能误报：
 
-   > “MyYoda” is damaged and can’t be opened.
+   > “Guru” is damaged and can’t be opened.
 
    **这不是安装包损坏。** 安装到 Applications 后执行：
 
    ```bash
-   xattr -cr /Applications/MyYoda.app
-   open /Applications/MyYoda.app
+   xattr -cr /Applications/Guru.app
+   open /Applications/Guru.app
    ```
 
    ## 下载
 
-   - **macOS Apple Silicon** — `MyYoda-X.Y.Z-arm64.dmg` / `MyYoda-X.Y.Z-arm64-mac.zip`
-   - **Windows** — `MyYoda-Setup-X.Y.Z.exe`
+   - **macOS Apple Silicon** — `Guru-X.Y.Z-arm64.dmg` / `Guru-X.Y.Z-arm64-mac.zip`
+   - **Windows** — `Guru-Setup-X.Y.Z.exe`
    ```
 
    对照近期 `release-notes/v*.md` 语气；下载产物文件名里的版本必须等于 `$NEXT`。

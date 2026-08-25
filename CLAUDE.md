@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-MyYoda is a local-first AI coding workstation packaged as an Electron desktop app, forked from and continuously synced from upstream [Proma](https://github.com/proma-ai/Proma). Top-level UI modes: **Chat** (conversational, no local side effects) and **Code** (Agent mode: reads/writes files, runs commands, orchestrates multi-step tasks; contains Kanban/Task orchestration and collaboration sub-agents).
+Guru is a local-first AI coding workstation packaged as an Electron desktop app, forked from and continuously synced from upstream [Proma](https://github.com/proma-ai/Proma). Top-level UI modes: **Chat** (conversational, no local side effects) and **Code** (Agent mode: reads/writes files, runs commands, orchestrates multi-step tasks; contains Kanban/Task orchestration and collaboration sub-agents).
 
 ## Commands
 
@@ -27,7 +27,7 @@ Upstream-sync specific commands (see "Upstream sync" below):
 
 ```bash
 bun run sync:check                 # gate that must pass before merging a sync/* branch
-bun run sync:apply-renames         # dry-run @proma → @myyoda rename fixups after a cherry-pick
+bun run sync:apply-renames         # dry-run @proma → @guru rename fixups after a cherry-pick
 bun run sync:apply-renames -- --write   # apply the renames
 ```
 
@@ -39,15 +39,15 @@ bun run sync:apply-renames -- --write   # apply the renames
 
 ## Monorepo structure
 
-Bun workspaces (`workspaces: ["packages/*", "apps/*"]`), packages scoped `@myyoda/*`, referenced internally via `workspace:*`:
+Bun workspaces (`workspaces: ["packages/*", "apps/*"]`), packages scoped `@guru/*`, referenced internally via `workspace:*`:
 
 - `packages/shared` — shared types, IPC channel constants, config, utils, `projects`/`tasks` domain types. No runtime deps.
-- `packages/core` — AI provider adapter registry, Shiki code highlighting. Depends on `@myyoda/shared`.
+- `packages/core` — AI provider adapter registry, Shiki code highlighting. Depends on `@guru/shared`.
 - `packages/session-core` — session transcript parsing/rendering shared between the Electron app and the CLI (`read`, `search`, `select`, `group`, `outline`, markdown rendering).
 - `packages/ui` — shared React UI components.
 - `apps/electron` — the desktop app: `src/main` (main process + `main/lib/` service layer), `src/preload` (context bridge), `src/renderer` (React/Vite/Tailwind/Radix UI), `src/utility` (the isolated Pi Agent Runtime process, see below).
-- `apps/cli` — `myyoda` CLI for reading/searching agent session transcripts outside the app, built on `@myyoda/session-core`.
-- `apps/server` — "MyYoda 企业版" Skills distribution/collaboration registry (Hono-based HTTP service; auth, orgs, skills endpoints).
+- `apps/cli` — `guru` CLI for reading/searching agent session transcripts outside the app, built on `@guru/session-core`.
+- `apps/server` — "Guru 企业版" Skills distribution/collaboration registry (Hono-based HTTP service; auth, orgs, skills endpoints).
 
 ## Core architecture
 
@@ -56,13 +56,13 @@ Bun workspaces (`workspaces: ["packages/*", "apps/*"]`), packages scoped `@myyod
 Every renderer↔main capability flows through four layers, all four of which need touching when adding a channel:
 
 ```
-@myyoda/shared (channel name constants + request/response types)
+@guru/shared (channel name constants + request/response types)
   → apps/electron/src/main/ipc.ts registers ipcMain.handle() handlers, delegating to main/lib/ services
     → apps/electron/src/preload/index.ts exposes a typed window.electronAPI.* surface via contextBridge
       → renderer calls window.electronAPI.*, usually wrapped inside a Jotai atom
 ```
 
-Channel constant groups live in `@myyoda/shared` (e.g. `AGENT_IPC_CHANNELS`, `CHANNEL_IPC_CHANNELS`, `PROJECT_IPC_CHANNELS`, `TASK_IPC_CHANNELS`, `FEISHU_IPC_CHANNELS`, `SESSION_COMMAND_CHANNEL`).
+Channel constant groups live in `@guru/shared` (e.g. `AGENT_IPC_CHANNELS`, `CHANNEL_IPC_CHANNELS`, `PROJECT_IPC_CHANNELS`, `TASK_IPC_CHANNELS`, `FEISHU_IPC_CHANNELS`, `SESSION_COMMAND_CHANNEL`).
 
 ### Pi Agent Runtime — isolated per-session utility process
 
@@ -104,7 +104,7 @@ Representative core services (there are ~280 files total; these are the ones mos
 | `task-handlers.ts` / `task-runner.ts` | Kanban Task IPC + DAG orchestration/scheduling, orphaned-run recovery on cold start |
 | `conductor-session-host.ts` | Bridges TaskRunner-triggered runs into the Agent event stream via `runAgentHeadless`, so Kanban-triggered work is visible in Code chat |
 | `feishu-bridge.ts` | Feishu/Lark integration: message sync, task notifications, OAuth |
-| `runtime-init.ts`, `config-paths.ts` | Shell/Bun/Git environment detection; resolves `~/.myyoda/` (packaged) vs `~/.myyoda-dev/` (dev, `app.isPackaged === false`) |
+| `runtime-init.ts`, `config-paths.ts` | Shell/Bun/Git environment detection; resolves `~/.guru/` (packaged) vs `~/.guru-dev/` (dev, `app.isPackaged === false`) |
 
 ### AI provider adapters (`packages/core/src/providers/`)
 
@@ -134,10 +134,10 @@ State management is Jotai-only (not Redux/Zustand/Context) — this is a firm pr
 
 ### Local storage layout
 
-No local database — JSON config + append-only JSONL logs, so state is portable/inspectable/backup-friendly. Root is `~/.myyoda/` (packaged) or `~/.myyoda-dev/` (dev):
+No local database — JSON config + append-only JSONL logs, so state is portable/inspectable/backup-friendly. Root is `~/.guru/` (packaged) or `~/.guru-dev/` (dev):
 
 ```
-~/.myyoda/
+~/.guru/
 ├── channels.json / conversations.json / agent-sessions.json   # indexes
 ├── conversations/{uuid}.jsonl        # per-conversation Chat messages
 ├── agent-sessions/{uuid}.jsonl       # per-session Agent messages
@@ -176,11 +176,11 @@ All four should return nothing new.
 
 This fork pulls from `upstream` (proma-ai/Proma) one-way only — **never open a reverse PR against upstream**. After cherry-picking/merging from `upstream/main` onto a `sync/proma-*` branch:
 
-1. `bun run sync:apply-renames` (dry run), then `-- --write` once satisfied — fixes `@proma`→`@myyoda` residue via `scripts/upstream-sync/rename-map.json` only; never hand-roll a global find/replace.
+1. `bun run sync:apply-renames` (dry run), then `-- --write` once satisfied — fixes `@proma`→`@guru` residue via `scripts/upstream-sync/rename-map.json` only; never hand-roll a global find/replace.
 2. `bun run sync:check` — hard gate (SDK pinned-version consistency across `apps/electron/package.json` deps + root `overrides`, `@anthropic-ai/claude-agent-sdk` residue = error since that runtime retired in 2026-08, doc-branding residue = warn by default).
 3. `bun run typecheck`, and if the SDK/`agent-orchestrator.ts`/a Pi adapter was touched, manually smoke-test: send a message in Code, and run a Kanban task if relevant.
 
-Conflict resolution rule of thumb: MyYoda-owned surfaces (Kanban/Project/Agent专家/`@myyoda` naming) win structural conflicts; take upstream's version for SDK/security/bugfix semantics. Never assume a name/prop that looks "unrelated" is dead scaffolding without checking `upstream/main` directly — a conflict can legitimately combine an unrelated fork-only addition with a genuine upstream change to the same lines. When default-skill content under `apps/electron/default-skills/<skill>/` changes, its `SKILL.md` frontmatter `version` must be bumped (patch +1) — the seeding/upgrade logic in `config-paths.ts`/`agent-workspace-manager.ts` uses semver comparison to decide whether existing users get the update.
+Conflict resolution rule of thumb: Guru-owned surfaces (Kanban/Project/Agent专家/`@guru` naming) win structural conflicts; take upstream's version for SDK/security/bugfix semantics. Never assume a name/prop that looks "unrelated" is dead scaffolding without checking `upstream/main` directly — a conflict can legitimately combine an unrelated fork-only addition with a genuine upstream change to the same lines. When default-skill content under `apps/electron/default-skills/<skill>/` changes, its `SKILL.md` frontmatter `version` must be bumped (patch +1) — the seeding/upgrade logic in `config-paths.ts`/`agent-workspace-manager.ts` uses semver comparison to decide whether existing users get the update.
 
 ## Version management
 
