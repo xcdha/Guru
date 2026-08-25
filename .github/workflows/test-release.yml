@@ -72,7 +72,7 @@ jobs:
             # 默认分支 master（旧代码），导致 tag/release 指向错误 commit
             gh release create "${tag}" \
               --prerelease \
-              --title "MyYoda v${version} 测试版" \
+              --title "Guru v${version} 测试版" \
               --target "$GITHUB_SHA" \
               --notes-file apps/electron/RELEASE_NOTES.md
             echo "已创建 pre-release ${tag}"

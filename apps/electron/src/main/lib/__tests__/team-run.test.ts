@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { TeamSquad } from '@myyoda/shared/experts'
-import type { TaskSpec } from '@myyoda/shared/tasks/schema'
+import type { TeamSquad } from '@guru/shared/experts'
+import type { TaskSpec } from '@guru/shared/tasks/schema'
 import {
   buildTeamExecutionSpec,
   buildLeaderPlanningPrompt,

@@ -60,11 +60,11 @@ describe('isWikiPageNameSafe', () => {
 
 describe('rewriteWikiMedia', () => {
   const register = (url: string): string | null =>
-    url.includes('raw.githubusercontent.com') ? `myyoda-remote://${encodeURIComponent(url)}` : null
+    url.includes('raw.githubusercontent.com') ? `guru-remote://${encodeURIComponent(url)}` : null
 
   test('相对路径图片解析为 raw wiki 地址并注册代理', () => {
     const out = rewriteWikiMedia('![a](assets/logo.png)\n![b](./img/x.jpg)', register)
-    expect(out).toContain('myyoda-remote://')
+    expect(out).toContain('guru-remote://')
     expect(out).toContain('raw.githubusercontent.com')
   })
 

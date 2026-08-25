@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { AgentSessionMeta, TaskAggregateSummary } from '@myyoda/shared'
+import type { AgentSessionMeta, TaskAggregateSummary } from '@guru/shared'
 import {
   buildKanbanViewModel,
   deriveSubtaskRunState,

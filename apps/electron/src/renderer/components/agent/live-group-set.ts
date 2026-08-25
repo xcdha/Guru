@@ -1,4 +1,4 @@
-import { getSDKCompactStatus, type SDKMessage, type SDKSystemMessage } from '@myyoda/shared'
+import { getSDKCompactStatus, type SDKMessage, type SDKSystemMessage } from '@guru/shared'
 import type { MessageGroup } from './SDKMessageRenderer'
 
 interface BuildLiveGroupSetOptions {
@@ -10,7 +10,7 @@ interface BuildLiveGroupSetOptions {
 }
 
 type RunScopedLiveMessage = SDKMessage & {
-  _myyodaLiveRunStartedAt?: number
+  _guruLiveRunStartedAt?: number
 }
 
 const EMPTY_LIVE_GROUPS: ReadonlySet<MessageGroup> = new Set<MessageGroup>()
@@ -33,7 +33,7 @@ export function buildLiveGroupSet({
   const activeLiveMessages = activeRunStartedAt == null
     ? liveMessages
     : liveMessages.filter((message) => (
-      (message as RunScopedLiveMessage)._myyodaLiveRunStartedAt === activeRunStartedAt
+      (message as RunScopedLiveMessage)._guruLiveRunStartedAt === activeRunStartedAt
     ))
   // 自主压缩会在同一 stream 内插入 system 压缩状态，并在完成后继续输出。
   // 这时压缩前的 assistant 消息仍属于当前运行的 liveMessages；若仍标为 live，

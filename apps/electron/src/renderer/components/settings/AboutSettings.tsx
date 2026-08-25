@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { RefreshCw, Loader2, CheckCircle2, AlertCircle, Info, Terminal, ChevronDown, ChevronUp, ExternalLink, RotateCw } from 'lucide-react'
-import type { EnvironmentCheckResult, RuntimeStatus, WindowsShellPreference } from '@myyoda/shared'
+import type { EnvironmentCheckResult, RuntimeStatus, WindowsShellPreference } from '@guru/shared'
 import {
   SettingsSection,
   SettingsCard,
@@ -16,7 +16,7 @@ import {
   SettingsSelect,
 } from './primitives'
 import { updateStatusAtom, updaterAvailableAtom, checkForUpdates } from '@/atoms/updater'
-import { UPDATER_LINKS } from '@myyoda/shared'
+import { UPDATER_LINKS } from '@guru/shared'
 import {
   environmentCheckResultAtom,
   hasEnvironmentIssuesAtom,
@@ -51,7 +51,7 @@ function UpdateCard(): React.ReactElement | null {
   const [checking, setChecking] = React.useState(false)
   const [idleInstallScheduled, setIdleInstallScheduled] = React.useState(false)
   const [showReleaseNotes, setShowReleaseNotes] = React.useState(false)
-  const [release, setRelease] = React.useState<import('@myyoda/shared').GitHubRelease | null>(null)
+  const [release, setRelease] = React.useState<import('@guru/shared').GitHubRelease | null>(null)
 
   // updater 不可用时不渲染
   if (!available) return null
@@ -521,7 +521,7 @@ function ShellEnvironmentCard(): React.ReactElement | null {
 export function AboutSettings(): React.ReactElement {
   return (
     <SettingsSection
-      title="关于 MyYoda"
+      title="关于 Guru"
       description="集成通用 AI Agent 的下一代人工智能软件"
     >
       <SettingsCard>
@@ -546,12 +546,12 @@ export function AboutSettings(): React.ReactElement {
         </SettingsRow>
         <SettingsRow label="项目地址">
           <a
-            href="https://github.com/GeoffBao/MyYoda.git"
+            href="https://github.com/xcdha/Guru.git"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-primary hover:underline"
           >
-            github.com/GeoffBao/MyYoda
+            github.com/xcdha/Guru
           </a>
         </SettingsRow>
       </SettingsCard>

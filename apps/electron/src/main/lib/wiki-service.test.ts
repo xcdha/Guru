@@ -80,9 +80,9 @@ describe('wiki-service（本地 fixture 仓库）', () => {
 
   test('单页正文：相对路径图片重写为代理 URL，htmlUrl 正确', () => {
     const page = getWikiPage('Home', cacheDir)
-    expect(page.markdown).toContain('myyoda-remote://')
+    expect(page.markdown).toContain('guru-remote://')
     expect(page.markdown).not.toContain('](assets/logo.png)')
-    expect(page.htmlUrl).toBe('https://github.com/GeoffBao/MyYoda/wiki/Home')
+    expect(page.htmlUrl).toBe('https://github.com/xcdha/Guru/wiki/Home')
   })
 
   test('非法页面名抛错', () => {

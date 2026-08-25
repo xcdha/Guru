@@ -1,4 +1,4 @@
-import type { FileAccessOptions } from '@myyoda/shared'
+import type { FileAccessOptions } from '@guru/shared'
 import type { PreviewFile } from '@/atoms/preview-atoms'
 
 export function isAbsoluteFilePath(filePath: string): boolean {

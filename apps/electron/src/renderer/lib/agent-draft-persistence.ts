@@ -9,7 +9,7 @@
 import type { Store } from 'jotai/vanilla/store'
 import { agentSessionDraftsAtom } from '@/atoms/agent-atoms'
 
-const STORAGE_KEY = 'myyoda-agent-session-drafts'
+const STORAGE_KEY = 'guru-agent-session-drafts'
 /** 防抖窗口：停止输入多久后落盘 */
 const PERSIST_DEBOUNCE_MS = 1500
 

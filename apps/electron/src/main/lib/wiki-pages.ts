@@ -5,10 +5,10 @@
  * - fallback：文件列表构建平铺树（Home 置顶）
  * - 媒体重写：相对路径图片解析到 raw.githubusercontent.com/wiki 后交给远程媒体注册
  */
-import type { WikiPageNode, WikiPageTree } from '@myyoda/shared'
+import type { WikiPageNode, WikiPageTree } from '@guru/shared'
 
 /** raw 访问 wiki 文件的基础地址（wiki 默认分支 master） */
-export const WIKI_RAW_BASE = 'https://raw.githubusercontent.com/wiki/GeoffBao/MyYoda/master'
+export const WIKI_RAW_BASE = 'https://raw.githubusercontent.com/wiki/xcdha/Guru/master'
 
 interface SidebarItem {
   depth: number

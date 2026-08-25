@@ -3,8 +3,8 @@ import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { normalizePathForCompare } from '@myyoda/shared/utils'
-import type { AgentSessionMeta } from '@myyoda/shared'
+import { normalizePathForCompare } from '@guru/shared/utils'
+import type { AgentSessionMeta } from '@guru/shared'
 import {
   assertWorktreeClean,
   listGitBranchesForSession,
@@ -25,7 +25,7 @@ function sh(cwd: string, args: string[]): string {
 }
 
 function makeRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-git-session-context-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-git-session-context-'))
   roots.push(root)
   sh(root, ['init', '-b', 'main'])
   sh(root, ['config', 'user.email', 'test@example.com'])

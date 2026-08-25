@@ -2,10 +2,10 @@
  * 跨 Pi Agent query 的 xAI OAuth refresh 协调器。
  *
  * Pi 为每次 query 创建独立 CredentialStore；xAI 可能轮换 refresh token，因此
- * 必须按 MyYoda channelId 串行刷新，避免并行会话各自消费旧 refresh token。
+ * 必须按 Guru channelId 串行刷新，避免并行会话各自消费旧 refresh token。
  */
 
-import type { XaiOAuthCredentials } from '@myyoda/shared'
+import type { XaiOAuthCredentials } from '@guru/shared'
 
 const inflightCredentialRefreshes = new Map<string, Promise<XaiOAuthCredentials>>()
 const latestCredentialsByChannel = new Map<string, XaiOAuthCredentials>()

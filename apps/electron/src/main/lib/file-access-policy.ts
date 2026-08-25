@@ -1,4 +1,4 @@
-import type { FileAccessOptions } from '@myyoda/shared'
+import type { FileAccessOptions } from '@guru/shared'
 
 /** 只保留主进程可解释的文件访问上下文；Renderer 不能请求 unrestricted 绕过根校验。 */
 export function normalizeFileAccessOptions(value?: FileAccessOptions | string[]): FileAccessOptions | undefined {

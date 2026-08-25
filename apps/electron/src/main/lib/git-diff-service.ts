@@ -10,9 +10,9 @@ import { createHash } from 'node:crypto'
 import { constants, existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'fs'
 import { lstat, open, realpath } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'path'
-import type { ChangedFileEntry, UnstagedChangesResult, UntrackedFileEntry } from '@myyoda/shared'
-import { normalizePathForCompare } from '@myyoda/shared'
-import type { ChangeSource, ChangedFileStatus } from '@myyoda/shared'
+import type { ChangedFileEntry, UnstagedChangesResult, UntrackedFileEntry } from '@guru/shared'
+import { normalizePathForCompare } from '@guru/shared'
+import type { ChangeSource, ChangedFileStatus } from '@guru/shared'
 
 /** 大文件读取上限：超过则跳过，避免 IPC 序列化撑爆内存 */
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
@@ -856,7 +856,7 @@ async function getGitCommonDir(somePath: string): Promise<string | null> {
  * 对于 worktree，git 的公共目录（--git-common-dir）始终指向主仓库的 .git，
  * 因此其父目录即主仓库根。普通仓库返回自身根目录。非 git 路径返回 null。
  *
- * 用于安全校验：worktree 常被放在主仓库之外（如 ~/myyoda-dev/worktrees/xxx），
+ * 用于安全校验：worktree 常被放在主仓库之外（如 ~/guru-dev/worktrees/xxx），
  * 直接判定其路径会越界；改为校验它回溯到的主仓库是否已授权。
  */
 export async function getMainRepoRoot(somePath: string): Promise<string | null> {
@@ -873,9 +873,9 @@ export async function getMainRepoRoot(somePath: string): Promise<string | null> 
  * 会话目录可能是包含多个仓库的父目录。不能只使用第一个发现的仓库，否则前面的
  * 普通仓库会遮蔽后面真正拥有 linked worktree 的仓库。
  */
-export async function listWorktrees(repoPath: string): Promise<import('@myyoda/shared').WorktreeInfo[]> {
+export async function listWorktrees(repoPath: string): Promise<import('@guru/shared').WorktreeInfo[]> {
   const roots = await findAllGitRoots(repoPath)
-  const worktreesByPath = new Map<string, import('@myyoda/shared').WorktreeInfo>()
+  const worktreesByPath = new Map<string, import('@guru/shared').WorktreeInfo>()
 
   for (const root of roots) {
     const output = await runGitCommand(['worktree', 'list', '--porcelain'], root, { quiet: true })
@@ -886,7 +886,7 @@ export async function listWorktrees(repoPath: string): Promise<import('@myyoda/s
     const blocks = output.split('\n\n').filter(Boolean)
 
     // 解析时保留完整 HEAD hash，稍后批量查 commit subject（一次性 git log --no-walk）
-    const pendingHeads: { fullHead: string; target: import('@myyoda/shared').WorktreeInfo }[] = []
+    const pendingHeads: { fullHead: string; target: import('@guru/shared').WorktreeInfo }[] = []
 
     for (const block of blocks) {
       const lines = block.split('\n')
@@ -916,7 +916,7 @@ export async function listWorktrees(repoPath: string): Promise<import('@myyoda/s
       const key = normalizeGitRoot(path)
       if (worktreesByPath.has(key)) continue
 
-      const info: import('@myyoda/shared').WorktreeInfo = {
+      const info: import('@guru/shared').WorktreeInfo = {
         path,
         branch: branch || 'unknown',
         head,
@@ -960,7 +960,7 @@ export async function listWorktrees(repoPath: string): Promise<import('@myyoda/s
 export async function getWorktreeChanges(
   worktreePath: string,
   baseBranch: string = 'origin/main',
-): Promise<import('@myyoda/shared').UnstagedChangesResult> {
+): Promise<import('@guru/shared').UnstagedChangesResult> {
   if (!existsSync(worktreePath)) {
     return { isGitRepo: false, files: [], untrackedFiles: [], gitRootNames: [] }
   }
@@ -976,8 +976,8 @@ export async function getWorktreeChanges(
   const fetchKey = await getGitCommonDir(gitRoot) ?? gitRoot
   await refreshWorktreeRemote(fetchKey, gitRoot)
 
-  const allFiles: import('@myyoda/shared').ChangedFileEntry[] = []
-  const fileMap = new Map<string, import('@myyoda/shared').ChangedFileEntry>()
+  const allFiles: import('@guru/shared').ChangedFileEntry[] = []
+  const fileMap = new Map<string, import('@guru/shared').ChangedFileEntry>()
 
   // 1. 已 commit 但未合并的改动: git diff baseBranch...HEAD
   const committedStatus = await runGitCommand(['diff', `${baseBranch}...HEAD`, '--name-status'], gitRoot)
@@ -989,7 +989,7 @@ export async function getWorktreeChanges(
       const simpleMatch = line.match(/^([MDAT])\t(.+)$/)
       const renameMatch = line.match(/^([RC])\d*\t([^\t]+)\t(.+)$/)
 
-      let status: import('@myyoda/shared').ChangedFileStatus
+      let status: import('@guru/shared').ChangedFileStatus
       let filePath: string
 
       if (simpleMatch) {
@@ -1004,7 +1004,7 @@ export async function getWorktreeChanges(
       }
 
       const stats = committedStats.get(filePath) ?? { additions: 0, deletions: 0 }
-      const entry: import('@myyoda/shared').ChangedFileEntry = {
+      const entry: import('@guru/shared').ChangedFileEntry = {
         filePath,
         status,
         additions: stats.additions,
@@ -1026,7 +1026,7 @@ export async function getWorktreeChanges(
       const simpleMatch = line.match(/^([MDAT])\t(.+)$/)
       const renameMatch = line.match(/^([RC])\d*\t([^\t]+)\t(.+)$/)
 
-      let status: import('@myyoda/shared').ChangedFileStatus
+      let status: import('@guru/shared').ChangedFileStatus
       let filePath: string
 
       if (simpleMatch) {

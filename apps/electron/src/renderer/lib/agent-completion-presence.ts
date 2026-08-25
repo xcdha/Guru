@@ -1,5 +1,5 @@
 import type { TabItem } from '@/atoms/tab-atoms'
-import type { AgentSessionMeta, AgentStreamCompletePayload } from '@myyoda/shared'
+import type { AgentSessionMeta, AgentStreamCompletePayload } from '@guru/shared'
 
 export interface AgentCompletionPresenceInput {
   tabs: TabItem[]

@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { statSync } from 'node:fs'
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 import {
   listTaskSlugs,
   loadTaskRecord,
   saveTaskRecord,
   taskYamlPath,
-} from '@myyoda/shared/tasks/storage'
-import type { TaskWorkflow } from '@myyoda/shared/tasks/task-record'
+} from '@guru/shared/tasks/storage'
+import type { TaskWorkflow } from '@guru/shared/tasks/task-record'
 
 export interface BackfillLegacyTaskRecordsInput {
   workspaceId: string

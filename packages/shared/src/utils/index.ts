@@ -1,5 +1,5 @@
 /**
- * Shared utility functions for MyYoda
+ * Shared utility functions for Guru
  */
 
 // Placeholder - will be expanded as needed

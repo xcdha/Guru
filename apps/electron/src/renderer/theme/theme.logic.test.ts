@@ -28,7 +28,7 @@ describe('界面风格初始化竞态', () => {
 })
 
 const customPack = {
-  codeThemeId: 'myyoda',
+  codeThemeId: 'guru',
   theme: {
     ...DEFAULT_THEME_STATE.packs.light.theme,
     accent: '#408abf',

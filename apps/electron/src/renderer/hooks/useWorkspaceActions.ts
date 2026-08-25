@@ -12,7 +12,7 @@ import {
   currentAgentWorkspaceIdAtom,
 } from '@/atoms/agent-atoms'
 import { activeViewAtom } from '@/atoms/active-view'
-import type { AgentWorkspace } from '@myyoda/shared'
+import type { AgentWorkspace } from '@guru/shared'
 
 interface UseWorkspaceActionsResult {
   workspaces: AgentWorkspace[]

@@ -30,11 +30,11 @@ import {
   markInterfaceVariantUpdated,
 } from '../theme/theme.logic'
 
-const THEME_CACHE_KEY = 'myyoda-theme-mode'
-const THEME_STYLE_CACHE_KEY = 'myyoda-theme-style'
-const THEME_PACKS_CACHE_KEY = 'myyoda-theme-packs'
-const THEME_ACTIVE_VARIANT_CACHE_KEY = 'myyoda-theme-active-variant'
-const INTERFACE_VARIANT_CACHE_KEY = 'myyoda-interface-variant'
+const THEME_CACHE_KEY = 'guru-theme-mode'
+const THEME_STYLE_CACHE_KEY = 'guru-theme-style'
+const THEME_PACKS_CACHE_KEY = 'guru-theme-packs'
+const THEME_ACTIVE_VARIANT_CACHE_KEY = 'guru-theme-active-variant'
+const INTERFACE_VARIANT_CACHE_KEY = 'guru-interface-variant'
 
 const DYNAMIC_THEME_VARIABLES = [
   '--background', '--foreground', '--content-area', '--sidebar-surface', '--tabbar-surface', '--tab-surface',
@@ -80,8 +80,8 @@ function getCachedPacks(): Record<ThemeVariant, ThemePack> {
     // localStorage 不可用时使用默认值。
   }
   return {
-    light: { codeThemeId: 'myyoda', theme: DEFAULT_CHROME_THEMES.light },
-    dark: { codeThemeId: 'myyoda', theme: DEFAULT_CHROME_THEMES.dark },
+    light: { codeThemeId: 'guru', theme: DEFAULT_CHROME_THEMES.light },
+    dark: { codeThemeId: 'guru', theme: DEFAULT_CHROME_THEMES.dark },
   }
 }
 

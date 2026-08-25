@@ -152,7 +152,7 @@ async function triggerSystemPaste(): Promise<void> {
 
 async function triggerMacPaste(): Promise<void> {
   if (!systemPreferences.isTrustedAccessibilityClient(true)) {
-    throw new Error('需要在 macOS 系统设置中允许 MyYoda 使用辅助功能')
+    throw new Error('需要在 macOS 系统设置中允许 Guru 使用辅助功能')
   }
 
   await execFileAsync(
@@ -204,7 +204,7 @@ $signature = @"
 using System;
 using System.Runtime.InteropServices;
 
-public static class MyYodaKeyboardInput
+public static class GuruKeyboardInput
 {
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
@@ -266,5 +266,5 @@ public static class MyYodaKeyboardInput
 "@
 
 Add-Type -TypeDefinition $signature
-[MyYodaKeyboardInput]::Paste()
+[GuruKeyboardInput]::Paste()
 `

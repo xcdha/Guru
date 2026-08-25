@@ -4,7 +4,7 @@
  * 独立成零 Electron 依赖的小文件，方便历史对话迁移脚本复用。
  */
 
-import type { AgentRuntime } from '@myyoda/shared'
+import type { AgentRuntime } from '@guru/shared'
 
 export function normalizeAgentRuntime(_value?: unknown, _provider?: unknown): AgentRuntime {
   // Claude runtime 已退役，所有执行统一走 Pi。

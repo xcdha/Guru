@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { WorkingDirectoryField } from '@/components/app-shell/kanban/WorkingDirectoryField'
-import type { AgentWorkspace } from '@myyoda/shared'
+import type { AgentWorkspace } from '@guru/shared'
 import { cn } from '@/lib/utils'
 import { agentWorkspacesAtom, currentAgentWorkspaceIdAtom } from '@/atoms/agent-atoms'
 

@@ -3,8 +3,8 @@ import type {
   AgentSessionMeta,
   AgentSendInput,
   AgentWorkspace,
-  MyYodaPermissionMode,
-} from '@myyoda/shared'
+  GuruPermissionMode,
+} from '@guru/shared'
 import type {
   ConductorSessionHost,
   ConductorSendMessageOptions,
@@ -64,7 +64,7 @@ interface CompletionState {
   sawError: boolean
 }
 
-export class MyYodaConductorSessionHost implements ConductorSessionHost {
+export class GuruConductorSessionHost implements ConductorSessionHost {
   private readonly listeners = new Set<(event: SessionCompletionEvent) => void>()
   private readonly completionStates = new Map<string, CompletionState>()
 
@@ -244,7 +244,7 @@ export class MyYodaConductorSessionHost implements ConductorSessionHost {
 }
 
 /** 在 Electron 主进程中延迟加载真实服务，避免纯逻辑测试触发 Electron 模块。 */
-export async function createMyYodaConductorSessionHost(): Promise<MyYodaConductorSessionHost> {
+export async function createGuruConductorSessionHost(): Promise<GuruConductorSessionHost> {
   const [sessionManager, agentService, workspaceManager, configPaths, settingsService] = await Promise.all([
     import('./agent-session-manager'),
     import('./agent-service'),
@@ -252,7 +252,7 @@ export async function createMyYodaConductorSessionHost(): Promise<MyYodaConducto
     import('./config-paths'),
     import('./settings-service'),
   ])
-  return new MyYodaConductorSessionHost({
+  return new GuruConductorSessionHost({
     createAgentSession: (title, channelId, workspaceId, modelId) => {
       // Pi-only：不传 agentCwdMode，createAgentSession 默认按 project 语义。
       return sessionManager.createAgentSession(title, channelId, workspaceId, modelId)
@@ -274,9 +274,9 @@ export async function createMyYodaConductorSessionHost(): Promise<MyYodaConducto
   })
 }
 
-export const createConductorSessionHost = createMyYodaConductorSessionHost
+export const createConductorSessionHost = createGuruConductorSessionHost
 
-function mapPermissionMode(mode: string | undefined): MyYodaPermissionMode | undefined {
+function mapPermissionMode(mode: string | undefined): GuruPermissionMode | undefined {
   if (mode === undefined) return undefined
 
   switch (mode) {

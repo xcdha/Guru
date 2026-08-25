@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe('recovery-trash-service', () => {
   test('moves a destructive target without deleting it and writes a recoverable journal', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     roots.push(root)
     const source = join(root, 'projects', 'alpha')
     rmSync(join(root, 'projects'), { recursive: true, force: true })
@@ -34,8 +34,8 @@ describe('recovery-trash-service', () => {
   })
 
   test('rejects a symlinked recovery root before moving anything', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
-    const outside = mkdtempSync(join(tmpdir(), 'myyoda-recovery-outside-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
+    const outside = mkdtempSync(join(tmpdir(), 'guru-recovery-outside-'))
     roots.push(root, outside)
     const source = join(root, 'tasks', 'secret')
     mkdirSync(source, { recursive: true })
@@ -47,8 +47,8 @@ describe('recovery-trash-service', () => {
   })
 
   test('rejects a dangling recovery-root symlink before creating an escape path', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
-    const outside = join(tmpdir(), `myyoda-recovery-missing-${Date.now()}`)
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
+    const outside = join(tmpdir(), `guru-recovery-missing-${Date.now()}`)
     roots.push(root)
     const source = join(root, 'tasks', 'secret')
     mkdirSync(source, { recursive: true })
@@ -60,8 +60,8 @@ describe('recovery-trash-service', () => {
   })
 
   test('rejects a recovery journal index symlink before moving the source', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
-    const outside = mkdtempSync(join(tmpdir(), 'myyoda-recovery-outside-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
+    const outside = mkdtempSync(join(tmpdir(), 'guru-recovery-outside-'))
     roots.push(root, outside)
     const source = join(root, 'tasks', 'secret')
     const recoveryRoot = join(root, '.recovery-trash')
@@ -75,7 +75,7 @@ describe('recovery-trash-service', () => {
   })
 
   test('preserves a source named journal.json without overwriting its payload journal', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     roots.push(root)
     const source = join(root, 'tasks', 'journal.json')
     mkdirSync(join(root, 'tasks'), { recursive: true })
@@ -92,7 +92,7 @@ describe('recovery-trash-service', () => {
   })
 
   test('rejects a symlinked source path before moving the real target', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     roots.push(root)
     const realSource = join(root, 'tasks', 'real')
     mkdirSync(realSource, { recursive: true })
@@ -105,8 +105,8 @@ describe('recovery-trash-service', () => {
   })
 
   test('rejects a target outside the workspace before moving anything', () => {
-    const root = mkdtempSync(join(tmpdir(), 'myyoda-recovery-'))
-    const outside = mkdtempSync(join(tmpdir(), 'myyoda-recovery-outside-'))
+    const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
+    const outside = mkdtempSync(join(tmpdir(), 'guru-recovery-outside-'))
     roots.push(root, outside)
     const source = join(outside, 'secret')
     mkdirSync(source, { recursive: true })

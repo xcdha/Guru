@@ -6,7 +6,7 @@
 
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { SystemProxyDetectResult } from '@myyoda/shared'
+import type { SystemProxyDetectResult } from '@guru/shared'
 
 const execFileAsync = promisify(execFile)
 const SYSTEM_PROXY_COMMAND_TIMEOUT_MS = 3_000

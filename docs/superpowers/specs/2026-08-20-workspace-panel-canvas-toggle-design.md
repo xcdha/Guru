@@ -2,7 +2,7 @@
 
 ## 背景
 
-用户在体验 newmax、Synara 等同类桌面 Agent 产品后，反馈 MyYoda 当前有两处明确可改进：
+用户在体验 newmax、Synara 等同类桌面 Agent 产品后，反馈 Guru 当前有两处明确可改进：
 
 1. **受管浏览器面板打开后，当前会话的文件预览（Preview，md/html/diff 等）就无法同时显示**——两者在 `MainArea.tsx` 里被设计成互斥槽位。
 2. **画布（Yoda 画布 / Excalidraw）的创建体验偏重**：左侧栏图标点击后直接全屏接管主区域（`activeView` 切到 `excalidraw-gallery`），需要先看画廊网格，再新建或选择才能进入编辑器，会话上下文在此期间完全消失。newmax 的画布创建是"点了就落地"，不经过画廊。
@@ -12,7 +12,7 @@
 - **newmax**：统一"+"新建菜单（新建对话/新建绘图/新建文档/新建终端/网页浏览），新建对象直接以 tab 形式打开；文件右键菜单已把"文件"和"AI 对话"打通（打开文件/添加至 AI 对话/以 @ 引用插入聊天框/…）。
 - **Synara**（trysynara.com，已核实的真实产品）：Terminal / Browser / Diff / Docs 是可以同时挂载在工作区里的平级面板，官网原话 "Browser: Docs and previews, one pane over"——浏览器不是需要独占的东西。
 
-讨论后达成的方向：**不 1:1 照搬 newmax 的下拉菜单 + tab 页机制**，而是用 MyYoda 已有的"面板开关按钮"范式（`TabBar.tsx` 里终端 / 浏览器的开关按钮）去承载画布，改动面更小、和现有交互语言更一致。
+讨论后达成的方向：**不 1:1 照搬 newmax 的下拉菜单 + tab 页机制**，而是用 Guru 已有的"面板开关按钮"范式（`TabBar.tsx` 里终端 / 浏览器的开关按钮）去承载画布，改动面更小、和现有交互语言更一致。
 
 ## 目标
 
@@ -38,7 +38,7 @@
 - `BrowserPanel` 底层是原生 `WebContentsView`（非 iframe/webview 标签），由主进程按一个占位 `<div>`（`BrowserSlot.tsx`）的 `getBoundingClientRect()` 实时贴图。层级优先于 renderer DOM 是原生视图的固有特性，但**不代表不能和其他 DOM 面板并排**——它只需要一个稳定的占位 div 提供 bounds，机制上和 Preview/Scratch 的并排分屏没有冲突，当前互斥完全是 `MainArea.tsx` 里的显式判断式导致的产品选择，不是技术死限制。
 - 画布（Excalidraw）现状两条不统一的路径：
   1. 左侧栏"功能"分组 "Yoda 画布" 图标（`LeftSidebar.tsx` `handleOpenExcalidraw`）→ `activeView` 切到 `'excalidraw-gallery'`，在 `MainArea.tsx` 顶层作为**全屏路由**渲染（完全替换 `TabBar` + `TabContent`，会话上下文暂时消失），需要先在画廊选或建，再进 `'excalidraw-editor'`。
-  2. 画布文件持久化在 `getExcalidrawDir(workspaceSlug)`（`~/.myyoda/agent-workspaces/{slug}/excalidraw/`），和 `getWorkspaceFilesDir` 渲染的 `workspace-files/` 是**两个平级目录**，当前文件面板（`SidePanel.tsx` / `FileBrowser.tsx`）不感知 `excalidraw/` 目录。
+  2. 画布文件持久化在 `getExcalidrawDir(workspaceSlug)`（`~/.guru/agent-workspaces/{slug}/excalidraw/`），和 `getWorkspaceFilesDir` 渲染的 `workspace-files/` 是**两个平级目录**，当前文件面板（`SidePanel.tsx` / `FileBrowser.tsx`）不感知 `excalidraw/` 目录。
 - Preview 面板的状态管理模式（作为本次画布状态设计的参照）：`atoms/preview-atoms.ts` 用两个 per-session Map atom 管理——`previewPanelOpenMapAtom`（开关）+ `previewFileMapAtom`（当前显示哪个文件），`TabBar.tsx` 里终端/浏览器开关按钮也是同样"per session Map + 点击 toggle"的模式。
 
 ## 设计

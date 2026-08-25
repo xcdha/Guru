@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { applyWorktreeProjectContextOverride, resolveSessionCwd } from './agent-cwd-resolver'
 import type { EffectiveCwdResult } from './project-path-service'
 
-const SANDBOX = '/myyoda/agent-workspaces/ws/session-1'
+const SANDBOX = '/guru/agent-workspaces/ws/session-1'
 const PROJECT_DIR = '/Users/dev/my-real-project'
 
 function projectResolver(result: EffectiveCwdResult | null) {
@@ -68,10 +68,10 @@ describe('resolveSessionCwd', () => {
     const result = resolveSessionCwd({
       agentCwdMode: 'project',
       projectId: 'proj-1',
-      resolveProjectCwd: projectResolver({ status: 'managed', cwd: '/myyoda/projects/foo', displayPath: '/myyoda/projects/foo' }),
+      resolveProjectCwd: projectResolver({ status: 'managed', cwd: '/guru/projects/foo', displayPath: '/guru/projects/foo' }),
       sandboxCwd: SANDBOX,
     })
-    expect(result).toEqual({ cwd: '/myyoda/projects/foo', source: 'project' })
+    expect(result).toEqual({ cwd: '/guru/projects/foo', source: 'project' })
   })
 
   test('默认工作区目录命中 → 使用 default-workspace cwd', () => {

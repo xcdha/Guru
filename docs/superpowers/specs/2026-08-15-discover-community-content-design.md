@@ -5,7 +5,7 @@
 
 ## 1. 背景与目标
 
-MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口。本次设计一个统一面板：
+Guru 目前缺少一个面向用户的「官方内容 + 社区交流」入口。本次设计一个统一面板：
 
 1. 官方内容（视频/教程/公告/外链）在应用内展示，其中视频支持**版本更新**——维护者发布新版后，老用户打开应用即可看到「更新」标记并点击播放
 2. 社区讨论依托 GitHub Discussions，应用内只读浏览，发帖/回复跳浏览器
@@ -15,9 +15,9 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
 
 ## 2. 方案选型（已决策）
 
-- 官方内容源：公开 GitHub 内容仓库 `GeoffBao/myyoda-content` 的 `content.json` 清单（`raw.githubusercontent.com` 拉取，jsDelivr CDN 兜底）
+- 官方内容源：公开 GitHub 内容仓库 `xcdha/Guru-content` 的 `content.json` 清单（`raw.githubusercontent.com` 拉取，jsDelivr CDN 兜底）
 - 视频托管：内容仓库的 GitHub Release 资产，下载到本地缓存播放
-- 社区承载：MyYoda 主仓库 GitHub Discussions（REST API 只读 + 本地缓存），互动跳浏览器
+- 社区承载：Guru 主仓库 GitHub Discussions（REST API 只读 + 本地缓存），互动跳浏览器
 - 反馈：沿用现有 Notion 反馈机制（FeedbackDialog），不做改动
 - 否决项：Notion 作为社区承载（评论弱、需内嵌 token 或代理、限流）；自建后端（违背本地优先、范围暴涨）
 
@@ -27,8 +27,8 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
 - 面板内三个 tab：**官方精选** / **社区讨论** / **反馈**
 - 数据流：渲染进程 → IPC → 主进程服务 → GitHub（清单、视频、Discussions API），本地 JSON 缓存
 - 一次性手动配置（维护者执行）：
-  1. 新建公开内容仓库 `GeoffBao/myyoda-content`
-  2. MyYoda 主仓库开启 Discussions，建三个 category：Q&A（问题讨论）/ Showcase（经验分享）/ Announcements（公告）
+  1. 新建公开内容仓库 `xcdha/Guru-content`
+  2. Guru 主仓库开启 Discussions，建三个 category：Q&A（问题讨论）/ Showcase（经验分享）/ Announcements（公告）
 
 ## 4. 官方精选流
 
@@ -46,7 +46,7 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
       "version": "2026.8.1",
       "publishedAt": "2026-08-01T00:00:00Z",
       "video": {
-        "url": "https://github.com/GeoffBao/myyoda-content/releases/download/v1/agent-essence.mp4",
+        "url": "https://github.com/xcdha/Guru-content/releases/download/v1/agent-essence.mp4",
         "mirrors": [],
         "size": 10453843
       }
@@ -62,7 +62,7 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
 
 ### 4.2 版本更新机制
 
-- 每条内容带 `version` 字段；应用本地维护 `~/.myyoda/content-state.json`（`{ itemId: seenVersion }`）
+- 每条内容带 `version` 字段；应用本地维护 `~/.guru/content-state.json`（`{ itemId: seenVersion }`）
 - 标记规则：`manifest.version !== seenVersion` 即视为有更新（只做不等比较，不做版本大小排序语义），条目打「更新」标记；任一未读更新存在时，侧边栏入口显示红点
 - 用户点开条目即写入已看版本（红点随之消失）
 - 发布新版视频 = 上传 Release 资产 + 更新 `content.json` 的 `version`/`url`/`size`，无需发应用版本
@@ -78,14 +78,14 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
 
 ## 5. 视频下载与播放
 
-1. 点击视频条目 → 检查本地缓存 `~/.myyoda/content-cache/{id}-{version}.mp4`
+1. 点击视频条目 → 检查本地缓存 `~/.guru/content-cache/{id}-{version}.mp4`
 2. 有缓存且大小校验通过 → 直接播放
 3. 无缓存 → 主进程下载（进度条 UI，逐个 mirrors 重试）→ 校验 size → 写入缓存 → 播放
 4. 缓存目录仅保留当前版本文件，旧版本清理
 
 ## 6. 社区讨论
 
-- 数据：`GET /repos/GeoffBao/MyYoda/discussions`（REST，匿名限流 60 次/时/IP），本地缓存 5 分钟
+- 数据：`GET /repos/xcdha/Guru/discussions`（REST，匿名限流 60 次/时/IP），本地缓存 5 分钟
 - 板块 tab：Q&A / Showcase / Announcements 三个筛选
 - 列表项：标题、作者、回复数、标签、更新时间
 - 详情页：应用内只读 markdown 渲染
@@ -125,7 +125,7 @@ MyYoda 目前缺少一个面向用户的「官方内容 + 社区交流」入口�
 - `apps/electron/src/main`：新增 `lib/content-service.ts`（清单拉取/版本对比/下载缓存）、`lib/community-service.ts`（Discussions 拉取/缓存）；`ipc.ts` 注册新处理器
 - `apps/electron/src/preload`：新增桥接 API
 - `apps/electron/src/renderer`：新增 `components/discover/`（DiscoverView + 官方精选/社区/反馈三个子视图）；`app-shell/LeftSidebar.tsx` 加入口；对应 atoms（Jotai）
-- 配置路径：`~/.myyoda/content-state.json`、`~/.myyoda/content-cache/`（开发模式 `~/.luxcoder-dev/` 下）
+- 配置路径：`~/.guru/content-state.json`、`~/.guru/content-cache/`（开发模式 `~/.luxcoder-dev/` 下）
 
 ## 12. 项目惯例遵循
 

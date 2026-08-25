@@ -25,8 +25,8 @@ import type {
   SDKSystemMessage,
   SDKUserContentBlock,
   SDKUserMessage,
-} from '@myyoda/shared'
-import { getSDKCompactStatus } from '@myyoda/shared'
+} from '@guru/shared'
+import { getSDKCompactStatus } from '@guru/shared'
 
 export type SessionMiniMapType = 'chat' | 'agent'
 

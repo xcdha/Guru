@@ -12,17 +12,17 @@
 
 import { randomUUID } from 'node:crypto'
 import type {
-  MyYodaPermissionMode,
+  GuruPermissionMode,
   PermissionRequest,
   DangerLevel,
   AskUserRequest,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   SAFE_TOOLS,
   isSafeBashCommand,
   isDangerousCommand,
   hasDangerousStructure,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** SDK PermissionBehavior */
 type PermissionBehavior = 'allow' | 'deny'

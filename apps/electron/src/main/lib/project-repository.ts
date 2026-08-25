@@ -7,7 +7,7 @@ import type {
   ProjectPromptContext,
   UpdateProjectInput,
   UploadProjectAssetInput,
-} from '@myyoda/shared/projects'
+} from '@guru/shared/projects'
 import {
   createProject as createProjectInStorage,
   deleteProject as deleteProjectInStorage,

@@ -17,7 +17,7 @@ import {
   agentSessionsAtom,
 } from '@/atoms/agent-atoms'
 import { activeViewAtom } from '@/atoms/active-view'
-import type { AgentWorkspace, LocalProjectRootStatus } from '@myyoda/shared'
+import type { AgentWorkspace, LocalProjectRootStatus } from '@guru/shared'
 import { SettingsSection, SettingsCard } from './primitives'
 import { useWorkspaceActions } from '@/hooks/useWorkspaceActions'
 import {
@@ -491,7 +491,7 @@ export function WorkspaceSettings(): React.ReactElement {
           <AlertDialogHeader>
             <AlertDialogTitle>删除工作区「{deleteTarget?.name}」？</AlertDialogTitle>
             <AlertDialogDescription>
-              将删除 MyYoda 托管的工作区数据、会话、自动任务与渠道绑定，且无法恢复；项目绑定的外部工作目录不会被删除。Todo 与日程记录不会被删除，但之后可能需要重新归类。确定要继续吗？
+              将删除 Guru 托管的工作区数据、会话、自动任务与渠道绑定，且无法恢复；项目绑定的外部工作目录不会被删除。Todo 与日程记录不会被删除，但之后可能需要重新归类。确定要继续吗？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

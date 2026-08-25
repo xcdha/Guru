@@ -72,7 +72,7 @@ export interface VideoDownloadProgressEvent {
   progress: number
 }
 
-/** 下载完成事件：filePath 为本地缓存绝对路径，渲染层经 GET_VIDEO_URL 换 myyoda-file:// URL */
+/** 下载完成事件：filePath 为本地缓存绝对路径，渲染层经 GET_VIDEO_URL 换 guru-file:// URL */
 export interface VideoDownloadDoneEvent {
   itemId: string
   filePath: string
@@ -165,7 +165,7 @@ export const DISCOVER_IPC_CHANNELS = {
   LIST_DISCUSSIONS: 'discover:list-discussions',
   /** 拉取讨论详情正文 */
   GET_DISCUSSION: 'discover:get-discussion',
-  /** 为已下载视频文件注册 myyoda-file:// 播放 URL */
+  /** 为已下载视频文件注册 guru-file:// 播放 URL */
   GET_VIDEO_URL: 'discover:get-video-url',
   /** 为远程视频注册 discover-video:// 流式播放 URL（主进程代理感知转发） */
   GET_VIDEO_STREAM_URL: 'discover:get-video-stream-url',

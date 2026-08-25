@@ -31,7 +31,7 @@ export function HelpSection(): React.ReactElement {
   const setShortcutOpen = useSetAtom(shortcutGuideOpenAtom)
 
   const openGuide = React.useCallback((): void => {
-    const result = openTab(tabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'MyYoda 使用指南' })
+    const result = openTab(tabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'Guru 使用指南' })
     setTabs(result.tabs)
     setActiveTabId(result.activeTabId)
     setActiveView('conversations')

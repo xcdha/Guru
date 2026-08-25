@@ -40,7 +40,7 @@ export const previewPanelOpenMapAtom = atom<Map<string, boolean>>(new Map())
 export const previewFileMapAtom = atom<Map<string, PreviewFile | null>>(new Map())
 
 /** 分栏比例（对话占比），持久化 */
-export const previewSplitRatioAtom = atomWithStorage<number>('myyoda-preview-split-ratio', 0.5, undefined, { getOnInit: true })
+export const previewSplitRatioAtom = atomWithStorage<number>('guru-preview-split-ratio', 0.5, undefined, { getOnInit: true })
 
 /**
  * 预览默认展开方式，持久化。
@@ -51,7 +51,7 @@ export const previewSplitRatioAtom = atomWithStorage<number>('myyoda-preview-spl
  */
 export type PreviewModePreference = 'tab' | 'split'
 export const previewModePreferenceAtom = atomWithStorage<PreviewModePreference>(
-  'myyoda-preview-mode-pref',
+  'guru-preview-mode-pref',
   'tab',
   undefined,
   { getOnInit: true },
@@ -59,7 +59,7 @@ export const previewModePreferenceAtom = atomWithStorage<PreviewModePreference>(
 
 /** 代码预览换行偏好（默认不换行，保持现有横向滚动行为） */
 export const previewCodeWrapAtom = atomWithStorage<boolean>(
-  'myyoda-preview-code-wrap',
+  'guru-preview-code-wrap',
   false,
   undefined,
   { getOnInit: true },

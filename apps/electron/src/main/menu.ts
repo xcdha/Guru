@@ -16,17 +16,17 @@ export function createApplicationMenu(): Menu {
     ...(isMac
       ? [
           {
-            label: 'MyYoda',
+            label: 'Guru',
             submenu: [
-              { role: 'about' as const, label: '关于 MyYoda' },
+              { role: 'about' as const, label: '关于 Guru' },
               { type: 'separator' as const },
               { role: 'services' as const, label: '服务' },
               { type: 'separator' as const },
-              { role: 'hide' as const, label: '隐藏 MyYoda' },
+              { role: 'hide' as const, label: '隐藏 Guru' },
               { role: 'hideOthers' as const, label: '隐藏其他' },
               { role: 'unhide' as const, label: '显示全部' },
               { type: 'separator' as const },
-              { role: 'quit' as const, label: '退出 MyYoda' },
+              { role: 'quit' as const, label: '退出 Guru' },
             ],
           },
         ]
@@ -123,7 +123,7 @@ export function createApplicationMenu(): Menu {
         {
           label: '了解更多',
           click: async () => {
-            await shell.openExternal('https://github.com/GeoffBao/MyYoda')
+            await shell.openExternal('https://github.com/xcdha/Guru')
           },
         },
       ],

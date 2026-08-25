@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { BuiltinMcpServerSummary, ChatToolInfo, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, ChatToolInfo, McpServerEntry } from '@guru/shared'
 import { buildPluginOverviewModel } from './plugin-overview-model'
 
 function chatTool(id: string, enabled: boolean, available: boolean): ChatToolInfo {

@@ -1,7 +1,7 @@
 /**
  * 「发现」社区服务：GitHub Discussions 只读拉取 + 本地缓存
  *
- * - 列表：GET https://api.github.com/repos/GeoffBao/MyYoda/discussions（匿名限流 60 次/时/IP）
+ * - 列表：GET https://api.github.com/repos/xcdha/Guru/discussions（匿名限流 60 次/时/IP）
  * - 详情：GET .../discussions/{number}（含 body markdown）
  * - 缓存：磁盘 discussions-cache.json + 内存缓存，TTL 5 分钟
  * - 板块筛选在解析后按 categorySlug 过滤（REST 无分类过滤参数），未知 slug 丢弃
@@ -14,7 +14,7 @@ import {
   type DiscussionDetail,
   type DiscussionListResult,
   type DiscussionSummary,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { getDiscoverCommunityStatePath, getDiscoverDiscussionsCachePath } from './config-paths'
 import { getFetchFn } from './proxy-fetch'
 import { getEffectiveProxyUrl } from './proxy-settings-service'
@@ -23,8 +23,8 @@ import { registerRemoteMediaUrl } from './discover-remote-media'
 
 export const DISCUSSION_CACHE_TTL_MS = 5 * 60 * 1000
 
-/** 社区承载仓库（MyYoda 主仓库） */
-export const COMMUNITY_REPO = { owner: 'GeoffBao', repo: 'MyYoda' }
+/** 社区承载仓库（Guru 主仓库） */
+export const COMMUNITY_REPO = { owner: 'GeoffBao', repo: 'Guru' }
 
 const KNOWN_CATEGORY_SLUGS = new Set<string>(['q-a', 'show-and-tell', 'announcements'])
 
@@ -80,7 +80,7 @@ export function markDiscussionViewed(number: number, commentCount: number): void
 let listMemoryCache: Map<string, DiscussionCacheEntry> | null = null
 const detailMemoryCache = new Map<number, { fetchedAt: number; detail: DiscussionDetail }>()
 
-/** 读取磁盘缓存（v1 旧格式含 myyoda-remote token，跨进程重启后失效，视为过期） */
+/** 读取磁盘缓存（v1 旧格式含 guru-remote token，跨进程重启后失效，视为过期） */
 function readListCache(categorySlug: string): DiscussionCacheEntry | null {
   try {
     const raw = JSON.parse(readFileSync(getDiscoverDiscussionsCachePath(), 'utf-8')) as Record<

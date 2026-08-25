@@ -84,11 +84,11 @@ issue.assignee_type 扩展 'squad'
 
 ---
 
-## 2. 当前项目（LuxCoder/MyYoda）现状
+## 2. 当前项目（LuxCoder/Guru）现状
 
 ### 2.1 专家（Expert）
 
-- 存储：`~/.myyoda/experts/{slug}/`（expert.json + IDENTITY.md/SOUL.md/RULES.md）
+- 存储：`~/.guru/experts/{slug}/`（expert.json + IDENTITY.md/SOUL.md/RULES.md）
 - manifest：`id / label / kind('expert'|'team') / roleLabels / skillSlugs / mcpIds / channelBindings`
 - 内置 5 专家（general/architect/qa/reviewer/delivery-manager）+ 2 专家团（dev-team/quality-team）
 - 注入：TaskRunner Kanban 任务运行时 `formatExpertPreamble` → `<agent_expert>` XML 用户消息 preamble；`mergeSkillSlugs`/`mergeMcpIds` 合并技能与 MCP；工作区级 binding 可覆盖
@@ -173,7 +173,7 @@ issue.assignee_type 扩展 'squad'
 文件布局（保持与专家包同根）：
 
 ```
-~/.myyoda/experts/dev-team/
+~/.guru/experts/dev-team/
 ├── team.json          # squad 结构（leader + members + instructions）
 ├── IDENTITY.md        # 团队定位（可选，卡片/详情展示用）
 └── SOUL.md / RULES.md # 可选
@@ -282,7 +282,7 @@ graph TD
 
 7. **`defaultChannelId` 与既有 `ExpertChannelBinding.channel` 概念冲突**：`types.ts:1-4` 的 `channelBindings.channel` 指飞书/Discord 消息渠道，新字段指 AI Provider 渠道，同一结构里两种"channel"语义不同，建议改名避免混读。
 8. **`updateExpertManifest` 的 patch 类型未跟上新字段**：`expert-service.ts:155-158` 当前只允许改 `skillSlugs`/`mcpIds`/`label`，需扩展支持 `description`/`avatar`/`defaultChannelId`/`defaultModel`。
-9. **`parse-team.ts` 校验应显式拦截"团队嵌套团队"**：leader/member 都在同一 `~/.myyoda/experts/{slug}/` 命名空间下，没有类型隔离，建议校验中加一条"leader/member 必须解析为 `kind==='expert'`"，避免递归配置。
+9. **`parse-team.ts` 校验应显式拦截"团队嵌套团队"**：leader/member 都在同一 `~/.guru/experts/{slug}/` 命名空间下，没有类型隔离，建议校验中加一条"leader/member 必须解析为 `kind==='expert'`"，避免递归配置。
 
 ### 🟢 已核实无误的部分
 

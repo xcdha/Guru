@@ -1,4 +1,4 @@
-import type { AgentSessionMeta, SDKMessage } from '@myyoda/shared'
+import type { AgentSessionMeta, SDKMessage } from '@guru/shared'
 import type { AgentStreamState } from '@/atoms/agent-atoms'
 
 export interface ExternalAgentRunTab {

@@ -28,7 +28,7 @@ import {
 const tempRoots: string[] = [];
 
 function createTempWorkspaceRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-task-storage-'));
+  const root = mkdtempSync(join(tmpdir(), 'guru-task-storage-'));
   tempRoots.push(root);
   return root;
 }

@@ -6,6 +6,6 @@
  */
 
 import { atom } from 'jotai'
-import type { SessionGroup } from '@myyoda/shared'
+import type { SessionGroup } from '@guru/shared'
 
 export const sessionGroupsAtom = atom<SessionGroup[]>([])

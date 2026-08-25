@@ -12,7 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { TaskGeneratedEventPayload } from '@myyoda/shared'
+import type { TaskGeneratedEventPayload } from '@guru/shared'
 import { useAtomValue } from 'jotai'
 import { agentWorkspacesAtom } from '@/atoms/agent-atoms'
 import { Button } from '@/components/ui/button'

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { SDKMessage } from '@myyoda/shared'
+import type { SDKMessage } from '@guru/shared'
 import { isMissingFinalTextAnswer, isVisibleRunMessage } from './agent-run-message-visibility'
 
 describe('Agent 本轮可见消息判定', () => {

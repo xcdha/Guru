@@ -3,7 +3,7 @@
  *
  * 负责渠道的 CRUD 操作、API Key 加密/解密、连接测试。
  * 使用 Electron safeStorage 进行 API Key 加密（底层使用 OS 级加密）。
- * 数据持久化到 ~/.myyoda/channels.json。
+ * 数据持久化到 ~/.guru/channels.json。
  */
 
 import { readFileSync, existsSync } from 'node:fs'
@@ -26,7 +26,7 @@ import type {
   FetchModelsInput,
   FetchModelsResult,
   ProviderType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   extractZhipuCodingTeamApiToken,
   parseZhipuTeamCredentials,
@@ -41,7 +41,7 @@ import {
   serializeXaiCredentials,
   isXaiCredentialExpired,
   VOLCENGINE_CODING_PLAN_MODELS,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { refreshCodexOAuth } from './codex-oauth-service'
 import { refreshClaudeOAuthToken } from './claude-oauth-service'
 import { refreshXaiOAuth } from './xai-oauth-service'
@@ -60,7 +60,7 @@ import {
   resolveOpenAIModelsUrl,
   resolveOpenAIChatCompletionsUrl,
   getAppUserAgent,
-} from '@myyoda/core'
+} from '@guru/core'
 import { normalizeHttpResponse, normalizeRequestError } from './channel-test-error'
 import { writeJsonFileAtomic } from './safe-file'
 import pkg from '../../../package.json' with { type: 'json' }
@@ -556,7 +556,7 @@ export function decryptApiKey(channelId: string): string {
  */
 const inflightCodexRefresh = new Map<string, Promise<CodexOAuthCredentials>>()
 
-/** 保存 Pi 或 MyYoda 刷新后的完整 Codex OAuth 凭据。 */
+/** 保存 Pi 或 Guru 刷新后的完整 Codex OAuth 凭据。 */
 export function persistCodexOAuthCredentials(channelId: string, credentials: CodexOAuthCredentials): void {
   const channel = getChannelById(channelId)
   if (!channel || channel.provider !== 'openai-codex') {
@@ -617,7 +617,7 @@ export async function resolveCodexAccessToken(channelId: string): Promise<string
   return (await resolveCodexOAuthCredentials(channelId)).access
 }
 
-/** 保存 Pi 或 MyYoda 刷新后的完整 xAI OAuth 凭据。 */
+/** 保存 Pi 或 Guru 刷新后的完整 xAI OAuth 凭据。 */
 export function persistXaiOAuthCredentials(channelId: string, credentials: XaiOAuthCredentials): void {
   const channel = getChannelById(channelId)
   if (!channel || channel.provider !== 'xai') {
@@ -833,7 +833,7 @@ export async function testChannel(channelId: string): Promise<ChannelTestResult>
       case 'google':
         return await testGoogle(channel.baseUrl, apiKey, proxyUrl)
       default:
-        return { success: false, message: `不支持的供应商: ${provider}。你可能过去使用的是 MyYoda 商业版，请重新下载商业版覆盖安装，当前版本为开源版本。` }
+        return { success: false, message: `不支持的供应商: ${provider}。你可能过去使用的是 Guru 商业版，请重新下载商业版覆盖安装，当前版本为开源版本。` }
     }
   } catch (error) {
     return normalizeRequestError(error)
@@ -845,7 +845,7 @@ export async function testChannel(channelId: string): Promise<ChannelTestResult>
  *
  * DeepSeek / Kimi 等内置供应商会按协议根路径补全端点。
  * Anthropic 兼容格式使用用户填写的完整请求地址。
- * Coding Plan 渠道必须发送 MyYoda User-Agent，否则返回 403。
+ * Coding Plan 渠道必须发送 Guru User-Agent，否则返回 403。
  */
 async function testAnthropicCompatible(
   baseUrl: string,
@@ -1565,7 +1565,7 @@ async function fetchZhipuQuota(
 }
 
 async function fetchZhipuTeamQuota(
-  credentials: import('@myyoda/shared').ZhipuTeamCredentials,
+  credentials: import('@guru/shared').ZhipuTeamCredentials,
   proxyUrl?: string,
 ): Promise<ZhipuQuotaResponse | { error: string }> {
   const fetchFn = getFetchFn(proxyUrl)
@@ -2104,7 +2104,7 @@ interface AnthropicModelItem {
  *
  * DeepSeek / Kimi 等内置供应商会按协议根路径补全模型端点。
  * Anthropic 兼容格式使用完整请求地址，不再推导模型端点。
- * Coding Plan 渠道必须发送 MyYoda User-Agent。
+ * Coding Plan 渠道必须发送 Guru User-Agent。
  * 文档: https://docs.anthropic.com/en/api/models-list
  */
 async function fetchAnthropicCompatibleModels(

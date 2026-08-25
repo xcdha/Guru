@@ -28,10 +28,10 @@ describe('buildIssueBody', () => {
 
   test('无截图无联系方式', () => {
     const body = buildIssueBody({ type: 'bug', description: '窗口闪退', screenshots: [] }, { ...base, screenshotUrls: [] })
-    expect(body).toContain('<!-- 来自 MyYoda 应用内反馈 -->')
+    expect(body).toContain('<!-- 来自 Guru 应用内反馈 -->')
     expect(body).toContain('**类型**：Bug 报告')
     expect(body).toContain('窗口闪退')
-    expect(body).toContain('- MyYoda 版本：0.10.8')
+    expect(body).toContain('- Guru 版本：0.10.8')
     expect(body).not.toContain('**截图**')
     expect(body).not.toContain('**联系方式**')
   })

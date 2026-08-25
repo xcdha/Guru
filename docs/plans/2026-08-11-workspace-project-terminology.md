@@ -62,7 +62,7 @@ git commit -m "test: define workspace and project terminology"
 **Steps:**
 1. Rename renderer-only actions to `selectWorkspace` / `createWorkspace`.
 2. Change setting/tab/button/toast/aria copy from 空间/项目 to 工作区.
-3. Clarify Workspace deletion: MyYoda-managed workspace data and bindings are removed; external project working directories are not deleted.
+3. Clarify Workspace deletion: Guru-managed workspace data and bindings are removed; external project working directories are not deleted.
 4. Preserve default/last Workspace guards and API calls.
 5. Run terminology tests and renderer typecheck.
 6. Commit the focused Workspace UI change.
@@ -103,7 +103,7 @@ git commit -m "test: define workspace and project terminology"
 - Modify: `apps/electron/src/main/lib/agent-prompt-builder.ts`
 - Modify: `packages/shared/src/projects/prompt.ts`
 - Modify: prompt tests
-- Modify: `/Users/admin/.myyoda/agent-workspaces/default/workspace-files/.context/2026-08-11-double-review-proma-craft-myyoda-integration.md`
+- Modify: `/Users/admin/.guru/agent-workspaces/default/workspace-files/.context/2026-08-11-double-review-proma-craft-guru-integration.md`
 
 **Steps:**
 1. Clarify session attachment to Workspace and optional binding to Project.

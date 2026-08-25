@@ -1,5 +1,5 @@
 import { Type } from 'typebox'
-import type { CreateAutomationInput, UpdateAutomationInput } from '@myyoda/shared'
+import type { CreateAutomationInput, UpdateAutomationInput } from '@guru/shared'
 
 export type AutomationScheduleType = CreateAutomationInput['scheduleType']
 

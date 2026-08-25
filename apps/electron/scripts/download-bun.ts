@@ -19,7 +19,7 @@
 import { existsSync, mkdirSync, chmodSync, rmSync, createWriteStream, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { createHash } from 'crypto'
-import type { PlatformArch, BunDownloadInfo } from '@myyoda/shared'
+import type { PlatformArch, BunDownloadInfo } from '@guru/shared'
 
 /** Bun 下载 URL 基础路径 */
 const BUN_DOWNLOAD_BASE = 'https://github.com/oven-sh/bun/releases/download'
@@ -72,7 +72,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'MyYoda-Build-Script/1.0',
+      'User-Agent': 'Guru-Build-Script/1.0',
     },
     redirect: 'follow',
   })
@@ -232,9 +232,9 @@ async function getBunVersion(): Promise<string> {
   const pkgFile = Bun.file(pkgPath)
   const pkg = await pkgFile.json()
 
-  const version = pkg.myyoda?.bun?.version
+  const version = pkg.guru?.bun?.version
   if (!version) {
-    throw new Error('package.json 中未配置 myyoda.bun.version')
+    throw new Error('package.json 中未配置 guru.bun.version')
   }
 
   return version
@@ -285,7 +285,7 @@ Bun 二进制下载脚本
  */
 async function main(): Promise<void> {
   console.log('='.repeat(60))
-  console.log('MyYoda Bun 二进制下载脚本')
+  console.log('Guru Bun 二进制下载脚本')
   console.log('='.repeat(60))
 
   try {

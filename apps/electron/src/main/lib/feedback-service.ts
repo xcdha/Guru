@@ -1,11 +1,11 @@
 /**
  * 用户反馈服务（→ GitHub Issues）
  *
- * 反馈提交到 GeoffBao/MyYoda 公开仓库的 Issues（fine-grained PAT 认证）。
- * - 配置：~/.myyoda/feedback.json（token 用 Electron safeStorage 加密）
+ * 反馈提交到 xcdha/Guru 公开仓库的 Issues（fine-grained PAT 认证）。
+ * - 配置：~/.guru/feedback.json（token 用 Electron safeStorage 加密）
  * - 截图：非官方 user-attachments 端点上传（与网页端拖拽等效），URL 嵌入 issue 正文
- * - 草稿：~/.myyoda/feedback-drafts/（v2 格式，提交失败降级，可重试）
- * - 去重：~/.myyoda/feedback-submitted.json（类型+描述 hash，30 天窗口）
+ * - 草稿：~/.guru/feedback-drafts/（v2 格式，提交失败降级，可重试）
+ * - 去重：~/.guru/feedback-submitted.json（类型+描述 hash，30 天窗口）
  * - HTTP 统一走代理感知的 getFetchFn（国内网络环境刚需）
  *
  * 设计契约参考 docs/superpowers/specs/2026-08-17-discover-feedback-github-issues-wiki-design.md §4。
@@ -26,7 +26,7 @@ import {
   type FeedbackSubmitInput,
   type FeedbackSubmitResult,
   type FeedbackTestConnectionResult,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { getFeedbackConfigPath, getFeedbackDraftsDir, getFeedbackSubmittedPath } from './config-paths'
 import {
   buildDedupKey,
@@ -150,10 +150,10 @@ export async function testFeedbackConnection(config: FeedbackGithubConfig): Prom
       return { success: false, message: 'Token 无效或已失效，请到 GitHub 重新生成' }
     }
     if (response.status === 403) {
-      return { success: false, message: '权限不足：请确认 Token 已授权访问 GeoffBao/MyYoda 仓库' }
+      return { success: false, message: '权限不足：请确认 Token 已授权访问 xcdha/Guru 仓库' }
     }
     if (response.status === 404) {
-      return { success: false, message: '找不到目标仓库 GeoffBao/MyYoda' }
+      return { success: false, message: '找不到目标仓库 xcdha/Guru' }
     }
     return { success: false, message: `GitHub 返回错误（${response.status}）` }
   } catch {

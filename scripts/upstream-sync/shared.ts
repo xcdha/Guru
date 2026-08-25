@@ -1,5 +1,5 @@
 /**
- * Proma → MyYoda upstream sync 共享工具
+ * Proma → Guru upstream sync 共享工具
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'

@@ -32,7 +32,7 @@
 ### 变更 3：未发送内容持久化
 
 - 保持 `agentSessionDraftsAtom` 为内存 Map（避免输入时频繁写盘），新增独立持久化副作用模块：
-  - **存储**：localStorage key `myyoda-agent-session-drafts`，JSON 对象 `{ [sessionId]: text }`。
+  - **存储**：localStorage key `guru-agent-session-drafts`，JSON 对象 `{ [sessionId]: text }`。
   - **启动加载**：App 根组件挂载时读取并注入 atom（store.set）。
   - **防抖写**：`AgentView.setInputContent` 触发 `schedulePersist`（1.5s 防抖，模块内 timer 独立于组件生命周期，切换会话不丢盘）。
   - **兜底 flush**：`window.beforeunload` 全局监听一次，同步 flush。

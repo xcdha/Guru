@@ -63,7 +63,7 @@ export const getAllFiles = async (baseDir: string, excludePatterns: string[] = [
   const allIgnorePatterns = [...DEFAULT_IGNORE_PATTERNS, ...excludePatterns];
 
   try {
-    // 文件系统扫描（git ls-files 感知后续可接入 MyYoda git 服务，避免仅分析 git 跟踪文件的场景）
+    // 文件系统扫描（git ls-files 感知后续可接入 Guru git 服务，避免仅分析 git 跟踪文件的场景）
     const fsFiles = await getAllFilesFromFS(baseDir, allIgnorePatterns);
 
     // Filter by exclude patterns

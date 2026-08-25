@@ -1,6 +1,6 @@
 import { atom } from 'jotai'
-import type { AgentSessionMeta } from '@myyoda/shared'
-import type { TaskAggregateSummary, TaskWorkflow } from '@myyoda/shared/tasks'
+import type { AgentSessionMeta } from '@guru/shared'
+import type { TaskAggregateSummary, TaskWorkflow } from '@guru/shared/tasks'
 import { buildKanbanViewModel } from '@/components/app-shell/kanban/kanban-view-model'
 import { workflowForKanbanColumn } from '@/components/app-shell/kanban/status-column'
 import type { SpecNodeSummary } from '@/components/app-shell/kanban/subtask-merge'

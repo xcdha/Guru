@@ -1,4 +1,4 @@
-import type { Channel } from '@myyoda/shared'
+import type { Channel } from '@guru/shared'
 import type { KanbanModelOption, KanbanModelProviderGroup } from './types'
 
 export interface KanbanModelSelection {

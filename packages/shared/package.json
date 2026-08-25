@@ -1,8 +1,8 @@
 {
-  "name": "@myyoda/shared",
+  "name": "@guru/shared",
   "version": "0.1.58",
   "license": "AGPL-3.0-only",
-  "description": "Shared types, configs and utilities for MyYoda",
+  "description": "Shared types, configs and utilities for Guru",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

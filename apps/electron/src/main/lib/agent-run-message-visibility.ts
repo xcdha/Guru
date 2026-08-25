@@ -1,5 +1,5 @@
-import type { SDKAssistantMessage, SDKMessage, SDKSystemMessage } from '@myyoda/shared'
-import { isPersistableSDKSystemMessage } from '@myyoda/shared'
+import type { SDKAssistantMessage, SDKMessage, SDKSystemMessage } from '@guru/shared'
+import { isPersistableSDKSystemMessage } from '@guru/shared'
 
 function isNonEmptyString(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0

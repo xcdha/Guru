@@ -1,8 +1,8 @@
 /**
  * 配置路径工具
  *
- * 管理 MyYoda 应用的本地配置文件路径。
- * 所有用户配置存储在 ~/.myyoda/ 目录下。
+ * 管理 Guru 应用的本地配置文件路径。
+ * 所有用户配置存储在 ~/.guru/ 目录下。
  */
 
 import { join, basename } from 'node:path'
@@ -14,28 +14,28 @@ import { resolveSafeAttachmentPath } from './attachment-path-policy'
 /**
  * 获取配置目录名称
  *
- * 开发模式下返回 '.myyoda-dev'，正式版本返回 '.myyoda'。
+ * 开发模式下返回 '.guru-dev'，正式版本返回 '.guru'。
  *
  * 检测优先级：
- * 1. MYYODA_DEV=1 环境变量（显式覆盖）
+ * 1. GURU_DEV=1 环境变量（显式覆盖）
  * 2. Electron app.isPackaged（未打包 = 开发模式）
- * 3. 兜底 '.myyoda'
+ * 3. 兜底 '.guru'
  */
 let _configDirName: string | undefined
 
 export function getConfigDirName(): string {
   if (_configDirName === undefined) {
-    if (process.env.MYYODA_DEV === '1') {
-      _configDirName = '.myyoda-dev'
+    if (process.env.GURU_DEV === '1') {
+      _configDirName = '.guru-dev'
     } else {
       try {
         const { app } = require('electron')
-        _configDirName = app.isPackaged ? '.myyoda' : '.myyoda-dev'
+        _configDirName = app.isPackaged ? '.guru' : '.guru-dev'
       } catch {
-        _configDirName = '.myyoda'
+        _configDirName = '.guru'
       }
     }
-    const mode = _configDirName === '.myyoda-dev' ? '开发模式' : '正式版本'
+    const mode = _configDirName === '.guru-dev' ? '开发模式' : '正式版本'
     console.log(`[配置] 配置目录: ~/${_configDirName}/（${mode}）`)
   }
   return _configDirName
@@ -44,7 +44,7 @@ export function getConfigDirName(): string {
 /**
  * 获取配置目录路径
  *
- * 开发模式返回 ~/.myyoda-dev/，正式版本返回 ~/.myyoda/。
+ * 开发模式返回 ~/.guru-dev/，正式版本返回 ~/.guru/。
  * 如果目录不存在则自动创建。
  */
 export function getConfigDir(): string {
@@ -61,7 +61,7 @@ export function getConfigDir(): string {
 /**
  * 获取渠道配置文件路径
  *
- * @returns ~/.myyoda/channels.json
+ * @returns ~/.guru/channels.json
  */
 export function getChannelsPath(): string {
   return join(getConfigDir(), 'channels.json')
@@ -70,7 +70,7 @@ export function getChannelsPath(): string {
 /**
  * 获取对话索引文件路径
  *
- * @returns ~/.myyoda/conversations.json
+ * @returns ~/.guru/conversations.json
  */
 export function getConversationsIndexPath(): string {
   return join(getConfigDir(), 'conversations.json')
@@ -81,7 +81,7 @@ export function getConversationsIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/conversations/
+ * @returns ~/.guru/conversations/
  */
 export function getConversationsDir(): string {
   const dir = join(getConfigDir(), 'conversations')
@@ -98,7 +98,7 @@ export function getConversationsDir(): string {
  * 获取指定对话的消息文件路径
  *
  * @param id 对话 ID
- * @returns ~/.myyoda/conversations/{id}.jsonl
+ * @returns ~/.guru/conversations/{id}.jsonl
  */
 export function getConversationMessagesPath(id: string): string {
   return join(getConversationsDir(), `${id}.jsonl`)
@@ -109,7 +109,7 @@ export function getConversationMessagesPath(id: string): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/attachments/
+ * @returns ~/.guru/attachments/
  */
 export function getAttachmentsDir(): string {
   const dir = join(getConfigDir(), 'attachments')
@@ -128,7 +128,7 @@ export function getAttachmentsDir(): string {
  * 如果目录不存在则自动创建。
  *
  * @param conversationId 对话 ID
- * @returns ~/.myyoda/attachments/{conversationId}/
+ * @returns ~/.guru/attachments/{conversationId}/
  */
 export function getConversationAttachmentsDir(conversationId: string): string {
   const dir = resolveSafeAttachmentPath(getAttachmentsDir(), conversationId)
@@ -144,7 +144,7 @@ export function getConversationAttachmentsDir(conversationId: string): string {
  * 解析附件相对路径为完整路径
  *
  * @param localPath 相对路径 {conversationId}/{uuid}.ext
- * @returns 完整路径 ~/.myyoda/attachments/{conversationId}/{uuid}.ext
+ * @returns 完整路径 ~/.guru/attachments/{conversationId}/{uuid}.ext
  */
 export function resolveAttachmentPath(localPath: string): string {
   return resolveSafeAttachmentPath(getAttachmentsDir(), localPath)
@@ -153,7 +153,7 @@ export function resolveAttachmentPath(localPath: string): string {
 /**
  * 获取应用设置文件路径
  *
- * @returns ~/.myyoda/settings.json
+ * @returns ~/.guru/settings.json
  */
 export function getSettingsPath(): string {
   return join(getConfigDir(), 'settings.json')
@@ -162,7 +162,7 @@ export function getSettingsPath(): string {
 /**
  * 获取系统默认 App 探测缓存路径
  *
- * @returns ~/.myyoda/default-apps.json
+ * @returns ~/.guru/default-apps.json
  */
 export function getDefaultAppsCachePath(): string {
   return join(getConfigDir(), 'default-apps.json')
@@ -171,7 +171,7 @@ export function getDefaultAppsCachePath(): string {
 /**
  * 获取用户档案文件路径
  *
- * @returns ~/.myyoda/user-profile.json
+ * @returns ~/.guru/user-profile.json
  */
 export function getUserProfilePath(): string {
   return join(getConfigDir(), 'user-profile.json')
@@ -180,7 +180,7 @@ export function getUserProfilePath(): string {
 /**
  * 获取代理配置文件路径
  *
- * @returns ~/.myyoda/proxy-settings.json
+ * @returns ~/.guru/proxy-settings.json
  */
 export function getProxySettingsPath(): string {
   return join(getConfigDir(), 'proxy-settings.json')
@@ -189,7 +189,7 @@ export function getProxySettingsPath(): string {
 /**
  * 获取系统提示词配置文件路径
  *
- * @returns ~/.myyoda/system-prompts.json
+ * @returns ~/.guru/system-prompts.json
  */
 export function getSystemPromptsPath(): string {
   return join(getConfigDir(), 'system-prompts.json')
@@ -198,7 +198,7 @@ export function getSystemPromptsPath(): string {
 /**
  * 获取 Chat 工具配置文件路径
  *
- * @returns ~/.myyoda/chat-tools.json
+ * @returns ~/.guru/chat-tools.json
  */
 export function getChatToolsConfigPath(): string {
   return join(getConfigDir(), 'chat-tools.json')
@@ -207,7 +207,7 @@ export function getChatToolsConfigPath(): string {
 /**
  * 获取 Agent 会话索引文件路径
  *
- * @returns ~/.myyoda/agent-sessions.json
+ * @returns ~/.guru/agent-sessions.json
  */
 export function getAgentSessionsIndexPath(): string {
   return join(getConfigDir(), 'agent-sessions.json')
@@ -218,7 +218,7 @@ export function getAgentSessionsIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/agent-sessions/
+ * @returns ~/.guru/agent-sessions/
  */
 export function getAgentSessionsDir(): string {
   const dir = join(getConfigDir(), 'agent-sessions')
@@ -235,7 +235,7 @@ export function getAgentSessionsDir(): string {
  * 获取指定 Agent 会话的消息文件路径
  *
  * @param id 会话 ID
- * @returns ~/.myyoda/agent-sessions/{id}.jsonl
+ * @returns ~/.guru/agent-sessions/{id}.jsonl
  */
 export function getAgentSessionMessagesPath(id: string): string {
   return join(getAgentSessionsDir(), `${id}.jsonl`)
@@ -244,7 +244,7 @@ export function getAgentSessionMessagesPath(id: string): string {
 /**
  * 获取 Agent 用量聚合缓存文件路径
  *
- * @returns ~/.myyoda/agent-usage-cache.json
+ * @returns ~/.guru/agent-usage-cache.json
  */
 export function getAgentUsageCachePath(): string {
   return join(getConfigDir(), 'agent-usage-cache.json')
@@ -253,7 +253,7 @@ export function getAgentUsageCachePath(): string {
 /**
  * 获取 Agent 工作区索引文件路径
  *
- * @returns ~/.myyoda/agent-workspaces.json
+ * @returns ~/.guru/agent-workspaces.json
  */
 export function getAgentWorkspacesIndexPath(): string {
   return join(getConfigDir(), 'agent-workspaces.json')
@@ -264,7 +264,7 @@ export function getAgentWorkspacesIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/agent-workspaces/
+ * @returns ~/.guru/agent-workspaces/
  */
 export function getAgentWorkspacesDir(): string {
   const dir = join(getConfigDir(), 'agent-workspaces')
@@ -283,7 +283,7 @@ export function getAgentWorkspacesDir(): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/
+ * @returns ~/.guru/agent-workspaces/{slug}/
  */
 export function getAgentWorkspacePath(slug: string): string {
   const dir = join(getAgentWorkspacesDir(), slug)
@@ -300,7 +300,7 @@ export function getAgentWorkspacePath(slug: string): string {
  * 获取指定工作区的 MCP 配置文件路径
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/mcp.json
+ * @returns ~/.guru/agent-workspaces/{slug}/mcp.json
  */
 export function getWorkspaceMcpPath(slug: string): string {
   return join(getAgentWorkspacePath(slug), 'mcp.json')
@@ -311,7 +311,7 @@ export function getWorkspaceMcpPath(slug: string): string {
 /**
  * 全局 MCP 配置文件路径（所有工作区共享的唯一配置；无工作区/项目覆盖层）
  *
- * @returns ~/.myyoda/mcp.json
+ * @returns ~/.guru/mcp.json
  */
 export function getGlobalMcpPath(): string {
   return join(getConfigDir(), 'mcp.json')
@@ -322,7 +322,7 @@ export function getGlobalMcpPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/global-skills/
+ * @returns ~/.guru/global-skills/
  */
 export function getGlobalSkillsDir(): string {
   const dir = join(getConfigDir(), 'global-skills')
@@ -337,7 +337,7 @@ export function getGlobalSkillsDir(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/global-skills-inactive/
+ * @returns ~/.guru/global-skills-inactive/
  */
 export function getGlobalInactiveSkillsDir(): string {
   const dir = join(getConfigDir(), 'global-skills-inactive')
@@ -350,7 +350,7 @@ export function getGlobalInactiveSkillsDir(): string {
 /**
  * 全局作用域迁移进度文件路径（migrateGlobalScopes 幂等标记）
  *
- * @returns ~/.myyoda/.migration-global-scope.json
+ * @returns ~/.guru/.migration-global-scope.json
  */
 export function getGlobalScopeMigrationStatePath(): string {
   return join(getConfigDir(), '.migration-global-scope.json')
@@ -359,7 +359,7 @@ export function getGlobalScopeMigrationStatePath(): string {
 /**
  * 全局作用域迁移备份目录路径
  *
- * @returns ~/.myyoda/.migration-backup/
+ * @returns ~/.guru/.migration-backup/
  */
 export function getGlobalScopeMigrationBackupDir(): string {
   const dir = join(getConfigDir(), '.migration-backup')
@@ -373,7 +373,7 @@ export function getGlobalScopeMigrationBackupDir(): string {
  * 获取指定工作区的会话自定义分组存储文件路径
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/session-groups.json
+ * @returns ~/.guru/agent-workspaces/{slug}/session-groups.json
  */
 export function getSessionGroupsPath(slug: string): string {
   return join(getAgentWorkspacePath(slug), 'session-groups.json')
@@ -385,7 +385,7 @@ export function getSessionGroupsPath(slug: string): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/skills/
+ * @returns ~/.guru/agent-workspaces/{slug}/skills/
  */
 export function getWorkspaceSkillsDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'skills')
@@ -404,7 +404,7 @@ export function getWorkspaceSkillsDir(slug: string): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/workspace-files/
+ * @returns ~/.guru/agent-workspaces/{slug}/workspace-files/
  */
 export function getWorkspaceFilesDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'workspace-files')
@@ -423,7 +423,7 @@ export function getWorkspaceFilesDir(slug: string): string {
  * 适用于 /now 等只读查询场景。
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/workspace-files/
+ * @returns ~/.guru/agent-workspaces/{slug}/workspace-files/
  */
 export function resolveWorkspaceFilesDir(slug: string): string {
   return join(getConfigDir(), 'agent-workspaces', slug, 'workspace-files')
@@ -437,7 +437,7 @@ export function resolveWorkspaceFilesDir(slug: string): string {
  *
  * @param slug 工作区 slug
  * @param sessionId 会话 ID
- * @returns ~/.myyoda/agent-workspaces/{slug}/{sessionId}/
+ * @returns ~/.guru/agent-workspaces/{slug}/{sessionId}/
  */
 export function resolveAgentSessionWorkspacePath(slug: string, sessionId: string): string {
   return join(getConfigDir(), 'agent-workspaces', slug, sessionId)
@@ -450,7 +450,7 @@ export function resolveAgentSessionWorkspacePath(slug: string, sessionId: string
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/skills-inactive/
+ * @returns ~/.guru/agent-workspaces/{slug}/skills-inactive/
  */
 export function getInactiveSkillsDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'skills-inactive')
@@ -467,7 +467,7 @@ export function getInactiveSkillsDir(slug: string): string {
  *
  * 新建工作区时自动复制此目录的内容到工作区 skills/ 下。
  *
- * @returns ~/.myyoda/default-skills/
+ * @returns ~/.guru/default-skills/
  */
 export function getDefaultSkillsDir(): string {
   const dir = join(getConfigDir(), 'default-skills')
@@ -480,14 +480,14 @@ export function getDefaultSkillsDir(): string {
 }
 
 /**
- * 获取 Agent 专家模板目录（~/.myyoda/default-experts/templates/）
+ * 获取 Agent 专家模板目录（~/.guru/default-experts/templates/）
  */
 export function getDefaultExpertTemplatesDir(): string {
   return join(getConfigDir(), 'default-experts', 'templates')
 }
 
 /**
- * 从 app bundle 同步内置专家模板到 ~/.myyoda/default-experts/templates/
+ * 从 app bundle 同步内置专家模板到 ~/.guru/default-experts/templates/
  *
  * 打包模式从 process.resourcesPath/default-experts 复制，开发模式从源码 default-experts/。
  * 模板文件很小且「缺失即写」即可：新模板随应用分发自动出现，已存在的不覆盖
@@ -529,7 +529,7 @@ export function seedDefaultExpertTemplates(): void {
  * 内置与自定义专家包均存放于此目录下的 {id}/ 子目录。
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/experts/
+ * @returns ~/.guru/experts/
  */
 export function getExpertsDir(): string {
   const dir = join(getConfigDir(), 'experts')
@@ -543,7 +543,7 @@ export function getExpertsDir(): string {
 }
 
 /**
- * 获取打包进 App 的 myyoda CLI 二进制路径。
+ * 获取打包进 App 的 guru CLI 二进制路径。
  *
  * 打包模式下从 process.resourcesPath/bin 取（electron-builder extraResources 注入）。
  * 开发模式下没有编译二进制——返回 undefined，由调用方回退到源码运行
@@ -554,7 +554,7 @@ export function getExpertsDir(): string {
 export function getBundledCliPath(): string | undefined {
   const { app } = require('electron')
   if (!app.isPackaged) return undefined
-  const binName = process.platform === 'win32' ? 'myyoda.exe' : 'myyoda'
+  const binName = process.platform === 'win32' ? 'guru.exe' : 'guru'
   const cliPath = join(process.resourcesPath, 'bin', binName)
   return existsSync(cliPath) ? cliPath : undefined
 }
@@ -622,7 +622,7 @@ function defaultSkillCopyFilter(src: string): boolean {
 }
 
 /**
- * 从 app bundle 同步默认 Skills 到 ~/.myyoda/default-skills/
+ * 从 app bundle 同步默认 Skills 到 ~/.guru/default-skills/
  *
  * 打包模式下从 process.resourcesPath/default-skills 复制。
  * 开发模式下从源码 default-skills/ 目录复制。
@@ -698,7 +698,7 @@ export function seedDefaultSkills(): void {
 /**
  * 获取微信配置文件路径
  *
- * @returns ~/.myyoda/wechat.json
+ * @returns ~/.guru/wechat.json
  */
 export function getWeChatConfigPath(): string {
   return join(getConfigDir(), 'wechat.json')
@@ -707,7 +707,7 @@ export function getWeChatConfigPath(): string {
 /**
  * 获取微信长轮询同步游标路径
  *
- * @returns ~/.myyoda/wechat-sync.json
+ * @returns ~/.guru/wechat-sync.json
  */
 export function getWeChatSyncPath(): string {
   return join(getConfigDir(), 'wechat-sync.json')
@@ -716,7 +716,7 @@ export function getWeChatSyncPath(): string {
 /**
  * 获取微信聊天绑定持久化路径
  *
- * @returns ~/.myyoda/wechat-bindings.json
+ * @returns ~/.guru/wechat-bindings.json
  */
 export function getWeChatBindingsPath(): string {
   return join(getConfigDir(), 'wechat-bindings.json')
@@ -725,7 +725,7 @@ export function getWeChatBindingsPath(): string {
 /**
  * 获取钉钉配置文件路径
  *
- * @returns ~/.myyoda/dingtalk.json
+ * @returns ~/.guru/dingtalk.json
  */
 export function getDingTalkConfigPath(): string {
   return join(getConfigDir(), 'dingtalk.json')
@@ -734,7 +734,7 @@ export function getDingTalkConfigPath(): string {
 /**
  * 获取某个钉钉 Bot 的聊天绑定持久化路径
  *
- * @returns ~/.myyoda/dingtalk-bindings-{botId}.json
+ * @returns ~/.guru/dingtalk-bindings-{botId}.json
  */
 export function getDingTalkBotBindingsPath(botId: string): string {
   return join(getConfigDir(), `dingtalk-bindings-${botId}.json`)
@@ -743,7 +743,7 @@ export function getDingTalkBotBindingsPath(botId: string): string {
 /**
  * 获取飞书配置文件路径
  *
- * @returns ~/.myyoda/feishu.json
+ * @returns ~/.guru/feishu.json
  */
 export function getFeishuConfigPath(): string {
   return join(getConfigDir(), 'feishu.json')
@@ -752,7 +752,7 @@ export function getFeishuConfigPath(): string {
 /**
  * 获取反馈配置（GitHub PAT）文件路径
  *
- * @returns ~/.myyoda/feedback.json
+ * @returns ~/.guru/feedback.json
  */
 export function getFeedbackConfigPath(): string {
   return join(getConfigDir(), 'feedback.json')
@@ -761,7 +761,7 @@ export function getFeedbackConfigPath(): string {
 /**
  * 获取反馈草稿目录路径
  *
- * @returns ~/.myyoda/feedback-drafts
+ * @returns ~/.guru/feedback-drafts
  */
 export function getFeedbackDraftsDir(): string {
   return join(getConfigDir(), 'feedback-drafts')
@@ -770,7 +770,7 @@ export function getFeedbackDraftsDir(): string {
 /**
  * 获取反馈去重记录文件路径
  *
- * @returns ~/.myyoda/feedback-submitted.json
+ * @returns ~/.guru/feedback-submitted.json
  */
 export function getFeedbackSubmittedPath(): string {
   return join(getConfigDir(), 'feedback-submitted.json')
@@ -779,7 +779,7 @@ export function getFeedbackSubmittedPath(): string {
 /**
  * 获取「发现」面板数据目录（清单缓存/已读状态/讨论缓存/视频缓存）
  *
- * @returns ~/.myyoda/discover
+ * @returns ~/.guru/discover
  */
 export function getDiscoverDir(): string {
   return join(getConfigDir(), 'discover')
@@ -788,7 +788,7 @@ export function getDiscoverDir(): string {
 /**
  * 获取「发现」已读状态文件路径
  *
- * @returns ~/.myyoda/discover/content-state.json
+ * @returns ~/.guru/discover/content-state.json
  */
 export function getDiscoverContentStatePath(): string {
   return join(getDiscoverDir(), 'content-state.json')
@@ -797,7 +797,7 @@ export function getDiscoverContentStatePath(): string {
 /**
  * 获取「发现」清单缓存文件路径
  *
- * @returns ~/.myyoda/discover/manifest-cache.json
+ * @returns ~/.guru/discover/manifest-cache.json
  */
 export function getDiscoverManifestCachePath(): string {
   return join(getDiscoverDir(), 'manifest-cache.json')
@@ -806,7 +806,7 @@ export function getDiscoverManifestCachePath(): string {
 /**
  * 获取「发现」视频本地缓存目录
  *
- * @returns ~/.myyoda/discover/video-cache
+ * @returns ~/.guru/discover/video-cache
  */
 export function getDiscoverVideoCacheDir(): string {
   return join(getDiscoverDir(), 'video-cache')
@@ -815,7 +815,7 @@ export function getDiscoverVideoCacheDir(): string {
 /**
  * 获取「发现」Wiki 缓存目录路径（git 浅克隆目标）
  *
- * @returns ~/.myyoda/discover/wiki-cache
+ * @returns ~/.guru/discover/wiki-cache
  */
 export function getDiscoverWikiCacheDir(): string {
   return join(getDiscoverDir(), 'wiki-cache')
@@ -824,7 +824,7 @@ export function getDiscoverWikiCacheDir(): string {
 /**
  * 获取「发现」社区已读状态文件路径
  *
- * @returns ~/.myyoda/discover/community-state.json
+ * @returns ~/.guru/discover/community-state.json
  */
 export function getDiscoverCommunityStatePath(): string {
   return join(getDiscoverDir(), 'community-state.json')
@@ -833,7 +833,7 @@ export function getDiscoverCommunityStatePath(): string {
 /**
  * 获取「发现」讨论列表缓存文件路径
  *
- * @returns ~/.myyoda/discover/discussions-cache.json
+ * @returns ~/.guru/discover/discussions-cache.json
  */
 export function getDiscoverDiscussionsCachePath(): string {
   return join(getDiscoverDir(), 'discussions-cache.json')
@@ -842,7 +842,7 @@ export function getDiscoverDiscussionsCachePath(): string {
 /**
  * 获取飞书聊天绑定持久化路径
  *
- * @returns ~/.myyoda/feishu-bindings.json
+ * @returns ~/.guru/feishu-bindings.json
  */
 export function getFeishuBindingsPath(): string {
   return join(getConfigDir(), 'feishu-bindings.json')
@@ -851,7 +851,7 @@ export function getFeishuBindingsPath(): string {
 /**
  * 获取某个飞书 Bot 的聊天绑定持久化路径
  *
- * @returns ~/.myyoda/feishu-bindings-{botId}.json
+ * @returns ~/.guru/feishu-bindings-{botId}.json
  */
 export function getFeishuBotBindingsPath(botId: string): string {
   return join(getConfigDir(), `feishu-bindings-${botId}.json`)
@@ -862,7 +862,7 @@ export function getFeishuBotBindingsPath(botId: string): string {
  *
  * 用于保存最近交互用户 open_id 等需要跨进程重启恢复的状态。
  *
- * @returns ~/.myyoda/feishu-metadata-{botId}.json
+ * @returns ~/.guru/feishu-metadata-{botId}.json
  */
 export function getFeishuBotMetadataPath(botId: string): string {
   return join(getConfigDir(), `feishu-metadata-${botId}.json`)
@@ -876,7 +876,7 @@ export function getFeishuBotMetadataPath(botId: string): string {
  *
  * @param workspaceSlug 工作区 slug
  * @param sessionId 会话 ID
- * @returns ~/.myyoda/agent-workspaces/{slug}/{sessionId}/
+ * @returns ~/.guru/agent-workspaces/{slug}/{sessionId}/
  */
 export function getAgentSessionWorkspacePath(workspaceSlug: string, sessionId: string): string {
   const dir = join(getAgentWorkspacePath(workspaceSlug), sessionId)
@@ -893,11 +893,11 @@ export function getAgentSessionWorkspacePath(workspaceSlug: string, sessionId: s
  * 获取 SDK 隔离配置目录路径
  *
  * 用于设置 CLAUDE_CONFIG_DIR 环境变量，让 SDK 读取独立的配置文件，
- * 而不是用户的 ~/.claude.json，实现 MyYoda 与 Claude Code CLI 的配置隔离。
+ * 而不是用户的 ~/.claude.json，实现 Guru 与 Claude Code CLI 的配置隔离。
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.myyoda/sdk-config/
+ * @returns ~/.guru/sdk-config/
  */
 export function getSdkConfigDir(): string {
   const dir = join(getConfigDir(), 'sdk-config')
@@ -913,7 +913,7 @@ export function getSdkConfigDir(): string {
 /**
  * 获取 Scratch Pad 文件路径
  *
- * @returns ~/.myyoda/scratch-pad.md
+ * @returns ~/.guru/scratch-pad.md
  */
 export function getScratchPadPath(): string {
   return join(getConfigDir(), 'scratch-pad.md')
@@ -922,7 +922,7 @@ export function getScratchPadPath(): string {
 /**
  * 获取定时任务（Automation）配置文件路径
  *
- * @returns ~/.myyoda/automations.json
+ * @returns ~/.guru/automations.json
  */
 export function getAutomationsPath(): string {
   return join(getConfigDir(), 'automations.json')
@@ -937,7 +937,7 @@ export function getPlanningDatabasePath(): string {
  * 获取 Excalidraw 画布文件目录路径（按 Workspace）
  *
  * @param workspaceSlug 工作区 slug
- * @returns ~/.myyoda/agent-workspaces/{slug}/excalidraw/
+ * @returns ~/.guru/agent-workspaces/{slug}/excalidraw/
  */
 export function getExcalidrawDir(workspaceSlug: string): string {
   const dir = join(getAgentWorkspacePath(workspaceSlug), 'excalidraw')
@@ -967,7 +967,7 @@ export function isRetiredDefaultSkill(slug: string): boolean {
   return RETIRED_DEFAULT_SKILL_SLUG_SET.has(slug)
 }
 
-/** 清理 ~/.myyoda/default-skills/ 中已退役的内置 Skill 缓存。 */
+/** 清理 ~/.guru/default-skills/ 中已退役的内置 Skill 缓存。 */
 export function removeRetiredDefaultSkills(dir = getDefaultSkillsDir()): void {
   for (const slug of RETIRED_DEFAULT_SKILL_SLUGS) {
     const target = join(dir, slug)

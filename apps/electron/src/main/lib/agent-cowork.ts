@@ -15,14 +15,14 @@ import {
   formatExpertPreamble,
   validateTeamSquad,
   type TeamSquad,
-} from '@myyoda/shared/experts'
+} from '@guru/shared/experts'
 import {
   type AgentMessage,
   type AgentSessionMeta,
   type SpawnExpertCoworkInput,
   type SpawnExpertCoworkResult,
-} from '@myyoda/shared'
-import type { AgentSendInput, MyYodaPermissionMode } from '@myyoda/shared'
+} from '@guru/shared'
+import type { AgentSendInput, GuruPermissionMode } from '@guru/shared'
 import { extractFinalText } from './agent-cowork-utils'
 import {
   createAgentSession,
@@ -36,9 +36,9 @@ import {
   buildTeamExecutionSpec,
 } from './team-run'
 import { getExpertsDir } from './config-paths'
-import { extractYaml, buildRepairPrompt } from '@myyoda/shared/tasks'
-import type { TaskSpec } from '@myyoda/shared/tasks/schema'
-import { parseTaskYaml } from '@myyoda/shared/tasks/storage'
+import { extractYaml, buildRepairPrompt } from '@guru/shared/tasks'
+import type { TaskSpec } from '@guru/shared/tasks/schema'
+import { parseTaskYaml } from '@guru/shared/tasks/storage'
 
 /** cowork 子会话在 AgentSessionMeta 中的委派角色标记 */
 export const COWORK_DELEGATION_ROLE = 'expert-cowork' as const
@@ -47,7 +47,7 @@ interface CoworkParentContext {
   channelId?: string
   modelId?: string
   workspaceId?: string
-  permissionMode?: MyYodaPermissionMode
+  permissionMode?: GuruPermissionMode
   agentRuntime?: string
   projectId?: string
   workingDirectory?: string

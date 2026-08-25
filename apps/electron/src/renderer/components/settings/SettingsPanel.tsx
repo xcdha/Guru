@@ -240,7 +240,7 @@ export function SettingsPanel({
   /** 切换标签页时检测是否有未保存内容；使用指南和 FAQ 分别进入对应帮助入口。 */
   const handleTabChange = (tabId: SettingsTab): void => {
     if (tabId === 'tutorial') {
-      const result = openTab(mainTabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'MyYoda 使用指南' })
+      const result = openTab(mainTabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'Guru 使用指南' })
       setMainTabs(result.tabs)
       setMainActiveTabId(result.activeTabId)
       setAutomationForm({ open: false, draft: null })

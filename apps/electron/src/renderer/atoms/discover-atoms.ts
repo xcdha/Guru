@@ -10,7 +10,7 @@ import type {
   VideoDownloadState,
   WikiPageContent,
   WikiPagesResult,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 面板内 tab：featured 官方精选 / community 社区 / help 帮助 / feedback 反馈 */
 export type DiscoverTab = 'featured' | 'community' | 'help' | 'feedback'

@@ -14,8 +14,8 @@ import type {
   AutomationPermissionMode,
   AutomationSessionMode,
   AgentRuntime,
-} from '@myyoda/shared'
-import { AUTOMATION_DEFAULT_PERMISSION_MODE, AUTOMATION_DEFAULT_SESSION_MODE, AUTOMATION_DEFAULT_EXECUTION_MODE } from '@myyoda/shared'
+} from '@guru/shared'
+import { AUTOMATION_DEFAULT_PERMISSION_MODE, AUTOMATION_DEFAULT_SESSION_MODE, AUTOMATION_DEFAULT_EXECUTION_MODE } from '@guru/shared'
 
 /** 全部定时任务列表 */
 export const automationsAtom = atom<Automation[]>([])

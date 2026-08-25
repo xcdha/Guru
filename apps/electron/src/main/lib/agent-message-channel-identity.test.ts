@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { SDKMessage } from '@myyoda/shared'
+import type { SDKMessage } from '@guru/shared'
 import { withAgentMessageChannelIdentity } from './agent-message-channel-identity'
 
 describe('Agent 消息渠道身份', () => {

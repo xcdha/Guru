@@ -4,7 +4,7 @@
 
 **Goal:** 左侧栏「功能」分组内新增「发现」入口，主区独立面板包含官方精选流（视频/教程/公告/外链，带版本更新标记）、社区讨论（GitHub Discussions 只读 + 跳浏览器）、反馈（复用 Notion 弹窗）。
 
-**Architecture:** 内容源为公开 GitHub 内容仓库 `GeoffBao/myyoda-content` 的 `content.json` 清单（raw.githubusercontent + jsDelivr 兜底）；视频以 Release 资产托管，下载到本地缓存后经既有 `myyoda-file://` 协议（支持 Range seek）播放；社区走 MyYoda 主仓库 Discussions REST API（匿名 + 5 分钟缓存）。全部拉取复用代理感知的 `getFetchFn`。
+**Architecture:** 内容源为公开 GitHub 内容仓库 `xcdha/Guru-content` 的 `content.json` 清单（raw.githubusercontent + jsDelivr 兜底）；视频以 Release 资产托管，下载到本地缓存后经既有 `guru-file://` 协议（支持 Range seek）播放；社区走 Guru 主仓库 Discussions REST API（匿名 + 5 分钟缓存）。全部拉取复用代理感知的 `getFetchFn`。
 
 **Tech Stack:** Electron 39 + React 18 + Jotai + Bun test + TypeScript strict。模式参考 feedback-service（IPC 通道 → 主进程服务 → preload → 渲染层）。
 
@@ -16,12 +16,12 @@
 
 - 所有命令在 worktree 根目录执行：`/Users/admin/Workspace/ClaudeCode/LuxAgents/.worktrees/discover-community-content`
 - 注释/日志中文；禁止 `any`；对象类型优先 interface；仅类型导入用 `import type`
-- 每次 commit 加 trailer：`--trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"`
+- 每次 commit 加 trailer：`--trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"`
 - 验证命令：`bun run typecheck`、`bun test`（在对应包目录跑）
 
 ---
 
-### Task 1: 共享类型与 IPC 通道（@myyoda/shared）
+### Task 1: 共享类型与 IPC 通道（@guru/shared）
 
 **Files:**
 - Create: `packages/shared/src/types/discover.ts`
@@ -98,7 +98,7 @@ export interface VideoDownloadProgressEvent {
   progress: number
 }
 
-/** 下载完成事件：filePath 为本地缓存绝对路径，渲染层经 getVideoUrl 换 myyoda-file:// URL */
+/** 下载完成事件：filePath 为本地缓存绝对路径，渲染层经 getVideoUrl 换 guru-file:// URL */
 export interface VideoDownloadDoneEvent {
   itemId: string
   filePath: string
@@ -165,7 +165,7 @@ export const DISCOVER_IPC_CHANNELS = {
   LIST_DISCUSSIONS: 'discover:list-discussions',
   /** 拉取讨论详情正文 */
   GET_DISCUSSION: 'discover:get-discussion',
-  /** 为已下载视频文件注册 myyoda-file:// 播放 URL */
+  /** 为已下载视频文件注册 guru-file:// 播放 URL */
   GET_VIDEO_URL: 'discover:get-video-url',
   /** 用系统浏览器打开外链 / 讨论页 */
   OPEN_EXTERNAL: 'discover:open-external',
@@ -191,7 +191,7 @@ Expected: 0 errors
 
 ```bash
 git add packages/shared/src/types/discover.ts packages/shared/src/types/index.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(shared): 「发现」面板共享类型与 IPC 通道常量"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(shared): 「发现」面板共享类型与 IPC 通道常量"
 ```
 
 ---
@@ -206,7 +206,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 ```ts
 /** 「发现」面板数据目录（清单缓存/已读状态/讨论缓存/视频缓存） */
 export function getDiscoverDir(): string {
-  return join(getMyYodaRoot(), 'discover')
+  return join(getGuruRoot(), 'discover')
 }
 
 /** 已读状态文件：content-state.json */
@@ -230,7 +230,7 @@ export function getDiscoverDiscussionsCachePath(): string {
 }
 ```
 
-（确认 `getMyYodaRoot` 的实际函数名——以文件内现有实现为准，如为 `getMyYodaRootPath` 则对齐。）
+（确认 `getGuruRoot` 的实际函数名——以文件内现有实现为准，如为 `getGuruRootPath` 则对齐。）
 
 **Step 2: 验证**
 
@@ -241,7 +241,7 @@ Expected: 0 errors
 
 ```bash
 git add apps/electron/src/main/lib/config-paths.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 配置路径——清单/状态/视频缓存/讨论缓存"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 配置路径——清单/状态/视频缓存/讨论缓存"
 ```
 
 ---
@@ -305,7 +305,7 @@ Expected: FAIL（模块不存在）
 /**
  * 「发现」内容清单纯逻辑：校验 + 更新标记（无 IO，便于单测）
  */
-import type { DiscoverContentItem, DiscoverContentState, DiscoverFeedItem, DiscoverManifest } from '@myyoda/shared'
+import type { DiscoverContentItem, DiscoverContentState, DiscoverFeedItem, DiscoverManifest } from '@guru/shared'
 
 export type ManifestValidation =
   | { ok: true; manifest: DiscoverManifest }
@@ -363,7 +363,7 @@ Expected: PASS（3 组用例全绿）
 
 ```bash
 git add apps/electron/src/main/lib/content-logic.ts apps/electron/src/main/lib/content-logic.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 内容清单校验与更新标记纯逻辑 + 单测"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 内容清单校验与更新标记纯逻辑 + 单测"
 ```
 
 ---
@@ -396,7 +396,7 @@ import {
   type DiscoverFeedResult,
   type DiscoverManifest,
   type VideoDownloadState,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   getDiscoverContentStatePath,
   getDiscoverManifestCachePath,
@@ -406,7 +406,7 @@ import { computeUpdateFlags, validateManifest } from './content-logic'
 import { getFetchFn } from './proxy-fetch'
 
 /** 内容源配置（维护者仓库，公开可读） */
-export const CONTENT_SOURCE = { owner: 'GeoffBao', repo: 'myyoda-content', branch: 'main' }
+export const CONTENT_SOURCE = { owner: 'GeoffBao', repo: 'guru-content', branch: 'main' }
 
 const RAW_BASE = `https://raw.githubusercontent.com/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}/${CONTENT_SOURCE.branch}`
 const JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}@${CONTENT_SOURCE.branch}`
@@ -467,7 +467,7 @@ Expected: 0 errors
 
 ```bash
 git add apps/electron/src/main/lib/content-service.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 官方内容服务——清单/已读状态/视频下载/文章拉取"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 官方内容服务——清单/已读状态/视频下载/文章拉取"
 ```
 
 ---
@@ -536,17 +536,17 @@ Expected: FAIL
 ```ts
 /**
  * 「发现」社区服务：GitHub Discussions 只读拉取 + 本地缓存
- * - 列表：GET https://api.github.com/repos/GeoffBao/MyYoda/discussions（匿名限流 60/h/IP）
+ * - 列表：GET https://api.github.com/repos/xcdha/Guru/discussions（匿名限流 60/h/IP）
  * - 详情：GET .../discussions/{number}（含 body markdown）
  * - 磁盘缓存 discussions-cache.json + 内存缓存，TTL 5 分钟
  * - 分板块筛选在解析后按 categorySlug 过滤（REST 无分类过滤参数）
  */
-import type { DiscussionCategorySlug, DiscussionDetail, DiscussionListResult, DiscussionSummary } from '@myyoda/shared'
+import type { DiscussionCategorySlug, DiscussionDetail, DiscussionListResult, DiscussionSummary } from '@guru/shared'
 import { getDiscoverDiscussionsCachePath } from './config-paths'
 import { getFetchFn } from './proxy-fetch'
 
 export const DISCUSSION_CACHE_TTL_MS = 5 * 60 * 1000
-export const COMMUNITY_REPO = { owner: 'GeoffBao', repo: 'MyYoda' }
+export const COMMUNITY_REPO = { owner: 'GeoffBao', repo: 'Guru' }
 
 /** 解析讨论列表原始 JSON（无 IO，可单测） */
 export function parseDiscussionList(raw: unknown): DiscussionSummary[]
@@ -574,7 +574,7 @@ export function buildNewDiscussionUrl(categorySlug: DiscussionCategorySlug): str
 
 ```bash
 git add apps/electron/src/main/lib/community-service.ts apps/electron/src/main/lib/community-service.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 社区服务——GitHub Discussions 只读拉取与缓存 + 单测"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 社区服务——GitHub Discussions 只读拉取与缓存 + 单测"
 ```
 
 ---
@@ -601,7 +601,7 @@ ipcMain.handle(DISCOVER_IPC_CHANNELS.GET_VIDEO_STATUS, async (_e, itemId: string
   const { getVideoStatus } = await import('./lib/content-service')
   return getVideoStatus(itemId, version, size)
 })
-ipcMain.handle(DISCOVER_IPC_CHANNELS.DOWNLOAD_VIDEO, async (event, item: import('@myyoda/shared').DiscoverContentItem) => {
+ipcMain.handle(DISCOVER_IPC_CHANNELS.DOWNLOAD_VIDEO, async (event, item: import('@guru/shared').DiscoverContentItem) => {
   const { downloadVideo } = await import('./lib/content-service')
   const result = await downloadVideo(item, event.sender)
   return { filePath: result.filePath }
@@ -612,15 +612,15 @@ ipcMain.handle(DISCOVER_IPC_CHANNELS.MARK_SEEN, async (_e, itemId: string, versi
 })
 ipcMain.handle(DISCOVER_IPC_CHANNELS.LIST_DISCUSSIONS, async (_e, categorySlug: string, force?: boolean) => {
   const { listDiscussions } = await import('./lib/community-service')
-  return listDiscussions(categorySlug as import('@myyoda/shared').DiscussionCategorySlug, force)
+  return listDiscussions(categorySlug as import('@guru/shared').DiscussionCategorySlug, force)
 })
 ipcMain.handle(DISCOVER_IPC_CHANNELS.GET_DISCUSSION, async (_e, number: number) => {
   const { getDiscussion } = await import('./lib/community-service')
   return getDiscussion(number)
 })
 ipcMain.handle(DISCOVER_IPC_CHANNELS.GET_VIDEO_URL, async (_e, filePath: string) => {
-  const { registerMyYodaFilePath } = await import('./lib/local-file-protocol')
-  return registerMyYodaFilePath(filePath)
+  const { registerGuruFilePath } = await import('./lib/local-file-protocol')
+  return registerGuruFilePath(filePath)
 })
 ipcMain.handle(DISCOVER_IPC_CHANNELS.OPEN_EXTERNAL, async (_e, url: string) => {
   const { shell } = await import('electron')
@@ -635,17 +635,17 @@ ipcMain.handle(DISCOVER_IPC_CHANNELS.OPEN_EXTERNAL, async (_e, url: string) => {
 类型声明区（`window.electronAPI` interface）追加：
 
 ```ts
-discoverGetFeed: () => Promise<import('@myyoda/shared').DiscoverFeedResult>
+discoverGetFeed: () => Promise<import('@guru/shared').DiscoverFeedResult>
 discoverGetArticle: (contentUrl: string) => Promise<string>
-discoverGetVideoStatus: (itemId: string, version: string, size?: number) => Promise<import('@myyoda/shared').VideoDownloadState>
-discoverDownloadVideo: (item: import('@myyoda/shared').DiscoverContentItem) => Promise<{ filePath: string }>
+discoverGetVideoStatus: (itemId: string, version: string, size?: number) => Promise<import('@guru/shared').VideoDownloadState>
+discoverDownloadVideo: (item: import('@guru/shared').DiscoverContentItem) => Promise<{ filePath: string }>
 discoverMarkSeen: (itemId: string, version: string) => Promise<void>
-discoverListDiscussions: (categorySlug: import('@myyoda/shared').DiscussionCategorySlug, force?: boolean) => Promise<import('@myyoda/shared').DiscussionListResult>
-discoverGetDiscussion: (number: number) => Promise<import('@myyoda/shared').DiscussionDetail>
+discoverListDiscussions: (categorySlug: import('@guru/shared').DiscussionCategorySlug, force?: boolean) => Promise<import('@guru/shared').DiscussionListResult>
+discoverGetDiscussion: (number: number) => Promise<import('@guru/shared').DiscussionDetail>
 discoverGetVideoUrl: (filePath: string) => Promise<string>
 discoverOpenExternal: (url: string) => Promise<void>
-onVideoDownloadProgress: (listener: (event: import('@myyoda/shared').VideoDownloadProgressEvent) => void) => () => void
-onVideoDownloadDone: (listener: (event: import('@myyoda/shared').VideoDownloadDoneEvent) => void) => () => void
+onVideoDownloadProgress: (listener: (event: import('@guru/shared').VideoDownloadProgressEvent) => void) => () => void
+onVideoDownloadDone: (listener: (event: import('@guru/shared').VideoDownloadDoneEvent) => void) => () => void
 ```
 
 实现区（参照 feedbackSubmit 的 invoke 写法）：
@@ -654,7 +654,7 @@ onVideoDownloadDone: (listener: (event: import('@myyoda/shared').VideoDownloadDo
 discoverGetFeed: () => ipcRenderer.invoke(DISCOVER_IPC_CHANNELS.GET_FEED),
 // ...其余 invoke 同理
 onVideoDownloadProgress: (listener) => {
-  const handler = (_e: Electron.IpcRendererEvent, payload: import('@myyoda/shared').VideoDownloadProgressEvent): void => listener(payload)
+  const handler = (_e: Electron.IpcRendererEvent, payload: import('@guru/shared').VideoDownloadProgressEvent): void => listener(payload)
   ipcRenderer.on(DISCOVER_IPC_CHANNELS.VIDEO_DOWNLOAD_PROGRESS, handler)
   return () => { ipcRenderer.removeListener(DISCOVER_IPC_CHANNELS.VIDEO_DOWNLOAD_PROGRESS, handler) }
 },
@@ -669,7 +669,7 @@ Expected: 0 errors
 
 ```bash
 git add apps/electron/src/main/ipc.ts apps/electron/src/preload/index.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): IPC 注册与 preload 桥接"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): IPC 注册与 preload 桥接"
 ```
 
 ---
@@ -691,7 +691,7 @@ import { atom } from 'jotai'
 import type {
   DiscussionCategorySlug, DiscussionDetail, DiscussionListResult,
   DiscoverFeedItem, VideoDownloadState,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 面板内 tab：featured 官方精选 / community 社区 / feedback 反馈 */
 export type DiscoverTab = 'featured' | 'community' | 'feedback'
@@ -757,7 +757,7 @@ export function DiscoverInitializer(): React.ReactElement {
 
 ```bash
 git add apps/electron/src/renderer/atoms/discover-atoms.ts apps/electron/src/renderer/components/discover/DiscoverInitializer.tsx apps/electron/src/renderer/main.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 渲染层状态原子与启动预拉取"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 渲染层状态原子与启动预拉取"
 ```
 
 ---
@@ -783,7 +783,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 **VideoPlayerDialog**：
 - Radix Dialog，全屏遮罩，`<video controls autoPlay src={fileUrl}>`
-- 打开时用 `discoverGetVideoUrl(filePath)` 换取 `myyoda-file://` URL（每次打开重新注册）
+- 打开时用 `discoverGetVideoUrl(filePath)` 换取 `guru-file://` URL（每次打开重新注册）
 
 **MainArea 路由**（在 `activeView === 'repo-wiki'` 分支旁追加）：
 
@@ -797,7 +797,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 ```bash
 git add apps/electron/src/renderer/components/discover/ apps/electron/src/renderer/components/tabs/MainArea.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 面板骨架、官方精选流与视频播放"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 面板骨架、官方精选流与视频播放"
 ```
 
 ---
@@ -811,13 +811,13 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 - 板块 tab（问题讨论 / 经验分享 / 公告，`DISCUSSION_CATEGORIES`）
 - 列表：标题、作者头像、回复数、标签、更新时间；加载/限流/错误态（`rateLimited` 时提示文案 + 重试）
 - 点击条目 → 详情页（返回按钮 + 标题 + 作者 + markdown 正文渲染）
-- 「回复」「发起讨论」按钮 → `discoverOpenExternal(buildXxxUrl)`——URL 构建逻辑在 community-service 内，preload 暴露 `discoverOpenExternal` 即可，但 URL 构建需要渲染层直接拼（简单字符串）：`https://github.com/GeoffBao/MyYoda/discussions/{number}` 与 `https://github.com/GeoffBao/MyYoda/discussions/new?category={slug}`。渲染层直接拼，不经过主进程。
+- 「回复」「发起讨论」按钮 → `discoverOpenExternal(buildXxxUrl)`——URL 构建逻辑在 community-service 内，preload 暴露 `discoverOpenExternal` 即可，但 URL 构建需要渲染层直接拼（简单字符串）：`https://github.com/xcdha/Guru/discussions/{number}` 与 `https://github.com/xcdha/Guru/discussions/new?category={slug}`。渲染层直接拼，不经过主进程。
 
 **Step: 验证 + Commit**
 
 ```bash
 git add apps/electron/src/renderer/components/discover/CommunityView.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 社区讨论视图——板块/列表/详情/跳转"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 社区讨论视图——板块/列表/详情/跳转"
 ```
 
 ---
@@ -861,7 +861,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 ```bash
 git add apps/electron/src/renderer/components/discover/FeedbackSection.tsx apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx apps/electron/src/renderer/atoms/active-view.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 反馈分区、侧边栏「发现」入口与 activeView 路由"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 反馈分区、侧边栏「发现」入口与 activeView 路由"
 ```
 
 ---
@@ -873,8 +873,8 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 - `.discover-bootstrap/README.md`（发布步骤：创建公开仓库 → 首次推送 → 建 Release 上传 mp4 → 之后更新流程）
 
 **发布前置检查（只读）：**
-- `gh api repos/GeoffBao/MyYoda/discussions/categories` 确认 Discussions 是否已开启及现有板块 slug
-- 发布动作（创建 `GeoffBao/myyoda-content` 公开仓库、上传视频 Release、开启/调整主仓库 Discussions 板块）**需用户明确批准后**用 gh 执行
+- `gh api repos/xcdha/Guru/discussions/categories` 确认 Discussions 是否已开启及现有板块 slug
+- 发布动作（创建 `xcdha/Guru-content` 公开仓库、上传视频 Release、开启/调整主仓库 Discussions 板块）**需用户明确批准后**用 gh 执行
 
 ---
 

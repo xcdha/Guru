@@ -1,7 +1,7 @@
 /**
  * Pi 模型注册与渠道兼容层。
  *
- * Pi SDK 需要把 MyYoda 渠道临时注册成 runtime provider；这里集中处理
+ * Pi SDK 需要把 Guru 渠道临时注册成 runtime provider；这里集中处理
  * ProviderType 到 Pi API 协议、baseUrl、认证头和模型 catalog 默认值的映射。
  */
 
@@ -19,14 +19,14 @@ import {
   type ReasoningCapability,
   type ReasoningTransport,
   type ProviderType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   getAppUserAgent,
   normalizeAnthropicBaseUrlForSdk,
   normalizeOpenAIBaseUrlForSdk,
   normalizeVersionedAnthropicBaseUrl,
   resolveAnthropicMessagesUrl,
-} from '@myyoda/core'
+} from '@guru/core'
 import type { Api, KnownProvider, Model } from '@earendil-works/pi-ai/compat'
 import type { PiAgentQueryOptions } from './pi-agent-adapter'
 import { rememberXaiOAuthCredentials, refreshXaiOAuthCredentialsSerial } from '../xai-oauth-credentials'
@@ -102,7 +102,7 @@ function compilePiReasoningCapabilities(
 }
 
 /**
- * MyYoda re-registers every non-OAuth channel as an ephemeral Pi provider. Preserve
+ * Guru re-registers every non-OAuth channel as an ephemeral Pi provider. Preserve
  * only this protocol-safe catalog flag: current Claude models require adaptive
  * thinking, while copying the complete catalog compat object could leak unrelated
  * tool/sampling behaviour across provider protocols.
@@ -678,8 +678,8 @@ export async function getCodexCatalogModels(): Promise<PiCatalogModel[]> {
  * openai-codex 是 Pi SDK 的内置 KnownProvider：模型目录、baseUrl 和
  * `openai-codex-responses` 协议全部内置，无需（也不能）手工构造 models 或 baseUrl。
  * Pi 0.80.10 将它声明为 OAuth-only provider；runtime API key 不会参与其认证解析。
- * 因此将 MyYoda 已刷新过的完整凭据放入一次性内存 OAuth credential store，
- * 按真实 expires 刷新并回写 MyYoda，避免读写全局 ~/.pi 认证文件。
+ * 因此将 Guru 已刷新过的完整凭据放入一次性内存 OAuth credential store，
+ * 按真实 expires 刷新并回写 Guru，避免读写全局 ~/.pi 认证文件。
  */
 export async function buildCodexModel(sdk: PiSdk, input: CodexModelInput) {
   if (!input.codexOAuthCredentials) {
@@ -757,7 +757,7 @@ export async function buildModel(sdk: PiSdk, input: PiAgentQueryOptions) {
   if (input.provider === 'xai') {
     return buildXaiModel(sdk, input)
   }
-  const providerName = `myyoda--`
+  const providerName = `guru--`
   const resolvedApiKey = resolvePiApiKey(input.provider, input.apiKey)
   // pi runtime 统一剥离 `[1m]` 后缀：无论上游从哪条路径传入，注册与查找都用干净 ID。
   const resolvedModelId = stripAgentSdkContextSuffix(input.model)

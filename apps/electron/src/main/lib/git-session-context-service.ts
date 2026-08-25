@@ -10,7 +10,7 @@ import type {
   RefreshSessionGitBranchInput,
   RefreshSessionGitBranchResult,
   SessionGitContext,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 interface PrepareOptions {
   updateSessionMeta?: (sessionId: string, updates: Partial<AgentSessionMeta>) => AgentSessionMeta

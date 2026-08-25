@@ -15,7 +15,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { resolveSafeChildPath } from './agent-file-path-policy'
 import { BrowserWindow } from 'electron'
 import type { WebContents } from 'electron'
-import { AGENT_IPC_CHANNELS, MAX_ATTACHMENT_SIZE } from '@myyoda/shared'
+import { AGENT_IPC_CHANNELS, MAX_ATTACHMENT_SIZE } from '@guru/shared'
 import type {
   AgentSendInput,
   AgentGenerateTitleInput,
@@ -29,10 +29,10 @@ import type {
   AgentQueuedMessageControlInput,
   AgentMoveQueuedMessageInput,
   AgentQueuedMessageSnapshot,
-  MyYodaPermissionMode,
+  GuruPermissionMode,
   AgentExternalRunSource,
   AgentMessage,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { PiAgentAdapter, cleanupPiRuntimeResources } from './adapters/pi-agent-adapter'
 import { PiUtilityAdapter } from './adapters/pi-utility-adapter'
 import { AgentEventBus } from './agent-event-bus'
@@ -54,8 +54,8 @@ import { listChannels } from './channel-manager'
 // ===== 实例创建 =====
 
 const eventBus = new AgentEventBus()
-const useUtilityAgentRuntime = process.env.MYYODA_AGENT_RUNTIME !== 'in-process'
-  && process.env.MYYODA_AGENT_RUNTIME !== 'off'
+const useUtilityAgentRuntime = process.env.GURU_AGENT_RUNTIME !== 'in-process'
+  && process.env.GURU_AGENT_RUNTIME !== 'off'
 const adapter = useUtilityAgentRuntime ? new PiUtilityAdapter() : new PiAgentAdapter()
 const orchestrator = new AgentOrchestrator(adapter, eventBus)
 
@@ -174,7 +174,7 @@ function publishRunStopped(
 ): void {
   if (!stoppedByUser) return
   eventBus.emit(sessionId, {
-    kind: 'myyoda_event',
+    kind: 'guru_event',
     event: {
       type: 'run_stopped',
       ...(startedAt != null ? { startedAt } : {}),
@@ -331,7 +331,7 @@ export async function runAgent(
         updateAgentSessionMeta(input.sessionId, { automationGraduated: true })
         // 向渲染进程发送毕业事件，触发 toast 提示
         eventBus.emit(input.sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'automation_graduated' },
         })
       }
@@ -376,13 +376,13 @@ export async function runAgent(
       },
       onRunStarted: ({ startedAt }) => {
         eventBus.emit(input.sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'run_started', startedAt },
         })
       },
       onTitleUpdated: (title) => {
         eventBus.emit(input.sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'title_updated', title },
         })
         if (!webContents.isDestroyed()) {
@@ -512,7 +512,7 @@ export async function runAgentHeadless(
       onTitleUpdated: (title) => {
         callbacks.onTitleUpdated(title)
         eventBus.emit(runInput.sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'title_updated', title },
         })
         // 同步到渲染进程
@@ -526,7 +526,7 @@ export async function runAgentHeadless(
       onRunStarted: ({ startedAt: persistedStartedAt }) => {
         const session = getAgentSessionMeta(runInput.sessionId)
         eventBus.emit(runInput.sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: {
             type: 'external_run_started',
             source: callbacks.source ?? 'bridge',
@@ -586,7 +586,7 @@ setAgentStopper(stopAgent)
 export async function rewindAgentSession(
   sessionId: string,
   assistantMessageUuid: string,
-): Promise<import('@myyoda/shared').RewindSessionResult> {
+): Promise<import('@guru/shared').RewindSessionResult> {
   return orchestrator.rewindSession(sessionId, assistantMessageUuid)
 }
 
@@ -621,9 +621,9 @@ export function killOrphanedClaudeSubprocesses(): void {
 /**
  * 运行中动态切换会话的权限模式
  *
- * 同时更新 MyYoda 侧（canUseTool 动态读取）和 SDK 侧（query.setPermissionMode）。
+ * 同时更新 Guru 侧（canUseTool 动态读取）和 SDK 侧（query.setPermissionMode）。
  */
-export async function updateAgentPermissionMode(sessionId: string, mode: MyYodaPermissionMode): Promise<void> {
+export async function updateAgentPermissionMode(sessionId: string, mode: GuruPermissionMode): Promise<void> {
   await orchestrator.updateSessionPermissionMode(sessionId, mode)
 }
 

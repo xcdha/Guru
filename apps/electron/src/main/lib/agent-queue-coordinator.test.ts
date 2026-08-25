@@ -4,7 +4,7 @@ import type {
   AgentDeferredQueueMessageInput,
   AgentMoveQueuedMessageInput,
   AgentQueuedMessageStatus,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { AgentQueueCoordinator, type AgentQueueCoordinatorOptions } from './agent-queue-coordinator'
 
 /** 构造测试用队列输入 */

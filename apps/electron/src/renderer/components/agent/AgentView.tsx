@@ -120,8 +120,8 @@ import { AgentSessionProvider } from '@/contexts/session-context'
 import { draftSessionIdsAtom } from '@/atoms/draft-session-atoms'
 import { sendWithCmdEnterAtom } from '@/atoms/shortcut-atoms'
 import { useOpenPreview } from '@/components/diff/preview-opener'
-import type { AgentRuntime, AgentSendInput, AgentDeferredQueueMessageInput, AgentPendingFile, AgentThinkingLevel, FileDialogLargeFile, FileDialogResult, ModelOption, ReasoningCapability, SDKMessage, SDKUserMessage, ProviderType, AgentSessionFileRoots } from '@myyoda/shared'
-import { DEFAULT_AGENT_THINKING_LEVEL, getSessionThinkingLevel, inferAgentSdkContextWindow, inferContextWindow, inferReasoningTransport, isCodexFastModeSupportedModel, isOpenAIReasoningMaxSupportedModel, MAX_ATTACHMENT_SIZE, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningCapability, resolveReasoningProfile } from '@myyoda/shared'
+import type { AgentRuntime, AgentSendInput, AgentDeferredQueueMessageInput, AgentPendingFile, AgentThinkingLevel, FileDialogLargeFile, FileDialogResult, ModelOption, ReasoningCapability, SDKMessage, SDKUserMessage, ProviderType, AgentSessionFileRoots } from '@guru/shared'
+import { DEFAULT_AGENT_THINKING_LEVEL, getSessionThinkingLevel, inferAgentSdkContextWindow, inferContextWindow, inferReasoningTransport, isCodexFastModeSupportedModel, isOpenAIReasoningMaxSupportedModel, MAX_ATTACHMENT_SIZE, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningCapability, resolveReasoningProfile } from '@guru/shared'
 import { fileToBase64, formatFileNames, getFileParentPath } from '@/lib/file-utils'
 import { schedulePersistAgentDrafts } from '@/lib/agent-draft-persistence'
 import { getFilePanelDragData, INSERT_FILE_MENTION_EVENT, type FilePanelDragItem } from '@/lib/file-panel-drag'
@@ -471,7 +471,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
   }, [currentWorkspaceId, sessionId, sessionMeta?.projectId])
   // ===== 代码图谱工具（repo map + Graphify，2026-08-13） =====
   const [repoMapToolsEnabled, setRepoMapToolsEnabled] = useAtom(repoMapToolsAtom)
-  const [repoMapToolsState, setRepoMapToolsState] = React.useState<import('@myyoda/shared').RepoMapToolsState | null>(null)
+  const [repoMapToolsState, setRepoMapToolsState] = React.useState<import('@guru/shared').RepoMapToolsState | null>(null)
   const repoMapToolsCwd = sessionFileRoots?.executionCwd
 
   // 读开关（写入共享 atom，与设置页联动）+ 订阅状态推送
@@ -791,9 +791,9 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
 
   // 检查 Agent 渠道列表中是否存在可用的模型（渠道 enabled + 模型 enabled）
   const hasAvailableModel = React.useMemo(() => {
-    // MyYoda 官方渠道（商业版）：只要 enabled 且有可用模型，直接视为可用
-    const myyodaOfficial = globalChannels.find((c) => c.id === 'myyoda-official')
-    if (myyodaOfficial?.enabled && myyodaOfficial.models.some((m) => m.enabled)) return true
+    // Guru 官方渠道（商业版）：只要 enabled 且有可用模型，直接视为可用
+    const guruOfficial = globalChannels.find((c) => c.id === 'guru-official')
+    if (guruOfficial?.enabled && guruOfficial.models.some((m) => m.enabled)) return true
     // Pi 为唯一 runtime，支持所有协议，任何已启用渠道都可用
     return globalChannels.some((c) => c.enabled && c.models.some((m) => m.enabled))
   }, [globalChannels])
@@ -2467,7 +2467,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     const localUuid = crypto.randomUUID()
 
     // 1. 立即注入合成用户消息（/compact 气泡立刻可见，与普通发送路径一致）
-    const syntheticMsg: import('@myyoda/shared').SDKMessage = {
+    const syntheticMsg: import('@guru/shared').SDKMessage = {
       type: 'user',
       uuid: localUuid,
       message: {
@@ -2475,7 +2475,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
       },
       parent_tool_use_id: null,
       _createdAt: streamStartedAt,
-    } as unknown as import('@myyoda/shared').SDKMessage
+    } as unknown as import('@guru/shared').SDKMessage
 
     store.set(liveMessagesMapAtom, (prev) => {
       const map = new Map(prev)
@@ -2831,8 +2831,8 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     const handler = (): void => {
       if (streaming) handleStop()
     }
-    window.addEventListener('myyoda:stop-generation', handler)
-    return () => window.removeEventListener('myyoda:stop-generation', handler)
+    window.addEventListener('guru:stop-generation', handler)
+    return () => window.removeEventListener('guru:stop-generation', handler)
   }, [streaming, handleStop])
 
   // 监听快捷键系统分发的 focus-input 事件（Cmd+L）
@@ -2841,8 +2841,8 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
       const proseMirror = document.querySelector('[data-input-mode="agent"] .ProseMirror') as HTMLElement | null
       proseMirror?.focus()
     }
-    window.addEventListener('myyoda:focus-input', handler)
-    return () => window.removeEventListener('myyoda:focus-input', handler)
+    window.addEventListener('guru:focus-input', handler)
+    return () => window.removeEventListener('guru:focus-input', handler)
   }, [])
 
   // 监听文件面板三点菜单「引用到 Agent」事件：在输入框插入 @file 引用

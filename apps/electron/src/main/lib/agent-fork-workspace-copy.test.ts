@@ -10,7 +10,7 @@ import {
 const tempRoots: string[] = []
 
 function makeTempRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-fork-copy-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-fork-copy-'))
   tempRoots.push(root)
   return root
 }

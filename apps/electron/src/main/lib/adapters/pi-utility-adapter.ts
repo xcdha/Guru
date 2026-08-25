@@ -6,10 +6,10 @@ import type {
   SDKMessage,
   SDKUserMessageInput,
   SendQueuedMessageOptions,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   AGENT_RUNTIME_METHODS,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import type { PermissionResult, CanUseToolOptions } from '../agent-permission-service'
 import { AgentRuntimeClient } from '../agent-runtime-client'
 import type { PiAgentQueryOptions } from './pi-agent-adapter'

@@ -1,5 +1,5 @@
-import { TaskSpecSchema } from '@myyoda/shared/tasks/schema'
-import { slugify } from '@myyoda/shared/utils'
+import { TaskSpecSchema } from '@guru/shared/tasks/schema'
+import { slugify } from '@guru/shared/utils'
 import type { TaskEditorTarget } from './types'
 
 export interface QuickTaskDraft {

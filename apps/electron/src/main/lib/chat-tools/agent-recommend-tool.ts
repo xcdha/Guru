@@ -6,8 +6,8 @@
  * 由渲染进程的 AgentRecommendBanner 负责展示和执行迁移。
  */
 
-import type { ToolCall, ToolResult, ToolDefinition } from '@myyoda/core'
-import type { ChatToolMeta } from '@myyoda/shared'
+import type { ToolCall, ToolResult, ToolDefinition } from '@guru/core'
+import type { ChatToolMeta } from '@guru/shared'
 
 // ===== 工具元数据 =====
 

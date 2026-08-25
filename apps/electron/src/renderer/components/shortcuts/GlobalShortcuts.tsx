@@ -267,7 +267,7 @@ export function GlobalShortcuts(): null {
   useShortcut(
     'clear-context',
     useCallback(() => {
-      window.dispatchEvent(new CustomEvent('myyoda:clear-context'))
+      window.dispatchEvent(new CustomEvent('guru:clear-context'))
     }, []),
   )
 
@@ -275,7 +275,7 @@ export function GlobalShortcuts(): null {
   useShortcut(
     'focus-input',
     useCallback(() => {
-      window.dispatchEvent(new CustomEvent('myyoda:focus-input'))
+      window.dispatchEvent(new CustomEvent('guru:focus-input'))
     }, []),
   )
 
@@ -283,7 +283,7 @@ export function GlobalShortcuts(): null {
   useShortcut(
     'stop-generation',
     useCallback(() => {
-      window.dispatchEvent(new CustomEvent('myyoda:stop-generation'))
+      window.dispatchEvent(new CustomEvent('guru:stop-generation'))
     }, []),
   )
 
@@ -398,7 +398,7 @@ export function GlobalShortcuts(): null {
           store.set(currentConversationIdAtom, meta.id)
 
           // 处理附件：保存到磁盘，收集 FileAttachment[]
-          const savedAttachments: import('@myyoda/shared').FileAttachment[] = []
+          const savedAttachments: import('@guru/shared').FileAttachment[] = []
           if (data.files && data.files.length > 0) {
             for (const file of data.files) {
               if (!file.base64) {
@@ -443,7 +443,7 @@ export function GlobalShortcuts(): null {
     return cleanup
   }, [store])
 
-  // ===== 语音输入 → 写入当前 MyYoda 输入框 =====
+  // ===== 语音输入 → 写入当前 Guru 输入框 =====
 
   useEffect(() => {
     const cleanupPreview = window.electronAPI.onVoiceDictationPreviewText((data) => {
@@ -466,13 +466,13 @@ export function GlobalShortcuts(): null {
         return
       }
 
-      const insertedAtCursor = !window.dispatchEvent(new CustomEvent('myyoda:insert-voice-dictation-text', {
+      const insertedAtCursor = !window.dispatchEvent(new CustomEvent('guru:insert-voice-dictation-text', {
         cancelable: true,
         detail: { ...data, text: trimmed },
       }))
       if (insertedAtCursor) {
         acknowledgeDelivery(true)
-        window.dispatchEvent(new CustomEvent('myyoda:focus-input'))
+        window.dispatchEvent(new CustomEvent('guru:focus-input'))
         return
       }
 
@@ -519,7 +519,7 @@ export function GlobalShortcuts(): null {
           map.set(sessionId, (map.get(sessionId) ?? 0) + 1)
           return map
         })
-        window.dispatchEvent(new CustomEvent('myyoda:focus-input'))
+        window.dispatchEvent(new CustomEvent('guru:focus-input'))
         acknowledgeDelivery(true)
         return
       }
@@ -539,7 +539,7 @@ export function GlobalShortcuts(): null {
           map.set(conversationId, (map.get(conversationId) ?? 0) + 1)
           return map
         })
-        window.dispatchEvent(new CustomEvent('myyoda:focus-input'))
+        window.dispatchEvent(new CustomEvent('guru:focus-input'))
         acknowledgeDelivery(true)
         return
       }

@@ -10,7 +10,7 @@
  * - 认证：Authorization: Bearer
  */
 
-import type { ProviderType } from '@myyoda/shared'
+import type { ProviderType } from '@guru/shared'
 import type {
   ProviderAdapter,
   ProviderRequest,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { SDKMessage } from '@myyoda/shared'
+import type { SDKMessage } from '@guru/shared'
 import { getContextCompactionProgress, hasRenderableAssistantTurnContent, isCompactionControlHistoryGroup, shouldRenderLiveAssistantTurn } from './AgentMessages'
 import { shouldClearRetainedCompactionForResumedStream, shouldRestoreCompactionProgress } from './TaskProgressOverlay'
 

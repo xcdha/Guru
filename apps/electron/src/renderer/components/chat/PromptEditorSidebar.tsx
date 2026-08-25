@@ -21,7 +21,7 @@ import {
   defaultPromptIdAtom,
   promptSidebarOpenAtom,
 } from '@/atoms/system-prompt-atoms'
-import type { SystemPrompt, SystemPromptCreateInput, SystemPromptUpdateInput } from '@myyoda/shared'
+import type { SystemPrompt, SystemPromptCreateInput, SystemPromptUpdateInput } from '@guru/shared'
 
 /** 防抖保存延迟 (ms) */
 const DEBOUNCE_DELAY = 500

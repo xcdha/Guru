@@ -21,7 +21,7 @@ export interface AgentWorkspace {
   /** URL-safe 目录名（创建后不可变） */
   slug: string
   /**
-   * 用户选择的本地项目根目录。未设置时，项目文件使用 MyYoda 托管的
+   * 用户选择的本地项目根目录。未设置时，项目文件使用 Guru 托管的
    * workspace-files/ 目录；设置后，项目文件直接指向该原始目录。
    * （对齐 upstream Proma：工作区 = 项目，projectRootPath 即工程目录）
    */
@@ -118,7 +118,7 @@ export function sessionThinkingLevelPatch(
   return { reasoningLevel: level, thinkingLevel: level, openAIThinkingLevel: level }
 }
 
-/** 是否为 MyYoda 可暴露 reasoning.effort 的 OpenAI 推理模型。 */
+/** 是否为 Guru 可暴露 reasoning.effort 的 OpenAI 推理模型。 */
 export function isOpenAIReasoningSupportedModel(modelId: string | undefined): boolean {
   const normalized = modelId?.toLowerCase() ?? ''
   // Pi catalog 中 gpt-5*-chat-latest 是非 reasoning 的对话变体；它们不能接受
@@ -317,7 +317,7 @@ export interface SkillActivation {
   name: string
   /** `SKILL.md` path used to load the Skill; retained as a compatibility fallback. */
   filePath?: string
-  /** Stable MyYoda workspace locator for a managed Skill. */
+  /** Stable Guru workspace locator for a managed Skill. */
   workspaceSlug?: string
   /** Path relative to the managed workspace Skills directory, such as `my-skill/SKILL.md`. */
   workspaceSkillPath?: string
@@ -672,12 +672,12 @@ export type AgentEvent =
   // 模型确认（SDK 确认实际使用的模型）
   | { type: 'model_resolved'; model: string }
   // 权限模式变更（Plan → bypassPermissions 等）
-  | { type: 'permission_mode_changed'; mode: MyYodaPermissionMode }
+  | { type: 'permission_mode_changed'; mode: GuruPermissionMode }
 
-// ===== MyYoda 内部事件（SDK 不覆盖的场景） =====
+// ===== Guru 内部事件（SDK 不覆盖的场景） =====
 
-/** MyYoda 内部事件类型 */
-export type MyYodaEvent =
+/** Guru 内部事件类型 */
+export type GuruEvent =
   | { type: 'permission_request'; request: PermissionRequest }
   | { type: 'permission_resolved'; requestId: string; behavior: 'allow' | 'deny' }
   | { type: 'ask_user_request'; request: AskUserRequest }
@@ -689,7 +689,7 @@ export type MyYodaEvent =
   | { type: 'retry'; status: 'starting' | 'attempt' | 'cleared' | 'failed' | 'cancelled'; attempt?: number; maxAttempts?: number; delaySeconds?: number; reason?: string; attemptData?: RetryAttempt; runStartedAt?: number; scheduledAt?: number; totalAttempt?: number; maxTotalAttempts?: number; error?: TypedError }
   | { type: 'model_resolved'; model: string }
   | { type: 'context_window'; contextWindow: number }
-  | { type: 'permission_mode_changed'; mode: MyYodaPermissionMode }
+  | { type: 'permission_mode_changed'; mode: GuruPermissionMode }
   | { type: 'title_updated'; title: string }
   | { type: 'external_run_started'; source: AgentExternalRunSource; sessionId: string; runId?: string; title?: string; workspaceId?: string; modelId?: string; channelId?: string; startedAt: number; userMessage?: string; userMessageUuid?: string; session?: AgentSessionMeta }
   /** 普通桌面会话已开始执行；runId 是竞态隔离的唯一身份。 */
@@ -769,7 +769,7 @@ export interface AgentAssistantDeltaPayload {
 /** SDK 消息与 AgentAssistantDeltaPayload 分离，Delta 只存在于运行时，不写入 JSONL。 */
 export type AgentStreamPayload =
   | { kind: 'sdk_message'; message: SDKMessage }
-  | { kind: 'myyoda_event'; event: MyYodaEvent }
+  | { kind: 'guru_event'; event: GuruEvent }
   | { kind: 'sdk_delta'; delta: AgentAssistantDeltaPayload }
 
 // ===== Kanban / Projects / Tasks IPC 契约 =====
@@ -851,7 +851,7 @@ export interface SetAgentSessionActiveWorktreeInput {
 /**
  * Agent 会话轻量索引项
  *
- * 存储在 ~/.myyoda/agent-sessions.json 中，
+ * 存储在 ~/.guru/agent-sessions.json 中，
  * 类似 ConversationMeta，独立存储。
  */
 export interface AgentSessionMeta {
@@ -869,7 +869,7 @@ export interface AgentSessionMeta {
   sdkSessionId?: string
   /** Pi session JSONL 的精确路径；避免仅按 session ID 子串定位 artifact。 */
   piSessionFile?: string
-  /** MyYoda assistant UI UUID 到 Pi 树状 session entry ID 的持久映射。 */
+  /** Guru assistant UI UUID 到 Pi 树状 session entry ID 的持久映射。 */
   piEntryBindings?: Record<string, string>
   /** 已退役 Claude runtime 的只读 transcript；必须新建 Pi 会话才能继续。 */
   legacyTranscript?: {
@@ -916,7 +916,7 @@ export interface AgentSessionMeta {
   attachedDirectories?: string[]
   /** 附加的外部文件路径列表（绝对路径，发送时以父目录作为 SDK additionalDirectories） */
   attachedFiles?: string[]
-  /** 分叉来源：源会话的 MyYoda 会话沙箱目录（SDK session state 位于此处，首次 resume 后清除；不是 Craft Project cwd） */
+  /** 分叉来源：源会话的 Guru 会话沙箱目录（SDK session state 位于此处，首次 resume 后清除；不是 Craft Project cwd） */
   forkSourceDir?: string
   /** 分叉来源：源会话的 SDK session ID（用于 rewind 时读取源会话的 file-history-snapshot 和备份文件） */
   forkSourceSdkSessionId?: string
@@ -931,7 +931,7 @@ export interface AgentSessionMeta {
   /** Conductor 当前运行状态，与标题和看板列独立持久化 */
   sessionStatus?: string
   /** 该会话当前的权限模式（持久化到磁盘，重启后恢复）。未设置时新会话默认 auto */
-  permissionMode?: MyYodaPermissionMode
+  permissionMode?: GuruPermissionMode
   /** 来源定时任务 ID（该会话由定时任务自动创建/复用时标记，用于侧栏显示钟表图标 + 跳转设置） */
   sourceAutomationId?: string
   /**
@@ -965,7 +965,7 @@ export interface AgentSessionMeta {
   gitBranch?: string
   /** Git 会话执行位置：local 表示项目主目录，worktree 表示隔离 worktree */
   gitExecutionMode?: import('./runtime').GitExecutionMode
-  /** MyYoda 为该会话准备或复用的 worktree 路径 */
+  /** Guru 为该会话准备或复用的 worktree 路径 */
   gitWorktreePath?: string
   /** Worktree 的起始基线 ref；通常等于所选 branch */
   gitBaseRef?: string
@@ -998,7 +998,7 @@ export interface AgentSessionMeta {
 /**
  * 用户自建会话分组（侧边栏「移动到分组」/「分组方式：自定义分组」用）
  *
- * 按工作区隔离存储在 ~/.myyoda/agent-workspaces/{slug}/session-groups.json。
+ * 按工作区隔离存储在 ~/.guru/agent-workspaces/{slug}/session-groups.json。
  */
 export interface SessionGroup {
   id: string
@@ -1044,7 +1044,7 @@ export type AgentDelegationStatus = 'running' | 'completed' | 'failed' | 'cancel
 /**
  * Agent 持久化消息
  *
- * 存储在 ~/.myyoda/agent-sessions/{id}.jsonl 中。
+ * 存储在 ~/.guru/agent-sessions/{id}.jsonl 中。
  */
 export interface AgentMessage {
   /** 消息唯一标识 */
@@ -1149,7 +1149,7 @@ export interface AgentGenerateTitleInput {
 
 // ===== MCP 服务器配置 =====
 
-/** MCP 传输类型；MyYoda 将 Streamable HTTP 规范化存储为 http */
+/** MCP 传输类型；Guru 将 Streamable HTTP 规范化存储为 http */
 export type McpTransportType = 'stdio' | 'http' | 'sse'
 
 /** 外部配置中常见的 Streamable HTTP 别名 */
@@ -1192,10 +1192,10 @@ export interface McpToolSummary {
   readOnly?: boolean
 }
 
-/** MyYoda 内置 MCP 分类 */
+/** Guru 内置 MCP 分类 */
 export type BuiltinMcpCategory = 'system' | 'automation' | 'collaboration' | 'memory' | 'media' | 'browser' | 'task'
 
-/** MyYoda 内置 MCP 摘要，不写入工作区 mcp.json */
+/** Guru 内置 MCP 摘要，不写入工作区 mcp.json */
 export interface BuiltinMcpServerSummary {
   id: string
   name: string
@@ -1254,7 +1254,7 @@ export interface SkillMeta {
   slug: string
   name: string
   description?: string
-  /** UI 分组名，用于把 MyYoda 内嵌 Skills 收拢到同一组 */
+  /** UI 分组名，用于把 Guru 内嵌 Skills 收拢到同一组 */
   group?: string
   icon?: string
   version?: string
@@ -1302,7 +1302,7 @@ export interface OtherProjectSkillsGroup {
 
 // ===== 企业版组织 Skills 分发 =====
 
-/** 组织连接配置（~/.myyoda/org-settings.json） */
+/** 组织连接配置（~/.guru/org-settings.json） */
 export interface OrganizationConnection {
   serverUrl: string
   /** 认证方式：企业账号（JWT）或 API Key */
@@ -1505,7 +1505,7 @@ export interface WorkspaceMemorySummary {
     legacyPath: string
     agentsPath: string
   }
-  /** 旧 `.claude/memory/` 迁移未完成时的状态；MyYoda 不会覆盖或删除旧内容。 */
+  /** 旧 `.claude/memory/` 迁移未完成时的状态；Guru 不会覆盖或删除旧内容。 */
   legacyAutoMemory?: {
     directory: string
     /** 与新的 memory/ 同名、因此未自动移动的顶层条目。 */
@@ -1515,7 +1515,7 @@ export interface WorkspaceMemorySummary {
     /** 检测到的旧目录内符号链接相对路径。 */
     symbolicLinkPath?: string
   }
-  /** MyYoda 工作区长期记忆目录。 */
+  /** Guru 工作区长期记忆目录。 */
   autoMemory: {
     /** 绝对目录路径 */
     directory: string
@@ -1563,7 +1563,7 @@ export interface AgentSendInput {
   /** 动态注入的 MCP 服务器（仅在本次会话中生效，如飞书群聊工具） */
   customMcpServers?: Record<string, Record<string, unknown>>
   /** 强制覆盖权限模式（飞书等无 UI 交互场景下强制 'bypassPermissions'） */
-  permissionModeOverride?: MyYodaPermissionMode
+  permissionModeOverride?: GuruPermissionMode
   /** 用户通过 /skill:xxx 引用的 Skill slug 列表 */
   mentionedSkills?: string[]
   /** 用户通过 #mcp:xxx 引用的 MCP 服务器名称列表 */
@@ -1700,7 +1700,7 @@ export interface MoveSessionToWorkspaceInput {
 
 /** Fork（分叉）会话输入 */
 export interface ForkSessionInput {
-  /** MyYoda 会话 ID */
+  /** Guru 会话 ID */
   sessionId: string
   /** SDK 消息 uuid（截断点，inclusive）。省略时复制全部历史 */
   upToMessageUuid?: string
@@ -1710,7 +1710,7 @@ export interface ForkSessionInput {
 
 /** 快照回退输入（同一会话内回退到指定点） */
 export interface RewindSessionInput {
-  /** MyYoda 会话 ID */
+  /** Guru 会话 ID */
   sessionId: string
   /** 回退到哪条 assistant message（inclusive，截断该消息之后的一切） */
   assistantMessageUuid: string
@@ -2045,22 +2045,22 @@ export interface ExitPlanModeResponse {
 
 // ===== 权限系统类型 =====
 
-/** 当前 MyYoda 支持的权限模式，值直接映射 SDK 原生 permissionMode */
-export const MYYODA_PERMISSION_MODES = ['bypassPermissions', 'plan'] as const
+/** 当前 Guru 支持的权限模式，值直接映射 SDK 原生 permissionMode */
+export const GURU_PERMISSION_MODES = ['bypassPermissions', 'plan'] as const
 
-export type MyYodaPermissionMode = typeof MYYODA_PERMISSION_MODES[number]
+export type GuruPermissionMode = typeof GURU_PERMISSION_MODES[number]
 
-export const MYYODA_DEFAULT_PERMISSION_MODE: MyYodaPermissionMode = 'bypassPermissions'
+export const GURU_DEFAULT_PERMISSION_MODE: GuruPermissionMode = 'bypassPermissions'
 
-export interface MyYodaPermissionModeConfig {
+export interface GuruPermissionModeConfig {
   /** 对应 Claude Agent SDK 的 permissionMode */
-  sdkMode: MyYodaPermissionMode
+  sdkMode: GuruPermissionMode
   label: string
   description: string
 }
 
-/** MyYoda 权限模式的单一配置来源 */
-export const MYYODA_PERMISSION_MODE_CONFIG = {
+/** Guru 权限模式的单一配置来源 */
+export const GURU_PERMISSION_MODE_CONFIG = {
   bypassPermissions: {
     sdkMode: 'bypassPermissions',
     label: '完全自动',
@@ -2071,19 +2071,19 @@ export const MYYODA_PERMISSION_MODE_CONFIG = {
     label: '计划模式',
     description: '仅规划不执行，查看工具使用计划',
   },
-} as const satisfies Record<MyYodaPermissionMode, MyYodaPermissionModeConfig>
+} as const satisfies Record<GuruPermissionMode, GuruPermissionModeConfig>
 
 /** 权限模式定义顺序（用于循环切换） */
-export const MYYODA_PERMISSION_MODE_ORDER: readonly MyYodaPermissionMode[] = MYYODA_PERMISSION_MODES
+export const GURU_PERMISSION_MODE_ORDER: readonly GuruPermissionMode[] = GURU_PERMISSION_MODES
 
-export function isMyYodaPermissionMode(mode: string): mode is MyYodaPermissionMode {
-  return (MYYODA_PERMISSION_MODES as readonly string[]).includes(mode)
+export function isGuruPermissionMode(mode: string): mode is GuruPermissionMode {
+  return (GURU_PERMISSION_MODES as readonly string[]).includes(mode)
 }
 
 /** 规范化权限模式：历史 auto 或其它非法值统一回到默认完全自动模式 */
-export function migratePermissionMode(mode: string): MyYodaPermissionMode {
-  if (isMyYodaPermissionMode(mode)) return mode
-  return MYYODA_DEFAULT_PERMISSION_MODE
+export function migratePermissionMode(mode: string): GuruPermissionMode {
+  if (isGuruPermissionMode(mode)) return mode
+  return GURU_DEFAULT_PERMISSION_MODE
 }
 
 /** 危险等级 */
@@ -2099,7 +2099,7 @@ export interface PermissionRequest {
   toolName: string
   /** 工具输入参数 */
   toolInput: Record<string, unknown>
-  /** 操作描述（人类可读，MyYoda 生成） */
+  /** 操作描述（人类可读，Guru 生成） */
   description: string
   /** 具体命令（Bash 工具时有值） */
   command?: string
@@ -2241,19 +2241,19 @@ export const AGENT_IPC_CHANNELS = {
   GET_MCP_CONFIG: 'agent:get-mcp-config',
   /** 保存工作区 MCP 配置（同上，已迁移） */
   SAVE_MCP_CONFIG: 'agent:save-mcp-config',
-  /** 读取全局 MCP 配置（~/.myyoda/mcp.json，所有工作区共享） */
+  /** 读取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享） */
   GET_GLOBAL_MCP_CONFIG: 'agent:get-global-mcp-config',
   /** 保存全局 MCP 配置 */
   SAVE_GLOBAL_MCP_CONFIG: 'agent:save-global-mcp-config',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
-  /** 获取全局 Skills 目录绝对路径（~/.myyoda/global-skills/） */
+  /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
   GET_GLOBAL_SKILLS_DIR: 'agent:get-global-skills-dir',
   /** 测试 MCP 服务器连接 */
   TEST_MCP_SERVER: 'agent:test-mcp-server',
   /** 测试内置连接器依赖（如 Chrome / npx） */
   TEST_BUILTIN_CONNECTOR: 'agent:test-builtin-connector',
-  /** 启用或关闭 MyYoda 内置 MCP */
+  /** 启用或关闭 Guru 内置 MCP */
   SET_BUILTIN_MCP_ENABLED: 'agent:set-builtin-mcp-enabled',
   /** 获取工作区 Skill 列表（仅工作区层，不含全局；展示完整三层请用 GET_ALL_EFFECTIVE_SKILLS） */
   GET_SKILLS: 'agent:get-skills',
@@ -2293,7 +2293,7 @@ export const AGENT_IPC_CHANNELS = {
   GET_OTHER_PROJECT_SKILLS: 'agent:get-other-project-skills',
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */
   BATCH_IMPORT_SKILLS_TO_PROJECT: 'agent:batch-import-skills-to-project',
-  /** 获取默认 Skills 的 slug 列表（来自 ~/.myyoda/default-skills/） */
+  /** 获取默认 Skills 的 slug 列表（来自 ~/.guru/default-skills/） */
   GET_DEFAULT_SKILL_SLUGS: 'agent:get-default-skill-slugs',
   /** 从其他工作区导入 Skill 到当前工作区 */
   IMPORT_SKILL_FROM_WORKSPACE: 'agent:import-skill-from-workspace',

@@ -43,7 +43,7 @@ export function getFetchFn(proxyUrl?: string): typeof globalThis.fetch {
  * `getFetchFn` 走 Node 全局 `fetch`（未显式配置代理时不会读取系统 HTTP 代理/VPN），
  * 而应用「代理配置」页明确标注是给 AI API 请求用的，大多数用户不会为了看一个官方视频
  * 去专门打开它。当用户系统层有代理/VPN（如 GFW 环境下访问 GitHub Release）但未在
- * MyYoda 里配置时，`getFetchFn` 的请求会直接失败——而渲染进程的其它资源请求（含内嵌
+ * Guru 里配置时，`getFetchFn` 的请求会直接失败——而渲染进程的其它资源请求（含内嵌
  * 浏览器）能通过 Chromium 网络栈自动读取系统代理正常访问。
  *
  * 因此这里在 `getFetchFn` 请求失败时，用 `net.fetch`（Electron/Chromium 网络栈，

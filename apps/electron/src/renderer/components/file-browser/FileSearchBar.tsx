@@ -13,7 +13,7 @@ import { FileTypeIcon } from './FileTypeIcon'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { fileBrowserAutoRevealAtom } from '@/atoms/agent-atoms'
 import { WORKSPACE_TERMS } from '@/lib/workspace-project-terminology'
-import type { FileIndexEntry } from '@myyoda/shared'
+import type { FileIndexEntry } from '@guru/shared'
 
 interface FileSearchBarProps {
   workspaceFilesPath: string | null

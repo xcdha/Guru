@@ -8,7 +8,7 @@ import { resolveSafeChildPath } from './agent-file-path-policy'
 const noSymlinkPermission = (() => {
   if (process.platform !== 'win32') return false
   try {
-    const probe = mkdtempSync(join(tmpdir(), 'myyoda-symlink-probe-'))
+    const probe = mkdtempSync(join(tmpdir(), 'guru-symlink-probe-'))
     symlinkSync(probe, join(probe, 'probe'))
     rmSync(probe, { recursive: true, force: true })
     return false
@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 function createRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-file-policy-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-file-policy-'))
   tempDirs.push(root)
   mkdirSync(join(root, 'nested'), { recursive: true })
   return root
@@ -46,7 +46,7 @@ describe('safe file path policy', () => {
   })
 
   test('Given a not-yet-created root When resolving Then preserves the requested root', () => {
-    const parent = mkdtempSync(join(tmpdir(), 'myyoda-file-policy-parent-'))
+    const parent = mkdtempSync(join(tmpdir(), 'guru-file-policy-parent-'))
     tempDirs.push(parent)
     const root = join(parent, 'new-root')
 
@@ -55,7 +55,7 @@ describe('safe file path policy', () => {
 
   test.skipIf(noSymlinkPermission)('Given a symlinked parent outside the root When resolving Then rejects the escape', () => {
     const root = createRoot()
-    const outside = mkdtempSync(join(tmpdir(), 'myyoda-file-policy-outside-'))
+    const outside = mkdtempSync(join(tmpdir(), 'guru-file-policy-outside-'))
     tempDirs.push(outside)
     symlinkSync(outside, join(root, 'linked'))
 
@@ -64,7 +64,7 @@ describe('safe file path policy', () => {
 
   test.skipIf(noSymlinkPermission)('Given an existing symlink target outside the root When resolving Then rejects the target', () => {
     const root = createRoot()
-    const outside = join(tmpdir(), `myyoda-file-policy-target-${Date.now()}.txt`)
+    const outside = join(tmpdir(), `guru-file-policy-target-${Date.now()}.txt`)
     writeFileSync(outside, 'outside', 'utf8')
     symlinkSync(outside, join(root, 'linked.txt'))
 

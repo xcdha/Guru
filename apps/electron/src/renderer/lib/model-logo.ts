@@ -114,8 +114,8 @@ import OpenRouterLogo from '@/assets/models/openrouter.svg'
 // NUWA
 import NuwaLogo from '@/assets/models/nuwa.svg'
 
-// MyYoda
-import MyYodaLogo from '@/assets/models/myyoda.png'
+// Guru
+import GuruLogo from '@/assets/models/guru.png'
 
 // Cohere
 import CohereLogo from '@/assets/models/cohere.png'
@@ -126,7 +126,7 @@ import EmbeddingLogo from '@/assets/models/embedding.png'
 
 // ===== 供应商类型 =====
 
-import type { ProviderType } from '@myyoda/shared'
+import type { ProviderType } from '@guru/shared'
 
 // ===== 正则匹配映射 =====
 
@@ -327,7 +327,7 @@ export function getProviderLogo(provider: ProviderType): string {
  * 服务（常以 /anthropic 结尾）不应被误判为 Claude（见 #659）。
  */
 const URL_LOGO_MAP: Array<[RegExp, string]> = [
-  [/myyoda.cool/i, MyYodaLogo],
+  [/guru.cool/i, GuruLogo],
   [/moonshot\.cn|kimi/i, KimiLogo],
   [/bigmodel\.cn|zhipuai/i, ZhipuLogo],
   [/minimax/i, MiniMaxLogo],
@@ -381,7 +381,7 @@ export function getChannelLogo(channel: { provider: ProviderType; baseUrl: strin
  * 优先返回别名（name !== id），未找到则返回原始 modelId。
  * 用于将 SDK 返回的 model ID 转为用户友好的显示名称。
  */
-export function resolveModelDisplayName(modelId: string, channels: import('@myyoda/shared').Channel[], channelId?: string): string {
+export function resolveModelDisplayName(modelId: string, channels: import('@guru/shared').Channel[], channelId?: string): string {
   for (const channel of channels) {
     if (channelId && channel.id !== channelId) continue
     for (const model of channel.models) {
@@ -396,7 +396,7 @@ export function resolveModelDisplayName(modelId: string, channels: import('@myyo
 /**
  * 根据模型 ID 在渠道列表中查找供应商类型；提供 channelId 时只查该渠道。
  */
-export function resolveModelProvider(modelId: string, channels: import('@myyoda/shared').Channel[], channelId?: string): ProviderType | undefined {
+export function resolveModelProvider(modelId: string, channels: import('@guru/shared').Channel[], channelId?: string): ProviderType | undefined {
   for (const channel of channels) {
     if (channelId && channel.id !== channelId) continue
     for (const model of channel.models) {
@@ -409,4 +409,4 @@ export function resolveModelProvider(modelId: string, channels: import('@myyoda/
 }
 
 /** 默认模型图标 */
-export { DefaultLogo, MyYodaLogo }
+export { DefaultLogo, GuruLogo }

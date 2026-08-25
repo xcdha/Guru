@@ -10,7 +10,7 @@
  * 但订阅窗口是分钟/小时级，重试毫无意义且会在 UI 连续刷屏
  * （「网络暂时中断，第 X/8 次继续当前回答」）。
  *
- * 这里在 MyYoda 层识别订阅账户级限流（区别于 API Key 的瞬时 rate limit），
+ * 这里在 Guru 层识别订阅账户级限流（区别于 API Key 的瞬时 rate limit），
  * 让 PiAgentAdapter 终止 native retry 并透传友好终态错误。
  */
 

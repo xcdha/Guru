@@ -4,9 +4,9 @@ import type {
   AgentSessionMeta,
   AgentSendInput,
   AgentWorkspace,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
-  MyYodaConductorSessionHost,
+  GuruConductorSessionHost,
   type ConductorSessionHostDependencies,
 } from './conductor-session-host'
 import type { SessionCompletionEvent } from './task-runner'
@@ -112,11 +112,11 @@ function createDependencies(): {
   }
 }
 
-describe('MyYodaConductorSessionHost', () => {
+describe('GuruConductorSessionHost', () => {
   test('创建 session 时映射 OSS 选项并持久化 Conductor 元数据', async () => {
     const testDeps = createDependencies()
     const { deps, updates } = testDeps
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await expect(host.createSession('workspace-1', {
       name: '节点标题',
@@ -157,7 +157,7 @@ describe('MyYodaConductorSessionHost', () => {
         { id: 'matched', title: 'matched', workspaceId: 'workspace-1', taskCorrelationKey: 'task/run/node/1', createdAt: 1, updatedAt: 1 },
       ],
     })
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     expect(host.findSessionByTaskCorrelationKey('workspace-1', 'task/run/node/1')).toEqual(
       expect.objectContaining({ id: 'matched' }),
@@ -166,19 +166,19 @@ describe('MyYodaConductorSessionHost', () => {
 
   test('历史 safe/ask 权限映射到 plan，不得升权为 bypass', async () => {
     const askDeps = createDependencies()
-    const askHost = new MyYodaConductorSessionHost(askDeps.deps)
+    const askHost = new GuruConductorSessionHost(askDeps.deps)
     await askHost.createSession('workspace-1', { permissionMode: 'ask' })
     expect(askDeps.updates[0]).toMatchObject({ permissionMode: 'plan' })
 
     const safeDeps = createDependencies()
-    const safeHost = new MyYodaConductorSessionHost(safeDeps.deps)
+    const safeHost = new GuruConductorSessionHost(safeDeps.deps)
     await safeHost.createSession('workspace-1', { permissionMode: 'safe' })
     expect(safeDeps.updates[0]).toMatchObject({ permissionMode: 'plan' })
   })
 
   test('未知权限模式显式失败且不创建 session', async () => {
     const { deps, created } = createDependencies()
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await expect(host.createSession('workspace-1', {
       permissionMode: 'unsupported-mode',
@@ -191,7 +191,7 @@ describe('MyYodaConductorSessionHost', () => {
     const deps = Object.assign(testDeps.deps, {
       getDefaultAgentChannelId: () => 'configured-default-channel',
     })
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await host.createSession('workspace-1', { name: '生成 task' })
     await host.sendMessage('session-1', '生成 task 内容')
@@ -205,7 +205,7 @@ describe('MyYodaConductorSessionHost', () => {
     const deps = Object.assign(testDeps.deps, {
       getDefaultAgentChannelId: () => 'configured-default-channel',
     })
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await host.createSession('workspace-1', { parentSessionId: 'session-1' })
 
@@ -215,7 +215,7 @@ describe('MyYodaConductorSessionHost', () => {
   test('发送消息时映射 AgentSendInput，并将错误与完成回调合并为一次完成事件', async () => {
     const testDeps = createDependencies()
     const { deps, sentInputs } = testDeps
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
     const events: Array<{ reason: string; finalText?: string }> = []
     host.onSessionComplete((event) => {
       events.push({ reason: event.reason, finalText: event.finalText })
@@ -239,7 +239,7 @@ describe('MyYodaConductorSessionHost', () => {
   test('生成草稿消息透传 toolPolicy=none，确保上层可禁用所有工具', async () => {
     const testDeps = createDependencies()
     const { deps, sentInputs } = testDeps
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await host.sendMessage('session-1', '生成 task.yaml', { toolPolicy: 'none' })
 
@@ -264,7 +264,7 @@ describe('MyYodaConductorSessionHost', () => {
         callbacks.onComplete()
       },
     }
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
     const events: SessionCompletionEvent[] = []
     host.onSessionComplete((event) => events.push(event))
 
@@ -286,7 +286,7 @@ describe('MyYodaConductorSessionHost', () => {
 
   test('后台任务未完成时不派发终态，最终完成时映射 token usage', async () => {
     const testDeps = createDependencies()
-    const host = new MyYodaConductorSessionHost(testDeps.deps)
+    const host = new GuruConductorSessionHost(testDeps.deps)
     const events: SessionCompletionEvent[] = []
     host.onSessionComplete((event) => events.push(event))
 
@@ -312,7 +312,7 @@ describe('MyYodaConductorSessionHost', () => {
 
   test('创建时保存工作目录，并在后续 AgentSendInput 中传递该目录', async () => {
     const testDeps = createDependencies()
-    const host = new MyYodaConductorSessionHost(testDeps.deps)
+    const host = new GuruConductorSessionHost(testDeps.deps)
 
     await host.createSession('workspace-1', {
       workingDirectory: '/repo/project',
@@ -328,7 +328,7 @@ describe('MyYodaConductorSessionHost', () => {
 
   test('metadata helpers 使用专用字段，工作目录来自 workspace 元数据，取消调用 stop', async () => {
     const { deps, updates, stopped } = createDependencies()
-    const host = new MyYodaConductorSessionHost(deps)
+    const host = new GuruConductorSessionHost(deps)
 
     await host.setSessionStatus('session-1', 'done')
     await host.setKanbanColumn('session-1', 'done')
@@ -350,7 +350,7 @@ describe('MyYodaConductorSessionHost', () => {
 
   test('完成回调没有消息时回读持久化消息作为最终文本', async () => {
     const testDeps = createDependencies()
-    const host = new MyYodaConductorSessionHost(testDeps.deps)
+    const host = new GuruConductorSessionHost(testDeps.deps)
     const events: SessionCompletionEvent[] = []
     host.onSessionComplete((event) => events.push(event))
 

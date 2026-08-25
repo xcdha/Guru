@@ -1,7 +1,7 @@
 /**
  * 语音输入会话路由
  *
- * MyYoda 前台时，听写状态内嵌在底部输入工具栏。
+ * Guru 前台时，听写状态内嵌在底部输入工具栏。
  * 外部应用前台时，显示无焦点、无转写文本的轻量状态条，避免用户失去听写反馈。
  */
 
@@ -32,12 +32,12 @@ let activeOutputContextId: string | null = null
 let voiceIndicatorWindow: BrowserWindow | null = null
 
 interface VoiceDictationToggleOptions {
-  targetIsMyYoda?: boolean
+  targetIsGuru?: boolean
   sourceInputId?: string
 }
 
 /**
- * 保留原导出以兼容启动流程；MyYoda 内部听写不再创建独立窗口。
+ * 保留原导出以兼容启动流程；Guru 内部听写不再创建独立窗口。
  */
 export function createVoiceDictationWindow(): void {
   const mainWindow = getMainWindow()
@@ -68,20 +68,20 @@ export function toggleVoiceDictationWindow(options: VoiceDictationToggleOptions 
     return
   }
 
-  const targetIsMyYoda = captureVoiceDictationTarget(options.targetIsMyYoda)
+  const targetIsGuru = captureVoiceDictationTarget(options.targetIsGuru)
   const outputMode = getSettings().voiceDictation?.outputMode ?? 'auto'
-  const routeToMyYodaInput = shouldRouteVoiceDictationToMyYodaInput(targetIsMyYoda, outputMode)
+  const routeToGuruInput = shouldRouteVoiceDictationToGuruInput(targetIsGuru, outputMode)
   const outputContextId = randomUUID()
-  beginVoiceDictationOutputContext(outputContextId, { routeToMyYodaInput, outputMode })
+  beginVoiceDictationOutputContext(outputContextId, { routeToGuruInput, outputMode })
   activeOutputContextId = outputContextId
   voiceDictationState = 'active'
-  usesExternalIndicator = !targetIsMyYoda
+  usesExternalIndicator = !targetIsGuru
   indicatorState = 'preparing'
   indicatorVolume = 0
   indicatorTranscript = ''
   if (usesExternalIndicator) showVoiceIndicator()
   const shownEvent: VoiceDictationShownEvent = {
-    routeToMyYodaInput,
+    routeToGuruInput,
     outputContextId,
     sourceInputId: options.sourceInputId,
   }
@@ -136,11 +136,11 @@ function isVoiceDictationEnabled(): boolean {
   return getSettings().voiceDictation?.enabled === true
 }
 
-function shouldRouteVoiceDictationToMyYodaInput(
-  targetIsMyYoda: boolean,
+function shouldRouteVoiceDictationToGuruInput(
+  targetIsGuru: boolean,
   outputMode: VoiceDictationOutputMode,
 ): boolean {
-  return outputMode === 'myyoda-input' || (outputMode === 'auto' && targetIsMyYoda)
+  return outputMode === 'guru-input' || (outputMode === 'auto' && targetIsGuru)
 }
 
 function showVoiceIndicator(): void {

@@ -100,7 +100,7 @@ export function searchProjects(query: string, workspaces: AgentWorkspace[]): Uni
 export function searchDiscover(query: string, feed: DiscoverFeedItem[], cachedDiscussions: DiscussionSummary[]): UnifiedSearchResult[]
 ```
 
-匹配逻辑统一复用 `findBestSearchMatch(title, query)`（`@myyoda/shared`）：命中返回 `{ matchStart, matchLength, score, kind }`，未命中返回 `null` 直接过滤掉。这样不用为每个 provider 重新发明匹配算法，评分体系也天然统一。
+匹配逻辑统一复用 `findBestSearchMatch(title, query)`（`@guru/shared`）：命中返回 `{ matchStart, matchLength, score, kind }`，未命中返回 `null` 直接过滤掉。这样不用为每个 provider 重新发明匹配算法，评分体系也天然统一。
 
 **`sortKey` 取值来源**（避免实现时歧义）：
 

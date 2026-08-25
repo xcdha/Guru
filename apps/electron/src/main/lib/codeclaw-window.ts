@@ -10,7 +10,7 @@
 
 import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import type { CodeClawSize } from '@myyoda/shared'
+import type { CodeClawSize } from '@guru/shared'
 import { getSettings, updateSettings } from './settings-service'
 
 const CODECLAW_DEFAULT_WIDTH = 220
@@ -87,7 +87,7 @@ export function createCodeClawWindow(): BrowserWindow | null {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      additionalArguments: ['--myyoda-window=codeclaw'],
+      additionalArguments: ['--guru-window=codeclaw'],
     },
   })
 

@@ -1,6 +1,6 @@
 /**
- * Shared configuration for MyYoda
+ * Shared configuration for Guru
  */
 
 // Placeholder - will be expanded as needed
-export const APP_NAME = 'MyYoda'
+export const APP_NAME = 'Guru'

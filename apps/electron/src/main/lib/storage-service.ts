@@ -499,8 +499,8 @@ async function calcAttachmentsCategory(): Promise<StorageCategory> {
 }
 
 async function calcTempFilesCategory(): Promise<StorageCategory> {
-  const previewDir = join(tmpdir(), 'myyoda-preview')
-  const installerDir = join(app.getPath('temp'), 'myyoda-installers')
+  const previewDir = join(tmpdir(), 'guru-preview')
+  const installerDir = join(app.getPath('temp'), 'guru-installers')
   const [preview, installer] = await Promise.all([
     getDirSize(previewDir),
     getDirSize(installerDir),
@@ -552,7 +552,7 @@ export async function calculateStorageStats(): Promise<StorageStats> {
 export async function cleanupTempFiles(): Promise<CleanupResult> {
   let freedBytes = 0, deletedCount = 0
   const errors: string[] = []
-  const previewDir = join(tmpdir(), 'myyoda-preview')
+  const previewDir = join(tmpdir(), 'guru-preview')
   if (existsSync(previewDir)) {
     try {
       const files = await fsPromises.readdir(previewDir)
@@ -565,7 +565,7 @@ export async function cleanupTempFiles(): Promise<CleanupResult> {
     }
   }
 
-  const installerDir = join(app.getPath('temp'), 'myyoda-installers')
+  const installerDir = join(app.getPath('temp'), 'guru-installers')
   if (existsSync(installerDir)) {
     try {
       const files = await fsPromises.readdir(installerDir)
@@ -797,7 +797,7 @@ export async function cleanupStorage(options: CleanupOptions): Promise<CleanupRe
     if (options.orphansOnly) {
       switch (cat) {
         case 'agent-sessions': merge(await cleanupOrphanAgentSessions()); break
-        // Pi-only runtime 不再拥有可安全推导 active ownership 的 SDK orphan 索引；沿用 MyYoda，保留这些历史文件。
+        // Pi-only runtime 不再拥有可安全推导 active ownership 的 SDK orphan 索引；沿用 Guru，保留这些历史文件。
         case 'sdk-config': break
         case 'workspaces': merge(await cleanupOrphanWorkspaces()); break
       }

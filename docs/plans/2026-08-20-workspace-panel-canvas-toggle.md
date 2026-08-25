@@ -1,7 +1,7 @@
 # 右侧工作区面板共存 + 画布快速开关 Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use myyoda-workspace-luxcoder:executing-plans to implement this plan task-by-task.
-> 开始实施前先用 myyoda-workspace-luxcoder:using-git-worktrees 建立独立 worktree，不要在主工作树直接改。
+> **For Claude:** REQUIRED SUB-SKILL: Use guru-workspace-luxcoder:executing-plans to implement this plan task-by-task.
+> 开始实施前先用 guru-workspace-luxcoder:using-git-worktrees 建立独立 worktree，不要在主工作树直接改。
 
 **Goal:** 受管浏览器打开时文件预览/草稿仍可共存；新增"画布"开关按钮（与终端、浏览器同级），点击直接在当前会话打开画布，不再经过全屏画廊。
 
@@ -332,7 +332,7 @@ git commit -m "feat(tabbar): 新增右侧工作区三栏布局纯函数 computeR
 // 在 rightWorkspaceSplitRatioAtom 定义之后追加：
 /** 右侧工作区中 Browser 与其余面板（文档槽/Scratch）并排时，Browser 占比 */
 export const browserWorkspaceSplitRatioAtom = atomWithStorage<number>(
-  'myyoda-browser-workspace-split-ratio',
+  'guru-browser-workspace-split-ratio',
   0.5,
   undefined,
   { getOnInit: true },

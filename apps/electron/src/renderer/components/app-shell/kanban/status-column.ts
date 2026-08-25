@@ -1,4 +1,4 @@
-import type { TaskWorkflow } from '@myyoda/shared/tasks'
+import type { TaskWorkflow } from '@guru/shared/tasks'
 import { DEFAULT_KANBAN_COLUMNS } from './board-model'
 
 export const KANBAN_COLUMNS = DEFAULT_KANBAN_COLUMNS

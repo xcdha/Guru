@@ -9,5 +9,5 @@
  */
 export const UPDATER_LINKS = {
   /** GitHub Releases 发布页（手动下载入口） */
-  releases: 'https://github.com/GeoffBao/MyYoda/releases',
+  releases: 'https://github.com/xcdha/Guru/releases',
 } as const

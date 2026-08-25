@@ -38,8 +38,8 @@ describe('agent-draft-persistence 删除清理', () => {
     store.set(agentSessionDraftsAtom, new Map([['s1', 'a'], ['s2', 'b']]))
     removeAgentDraft(store, 's1')
     expect(store.get(agentSessionDraftsAtom)).toEqual(new Map([['s2', 'b']]))
-    expect(localStorage.getItem('myyoda-agent-session-drafts')).toContain('s2')
-    expect(localStorage.getItem('myyoda-agent-session-drafts')).not.toContain('s1')
+    expect(localStorage.getItem('guru-agent-session-drafts')).toContain('s2')
+    expect(localStorage.getItem('guru-agent-session-drafts')).not.toContain('s1')
   })
 
   test('removeAgentDraft 不存在的会话不写盘', () => {

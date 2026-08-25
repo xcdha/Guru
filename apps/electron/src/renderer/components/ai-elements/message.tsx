@@ -1,7 +1,7 @@
 /**
  * AI Elements - 消息组件原语
  *
- * 简化迁移自 MyYoda 前版本 的 ai-elements/message.tsx，
+ * 简化迁移自 Guru 前版本 的 ai-elements/message.tsx，
  * 保留核心消息展示组件，适配 Electron + Jotai 架构。
  *
  * 包含：
@@ -38,13 +38,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { LoadingIndicator } from '@/components/ui/loading-indicator'
-import { CodeBlock, MermaidBlock } from '@myyoda/ui'
-import { detectLanguage } from '@myyoda/core'
+import { CodeBlock, MermaidBlock } from '@guru/ui'
+import { detectLanguage } from '@guru/core'
 import { FilePathChip, isAbsoluteFilePath, isImageFilePath, isRelativeFilePath } from './file-path-chip'
 import { buildAgentHistoryQuoteLabel, parseAgentHistoryQuoteMention } from '@/lib/quoted-selection'
 import { useAgentBrowserLink } from '@/components/browser/AgentBrowserLinkProvider'
 import type { HTMLAttributes, ComponentProps, ReactNode } from 'react'
-import type { FileAttachment } from '@myyoda/shared'
+import type { FileAttachment } from '@guru/shared'
 
 // ===== Message 根容器 =====
 
@@ -723,7 +723,7 @@ export const MessageResponse = React.memo(
     const renderedMarkdown = (remarkPlugins?.includes(remarkMentions)
       ? normalizeNamedReferenceDelimiters(children)
       : children
-    ).replace(/<!--MYYODA_AUTOMATION:[\s\S]*?-->/g, '').trim()
+    ).replace(/<!--GURU_AUTOMATION:[\s\S]*?-->/g, '').trim()
 
     // 全文归一化后按顶层边界分块：正则归一化是 O(n) 轻量扫描，
     // 真正昂贵的 remark 解析由 MemoizedMarkdownBlock 按块记忆化。

@@ -19,20 +19,20 @@ import { homedir } from 'node:os'
 import { basename, join, dirname } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
-import type { AgentSendInput, AgentMessage, AgentGenerateTitleInput, AgentProviderAdapter, AgentSessionMeta, CodexOAuthCredentials, XaiOAuthCredentials, TypedError, RetryAttempt, SDKMessage, SDKAssistantMessage, AgentStreamPayload, AgentAssistantDeltaPayload, RewindSessionResult, SkillActivation } from '@myyoda/shared'
-import { MYYODA_DEFAULT_PERMISSION_MODE, PROVIDER_DEFAULT_URLS, THINKING_SIGNATURE_ERROR_CODE, THINKING_SIGNATURE_ERROR_MESSAGE, THINKING_SIGNATURE_ERROR_TITLE, isPersistableSDKSystemMessage, normalizeMcpTransportType, inferAgentSdkContextWindow, inferReasoningTransport, resolveReasoningProfile, collectSkillActivations, mergeSkillActivations } from '@myyoda/shared'
-import type { MyYodaPermissionMode, AskUserRequest, ExitPlanModeRequest, SDKSystemMessage, RecoveryAction } from '@myyoda/shared'
+import type { AgentSendInput, AgentMessage, AgentGenerateTitleInput, AgentProviderAdapter, AgentSessionMeta, CodexOAuthCredentials, XaiOAuthCredentials, TypedError, RetryAttempt, SDKMessage, SDKAssistantMessage, AgentStreamPayload, AgentAssistantDeltaPayload, RewindSessionResult, SkillActivation } from '@guru/shared'
+import { GURU_DEFAULT_PERMISSION_MODE, PROVIDER_DEFAULT_URLS, THINKING_SIGNATURE_ERROR_CODE, THINKING_SIGNATURE_ERROR_MESSAGE, THINKING_SIGNATURE_ERROR_TITLE, isPersistableSDKSystemMessage, normalizeMcpTransportType, inferAgentSdkContextWindow, inferReasoningTransport, resolveReasoningProfile, collectSkillActivations, mergeSkillActivations } from '@guru/shared'
+import type { GuruPermissionMode, AskUserRequest, ExitPlanModeRequest, SDKSystemMessage, RecoveryAction } from '@guru/shared'
 import type { PiAgentQueryOptions } from './adapters/pi-agent-adapter'
 import { getMainRepoRoot } from './git-diff-service'
 import { getWorkspaceAssetsDir, listWorkspaceAssetsForPrompt } from './workspace-assets'
-import { normalizePathForCompare } from '@myyoda/shared'
+import { normalizePathForCompare } from '@guru/shared'
 import { getPiAssistantErrorDetails, hasPiAssistantTextContent, stripPiAssistantError } from './adapters/pi-message-adapter'
 import { isTransientNetworkError, isMalformedResponseError, isSessionNotFoundError } from './error-patterns'
 import { friendlyErrorMessage, isPromptTooLongError, isThinkingSignatureError, mapSDKErrorToTypedError, extractErrorDetails, shouldKeepChannelOpen } from './agent-error-utils'
 import { getActiveRunRejectionMessage, shouldPersistInitialUserMessage } from './agent-send-message-policy'
 import { AgentEventBus } from './agent-event-bus'
 import { decryptApiKey, getChannelById, listChannels, persistCodexOAuthCredentials, persistXaiOAuthCredentials, resolveChannelRuntimeApiKey, resolveClaudeOAuthCredentials, resolveCodexOAuthCredentials, resolveXaiOAuthCredentials } from './channel-manager'
-import { getAdapter, fetchTitle, getAppUserAgent } from '@myyoda/core'
+import { getAdapter, fetchTitle, getAppUserAgent } from '@guru/core'
 import pkg from '../../../package.json' with { type: 'json' }
 import { getFetchFn } from './proxy-fetch'
 import { resolveTitleChannel, resolveTitleModel } from './title-model-selection'
@@ -128,8 +128,8 @@ async function resolveMainRepoRootCached(cwd: string): Promise<string | null> {
   return root
 }
 
-function sdkPermissionModeForMyYodaMode(mode: MyYodaPermissionMode): MyYodaPermissionMode {
-  // Pi runtime 直接使用 MyYoda 权限模式，不需要 Claude SDK 模式映射。
+function sdkPermissionModeForGuruMode(mode: GuruPermissionMode): GuruPermissionMode {
+  // Pi runtime 直接使用 Guru 权限模式，不需要 Claude SDK 模式映射。
   return mode
 }
 
@@ -338,7 +338,7 @@ function buildPiAdditionalDirectoriesPrompt(directories: string[]): string {
   return `
 
 <attached_directories>
-这些目录已由 MyYoda 授权给当前会话，和当前工作目录同属于用户允许访问的范围。
+这些目录已由 Guru 授权给当前会话，和当前工作目录同属于用户允许访问的范围。
 如需读取或修改这些目录中的内容，请直接使用绝对路径，不要先复制到当前工作目录。
 ${directoryLines}
 </attached_directories>`
@@ -382,7 +382,7 @@ export class AgentOrchestrator {
   private stoppedBeforeRunSessions = new Set<string>()
 
   /** 运行中会话的当前权限模式（支持运行时动态切换） */
-  private sessionPermissionModes = new Map<string, MyYodaPermissionMode>()
+  private sessionPermissionModes = new Map<string, GuruPermissionMode>()
 
   /**
    * 会话级 repo map 注入去重（sessionId → 最近注入的 map 内容）。
@@ -472,7 +472,7 @@ export class AgentOrchestrator {
    *
    * 若会话绑定了嵌套 Project 且该 Project 已自己配置过 MCP 服务器，用项目级完全覆盖全局级；
    * 否则（未绑定项目、项目未自己配置过）读生效全局 MCP 配置（getEffectiveMcpConfig，
-   * 即 ~/.myyoda/mcp.json）。注意：不能用 getWorkspaceMcpConfig——工作区级 mcp.json 在
+   * 即 ~/.guru/mcp.json）。注意：不能用 getWorkspaceMcpConfig——工作区级 mcp.json 在
    * migrateGlobalScopes 完成后会被改名为 .migrated，继续读旧路径会让存量工作区的 MCP 服务器静默消失。
    */
   private buildMcpServers(workspaceSlug: string | undefined, projectId: string | undefined): Record<string, Record<string, unknown>> {
@@ -907,7 +907,7 @@ export class AgentOrchestrator {
   ): Promise<void> {
     const { sessionId, userMessage, rawUserMessage, userMessageUuid, channelId, modelId, workspaceId, additionalDirectories, customMcpServers, permissionModeOverride, mentionedSkills, mentionedMcpServers, mentionedSessionIds, mentionedTodoIds, mentionedCalendarEventIds, automationContext, workContext, retryOfErrorUuid, toolPolicy } = input
     // Claude runtime 已于 2026-08 退役，所有会话统一走 Pi。
-    const agentRuntime: import('@myyoda/shared').AgentRuntime = 'pi'
+    const agentRuntime: import('@guru/shared').AgentRuntime = 'pi'
     const toolsDisabled = toolPolicy === 'none'
     const stderrChunks: string[] = []
     const streamStartedAt = input.startedAt ?? Date.now()
@@ -1255,7 +1255,7 @@ export class AgentOrchestrator {
       console.log(`[Agent 编排] 检测到回退 resume: resumeSessionAt=${rewindResumeAt}`)
     }
 
-    console.log(`[Agent 编排] Resume 状态: sdkSessionId=${existingSdkSessionId || '无'}, myyoda sessionId=${sessionId}`)
+    console.log(`[Agent 编排] Resume 状态: sdkSessionId=${existingSdkSessionId || '无'}, guru sessionId=${sessionId}`)
 
     // 5. 状态初始化
     const accumulatedMessages: SDKMessage[] = []
@@ -1273,8 +1273,8 @@ export class AgentOrchestrator {
     let agentCwd: string | undefined
     let agentCwdSource: SessionCwdSource | undefined
     let workspaceSlug: string | undefined
-    let workspace: import('@myyoda/shared').AgentWorkspace | undefined
-    let sessionFileRoots: import('@myyoda/shared').AgentSessionFileRoots | undefined
+    let workspace: import('@guru/shared').AgentWorkspace | undefined
+    let sessionFileRoots: import('@guru/shared').AgentSessionFileRoots | undefined
     let turnOutputSnapshot: ReturnType<typeof snapshotOutputFiles> | undefined
 
     try {
@@ -1410,7 +1410,7 @@ export class AgentOrchestrator {
       // 9.5 Pi runtime 不需要 .claude/settings.json（Claude runtime 已退役）。
 
       // 9.6 直接信任已保存的 sdkSessionId，跳过 listSessions 预验证
-      // （如 ~/.myyoda/agent-workspaces/workspace-xxx/sessionId）与 SDK 内部存储的路径哈希可能不匹配，
+      // （如 ~/.guru/agent-workspaces/workspace-xxx/sessionId）与 SDK 内部存储的路径哈希可能不匹配，
       // 导致 listSessions 始终返回 0 个会话，误杀有效的 resume。
       // SDK 本身会优雅处理无效的 resume ID（回退为新会话），无需预验证。
       if (existingSdkSessionId) {
@@ -1434,7 +1434,7 @@ export class AgentOrchestrator {
           ? getProjectSkillsDir(workspaceSlug, sessionMeta.projectId)
           : getWorkspaceSkillsDir(workspaceSlug)
         : undefined
-      // 真正传给 SDK 的搜索路径需叠加全局层（Skills 全局化：~/.myyoda/global-skills/ 优先生效，
+      // 真正传给 SDK 的搜索路径需叠加全局层（Skills 全局化：~/.guru/global-skills/ 优先生效，
       // 否则预制 Skill 在迁移后会从实际会话中消失——见 getEffectiveSkillsDirs 注释）。
       const skillsSearchPaths = workspaceSlug ? getEffectiveSkillsDirs(workspaceSlug, sessionMeta?.projectId) : undefined
       if (!toolsDisabled && isBuiltinMcpUserEnabled('chrome-devtools')) {
@@ -1464,7 +1464,7 @@ export class AgentOrchestrator {
               projectId: sessionMeta?.projectId,
               agentCwd,
               allowedRoots: builtinToolAllowedRoots,
-              permissionMode: permissionModeOverride ?? sessionMeta?.permissionMode ?? MYYODA_DEFAULT_PERMISSION_MODE,
+              permissionMode: permissionModeOverride ?? sessionMeta?.permissionMode ?? GURU_DEFAULT_PERMISSION_MODE,
               triggeredBy: input.triggeredBy
             })
             piBuiltinTools = result.tools
@@ -1479,7 +1479,7 @@ export class AgentOrchestrator {
       }
 
       // Pi SDK 没有 Claude Agent SDK 的 mcpServers 参数；Claude 路径保持原生 MCP 不变，
-      // Pi 路径由 MyYoda 主进程连接用户 MCP server，并转换为 Pi customTools。
+      // Pi 路径由 Guru 主进程连接用户 MCP server，并转换为 Pi customTools。
       if (!toolsDisabled && Object.keys(mcpServers).length > 0) {
         try {
           piMcpTools = await buildPiMcpTools(mcpServers)
@@ -1552,7 +1552,7 @@ export class AgentOrchestrator {
       if (mentionedSkills?.length || mentionedMcpServers?.length) {
         const toolLines: string[] = ['用户在消息中明确引用了以下工具，请在本次回复中主动调用：']
         for (const slug of mentionedSkills ?? []) {
-          const qualifiedName = workspaceSlug ? `myyoda-workspace-${workspaceSlug}:${slug}` : slug
+          const qualifiedName = workspaceSlug ? `guru-workspace-${workspaceSlug}:${slug}` : slug
           toolLines.push(`- Skill: ${qualifiedName}（请立即调用此 Skill）`)
         }
         for (const name of mentionedMcpServers ?? []) {
@@ -1587,14 +1587,14 @@ export class AgentOrchestrator {
 
       // 12. 读取应用设置并确定权限模式
       // 权限模式只属于当前 session；新会话默认完全自动模式。
-      const initialPermissionMode: MyYodaPermissionMode = permissionModeOverride ?? MYYODA_DEFAULT_PERMISSION_MODE
+      const initialPermissionMode: GuruPermissionMode = permissionModeOverride ?? GURU_DEFAULT_PERMISSION_MODE
       // 注册到 Map，支持运行中动态切换
       this.sessionPermissionModes.set(sessionId, initialPermissionMode)
       console.log(`[Agent 编排] 权限模式: ${initialPermissionMode}${permissionModeOverride ? '（外部覆盖）' : ''}`)
 
       const emitPlanModeChanged = (active: boolean, source: 'initial' | 'tool' | 'permission'): void => {
         this.eventBus.emit(sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'plan_mode_changed', sessionId, active, source }
         })
       }
@@ -1602,20 +1602,20 @@ export class AgentOrchestrator {
       // 当初始模式为 plan 时，通知渲染进程展示计划模式 UI（如「Agent 正在规划」横幅）
       if (initialPermissionMode === 'plan') {
         this.eventBus.emit(sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'enter_plan_mode', sessionId }
         })
         emitPlanModeChanged(true, 'initial')
       }
 
       /** 读取当前会话的实时权限模式（支持运行中切换） */
-      const getPermissionMode = (): MyYodaPermissionMode => this.sessionPermissionModes.get(sessionId) ?? initialPermissionMode
+      const getPermissionMode = (): GuruPermissionMode => this.sessionPermissionModes.get(sessionId) ?? initialPermissionMode
 
       // ExitPlanMode 拦截器：plan 模式下走 UI 审批流程
       const handleExitPlanMode = (toolInput: Record<string, unknown>, signal: AbortSignal): Promise<ExitPlanPermissionResult> => {
         return exitPlanService.handleExitPlanMode(sessionId, toolInput, signal, (request: ExitPlanModeRequest) => {
           this.eventBus.emit(sessionId, {
-            kind: 'myyoda_event',
+            kind: 'guru_event',
             event: { type: 'exit_plan_mode_request', request }
           })
         })
@@ -1746,7 +1746,7 @@ export class AgentOrchestrator {
             emitPlanModeChanged(false, 'permission')
             // 同步通知 SDK 侧切换权限模式
             if (this.adapter.setPermissionMode) {
-              this.adapter.setPermissionMode(sessionId, sdkPermissionModeForMyYodaMode(result.targetMode)).catch((err: unknown) => {
+              this.adapter.setPermissionMode(sessionId, sdkPermissionModeForGuruMode(result.targetMode)).catch((err: unknown) => {
                 console.warn(`[Agent 编排] SDK 权限模式切换失败:`, err)
               })
             }
@@ -1759,7 +1759,7 @@ export class AgentOrchestrator {
           planModeEntered = true
           emitPlanModeChanged(true, 'tool')
           this.eventBus.emit(sessionId, {
-            kind: 'myyoda_event',
+            kind: 'guru_event',
             event: { type: 'enter_plan_mode', sessionId }
           })
           return { behavior: 'allow' as const, updatedInput: input }
@@ -1769,7 +1769,7 @@ export class AgentOrchestrator {
         if (toolName === 'AskUserQuestion') {
           return askUserService.handleAskUserQuestion(sessionId, input, options.signal, (request: AskUserRequest) => {
             this.eventBus.emit(sessionId, {
-              kind: 'myyoda_event',
+              kind: 'guru_event',
               event: { type: 'ask_user_request', request }
             })
           })
@@ -1817,7 +1817,7 @@ export class AgentOrchestrator {
         if (planningDeletionPermission === 'require-single-approval') {
           return permissionService.requestSingleApproval(sessionId, toolName, input, options, (request) => {
             this.eventBus.emit(sessionId, {
-              kind: 'myyoda_event',
+              kind: 'guru_event',
               event: { type: 'permission_request', request }
             })
           })
@@ -1997,7 +1997,7 @@ ${workContext}`
         resolvedModel = model.replace(/\[1m\]$/i, '')
         console.log(`[Agent 编排] SDK 确认模型: ${resolvedModel}`)
         this.eventBus.emit(sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'model_resolved', model: resolvedModel }
         })
       }
@@ -2008,7 +2008,7 @@ ${workContext}`
         // result 消息里的真实 contextWindow 透传到 renderer，
         // 覆盖流式过程中按模型名推断的 fallback 值（智谱等端点会把 [1m] 等后缀剥掉，导致 fallback 不准）
         this.eventBus.emit(sessionId, {
-          kind: 'myyoda_event',
+          kind: 'guru_event',
           event: { type: 'context_window', contextWindow }
         })
       }
@@ -2097,7 +2097,7 @@ ${workContext}`
         retryRunStartedAt: streamStartedAt,
         onRetry: (retry) => {
           this.eventBus.emit(sessionId, {
-            kind: 'myyoda_event',
+            kind: 'guru_event',
             event: { type: 'retry', ...retry }
           })
         }
@@ -2152,7 +2152,7 @@ ${workContext}`
             // 前 RETRY_VISIBILITY_THRESHOLD 次重试静默进行，避免偶发瞬时波动频繁惊扰用户
             if (retryAttempt > RETRY_VISIBILITY_THRESHOLD) {
               this.eventBus.emit(sessionId, {
-                kind: 'myyoda_event',
+                kind: 'guru_event',
                 event: {
                   type: 'retry',
                   status: 'starting',
@@ -2163,7 +2163,7 @@ ${workContext}`
                 }
               })
               this.eventBus.emit(sessionId, {
-                kind: 'myyoda_event',
+                kind: 'guru_event',
                 event: { type: 'retry', status: 'attempt', attemptData }
               })
             }
@@ -2306,7 +2306,7 @@ ${workContext}`
               if (msg.type === 'assistant' || msg.type === 'user' || sub === 'task_started' || sub === 'task_progress') {
                 awaitingBackgroundWake = false
                 this.eventBus.emit(sessionId, {
-                  kind: 'myyoda_event',
+                  kind: 'guru_event',
                   event: { type: 'run_resumed', sessionId }
                 })
               }
@@ -2350,7 +2350,7 @@ ${workContext}`
                 }
 
                 // Thinking signature 不兼容：通常由跨模型 resume 触发。
-                // 先自动清除 SDK resume 关系，改用 MyYoda 已持久化上下文重跑一次；再失败才展示用户提示。
+                // 先自动清除 SDK resume 关系，改用 Guru 已持久化上下文重跑一次；再失败才展示用户提示。
                 if (typedError.code === THINKING_SIGNATURE_ERROR_CODE && canTryThinkingSignatureRecovery(attempt)) {
                   thinkingSignatureRecoveryAttempted = true
                   invisibleRecoveryAttempts += 1
@@ -2375,7 +2375,7 @@ ${workContext}`
                 }
 
                 // 上下文过长：旧 SDK session 已经处于不可继续的超限状态。
-                // 自动清除 resume 指针，改用 MyYoda 最近历史回填重跑一次；用于飞书/自动任务等无人值守入口自恢复。
+                // 自动清除 resume 指针，改用 Guru 最近历史回填重跑一次；用于飞书/自动任务等无人值守入口自恢复。
                 if (typedError.code === 'prompt_too_long' && canTryPromptTooLongRecovery(attempt)) {
                   promptTooLongRecoveryAttempted = true
                   invisibleRecoveryAttempts += 1
@@ -2459,7 +2459,7 @@ ${workContext}`
                 // 如果之前有可见重试记录，发送 retry_failed
                 if (retryAttemptsScheduled > RETRY_VISIBILITY_THRESHOLD && lastRetryableError) {
                   this.eventBus.emit(sessionId, {
-                    kind: 'myyoda_event',
+                    kind: 'guru_event',
                     event: {
                       type: 'retry',
                       status: 'failed',
@@ -2626,7 +2626,7 @@ ${workContext}`
           // 正常完成 — 如果之前有可见重试，发送 retry_cleared
           if (!wasStoppedByUser && retryAttemptsScheduled > RETRY_VISIBILITY_THRESHOLD) {
             this.eventBus.emit(sessionId, {
-              kind: 'myyoda_event',
+              kind: 'guru_event',
               event: { type: 'retry', status: 'cleared' }
             })
             console.log(`[Agent 编排] 重试成功，已在第 ${attempt} 次尝试后恢复`)
@@ -2727,7 +2727,7 @@ ${workContext}`
             continue // 进入下一次 retry 循环
           }
 
-          // 上下文过长：清除超限 resume 指针，用 MyYoda 历史回填自动恢复一次。
+          // 上下文过长：清除超限 resume 指针，用 Guru 历史回填自动恢复一次。
           if (catchLooksPromptTooLong && canTryPromptTooLongRecovery(attempt)) {
             promptTooLongRecoveryAttempted = true
             invisibleRecoveryAttempts += 1
@@ -2846,7 +2846,7 @@ ${workContext}`
           // 如果之前有可见重试记录，发送 retry_failed
           if (retryAttemptsScheduled > RETRY_VISIBILITY_THRESHOLD && lastRetryableError) {
             this.eventBus.emit(sessionId, {
-              kind: 'myyoda_event',
+              kind: 'guru_event',
               event: {
                 type: 'retry',
                 status: 'failed',
@@ -2867,7 +2867,7 @@ ${workContext}`
           // 此终止分支只会被「非 session-not-found」的错误命中（session 失效已在上文
           // isSessionNotFoundError 分支单独处理并切到恢复模式）。网络断连、服务端 5xx、
           // 未知错误都不代表 SDK 会话本身失效——其完整历史 JSONL 仍保存在
-          // ~/.myyoda/sdk-config/projects/.../{sdkSessionId}.jsonl 中，依旧可 resume。
+          // ~/.guru/sdk-config/projects/.../{sdkSessionId}.jsonl 中，依旧可 resume。
           // 此前这里对 `!apiError`（如普通断连解析不出状态码）一律清除指针，导致下一轮
           // 退化为「仅回填最近 N 条」的冷启动，上下文从满载骤降（#903）。
           if (existingSdkSessionId) {
@@ -2885,7 +2885,7 @@ ${workContext}`
         // 仅当重试曾经对用户可见时才发送 retry_failed 事件
         if (retryAttemptsScheduled > RETRY_VISIBILITY_THRESHOLD) {
           this.eventBus.emit(sessionId, {
-            kind: 'myyoda_event',
+            kind: 'guru_event',
             event: {
               type: 'retry',
               status: 'failed',
@@ -2983,14 +2983,14 @@ ${workContext}`
   /**
    * 运行中动态切换会话的权限模式
    *
-   * 同时更新 MyYoda 侧（canUseTool 闭包读取的 Map）和 SDK 侧（query.setPermissionMode）。
+   * 同时更新 Guru 侧（canUseTool 闭包读取的 Map）和 SDK 侧（query.setPermissionMode）。
    * 典型场景：用户在 Agent 运行中通过 PermissionModeSelector 切换模式。
    */
-  async updateSessionPermissionMode(sessionId: string, mode: MyYodaPermissionMode): Promise<void> {
+  async updateSessionPermissionMode(sessionId: string, mode: GuruPermissionMode): Promise<void> {
     if (!this.activeSessions.has(sessionId)) return
     this.sessionPermissionModes.set(sessionId, mode)
     this.eventBus.emit(sessionId, {
-      kind: 'myyoda_event',
+      kind: 'guru_event',
       event: {
         type: 'plan_mode_changed',
         sessionId,
@@ -3000,7 +3000,7 @@ ${workContext}`
     })
     // 同步通知 SDK 侧
     if (this.adapter.setPermissionMode) {
-      await this.adapter.setPermissionMode(sessionId, sdkPermissionModeForMyYodaMode(mode))
+      await this.adapter.setPermissionMode(sessionId, sdkPermissionModeForGuruMode(mode))
     }
     console.log(`[Agent 编排] 运行中权限模式已切换: sessionId=${sessionId}, mode=${mode}`)
   }
@@ -3011,7 +3011,7 @@ ${workContext}`
    * 回退会话到指定消息点
    *
    * 1. 直接从 SDK JSONL 的 file-history-snapshot 恢复文件到目标时刻的状态
-   * 2. 截断 MyYoda JSONL 到 assistantMessageUuid（inclusive）
+   * 2. 截断 Guru JSONL 到 assistantMessageUuid（inclusive）
    * 3. 记录 resumeAtMessageUuid，下次发消息时 SDK 从该点分支继续
    *
    * 文件恢复通过解析 SDK JSONL 中的快照完成，无需运行中的 Query。
@@ -3096,7 +3096,7 @@ ${workContext}`
     if (mentionedSkills?.length || mentionedMcpServers?.length) {
       const toolLines: string[] = ['用户在消息中明确引用了以下工具，请在本次回复中主动调用：']
       for (const slug of mentionedSkills ?? []) {
-        const qualifiedName = workspaceSlug ? `myyoda-workspace-${workspaceSlug}:${slug}` : slug
+        const qualifiedName = workspaceSlug ? `guru-workspace-${workspaceSlug}:${slug}` : slug
         toolLines.push(`- Skill: ${qualifiedName}（请立即调用此 Skill）`)
       }
       for (const name of mentionedMcpServers ?? []) {

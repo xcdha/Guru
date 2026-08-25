@@ -2,8 +2,8 @@
  * 对话管理器
  *
  * 负责对话的 CRUD 操作和消息持久化。
- * - 对话索引：~/.myyoda/conversations.json（轻量元数据）
- * - 消息存储：~/.myyoda/conversations/{id}.jsonl（JSONL 格式，逐行追加）
+ * - 对话索引：~/.guru/conversations.json（轻量元数据）
+ * - 消息存储：~/.guru/conversations/{id}.jsonl（JSONL 格式，逐行追加）
  */
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, unlinkSync, createReadStream } from 'node:fs'
@@ -16,8 +16,8 @@ import {
   getConversationMessagesPath,
 } from './config-paths'
 import { deleteConversationAttachments, deleteAttachment } from './attachment-service'
-import type { ConversationMeta, ChatMessage, RecentMessagesResult, MessageSearchResult } from '@myyoda/shared'
-import { findBestSearchMatch, insertTopSearchResult } from '@myyoda/shared'
+import type { ConversationMeta, ChatMessage, RecentMessagesResult, MessageSearchResult } from '@guru/shared'
+import { findBestSearchMatch, insertTopSearchResult } from '@guru/shared'
 
 /**
  * 对话索引文件格式

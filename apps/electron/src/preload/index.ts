@@ -6,12 +6,12 @@
  */
 
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import { PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS, SESSION_COMMAND_CHANNEL, SESSION_GROUP_IPC_CHANNELS, EXPERT_IPC_CHANNELS } from '@myyoda/shared/channels'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@myyoda/shared'
-import type { TaskAggregateSummary, TaskMetadataPatch, TaskWorkflow } from '@myyoda/shared/tasks'
-import type { StartTodoAgentInput, StartTodoAgentResult, TodoAgentSessionActivation, PlanningWorkspaceScope } from '@myyoda/shared'
-import { LABEL_IPC_CHANNELS } from '@myyoda/shared/channels'
-import type { WorkspaceLabel } from '@myyoda/shared/labels'
+import { PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS, SESSION_COMMAND_CHANNEL, SESSION_GROUP_IPC_CHANNELS, EXPERT_IPC_CHANNELS } from '@guru/shared/channels'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@guru/shared'
+import type { TaskAggregateSummary, TaskMetadataPatch, TaskWorkflow } from '@guru/shared/tasks'
+import type { StartTodoAgentInput, StartTodoAgentResult, TodoAgentSessionActivation, PlanningWorkspaceScope } from '@guru/shared'
+import { LABEL_IPC_CHANNELS } from '@guru/shared/channels'
+import type { WorkspaceLabel } from '@guru/shared/labels'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, EXCALIDRAW_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
 import type {
   RuntimeStatus,
@@ -105,7 +105,7 @@ import type {
   PermissionResponse,
   ProjectDeleteImpact,
   TaskDeleteImpact,
-  MyYodaPermissionMode,
+  GuruPermissionMode,
   AskUserRequest,
   AskUserResponse,
   ExitPlanModeResponse,
@@ -192,9 +192,9 @@ import type {
   CodeClawMiniRequest,
   CodeClawPeekRequest,
   CodeClawSize,
-} from '@myyoda/shared'
-import type { ProjectConfig } from '@myyoda/shared/projects'
-import type { ExpertManifest, ExpertPackage, ExpertTemplate, TeamSquad } from '@myyoda/shared/experts'
+} from '@guru/shared'
+import type { ProjectConfig } from '@guru/shared/projects'
+import type { ExpertManifest, ExpertPackage, ExpertTemplate, TeamSquad } from '@guru/shared/experts'
 import type { CreateTeamInput, UpdateTeamInput } from '../main/lib/expert-service'
 import type { ValidationResult } from '../../../../packages/shared/src/tasks/validate.ts'
 import type {
@@ -368,68 +368,68 @@ export interface ElectronAPI {
   getGitRepoStatus: (dirPath: string) => Promise<GitRepoStatus | null>
 
   /** 获取未暂存的变更文件列表 */
-  getUnstagedChanges: (dirPath: string, sessionPath?: string, workspaceFilesPath?: string, extraPaths?: string[], sessionId?: string) => Promise<import('@myyoda/shared').UnstagedChangesResult>
+  getUnstagedChanges: (dirPath: string, sessionPath?: string, workspaceFilesPath?: string, extraPaths?: string[], sessionId?: string) => Promise<import('@guru/shared').UnstagedChangesResult>
   /** 失效 Git Diff 扫描缓存；省略路径时失效全部仓库 */
   invalidateGitDiffCache: (changedPath?: string) => Promise<void>
   /** 获取单个文件的 diff */
-  getFileDiff: (input: import('@myyoda/shared').GetFileDiffInput) => Promise<string>
+  getFileDiff: (input: import('@guru/shared').GetFileDiffInput) => Promise<string>
   /** 获取未追踪文件内容 */
-  getUntrackedContent: (input: import('@myyoda/shared').GetFileDiffInput) => Promise<string>
+  getUntrackedContent: (input: import('@guru/shared').GetFileDiffInput) => Promise<string>
   /** 还原文件变更 */
-  revertFile: (input: import('@myyoda/shared').RevertFileInput) => Promise<void>
+  revertFile: (input: import('@guru/shared').RevertFileInput) => Promise<void>
   /** 获取文件新旧版本内容 */
-  getDiffContents: (input: import('@myyoda/shared').GetFileDiffInput) => Promise<{ oldContent: string; newContent: string } | null>
+  getDiffContents: (input: import('@guru/shared').GetFileDiffInput) => Promise<{ oldContent: string; newContent: string } | null>
   /** 列出 Git Worktree */
-  listWorktrees: (repoPath: string, sessionId: string) => Promise<import('@myyoda/shared').WorktreeInfo[]>
+  listWorktrees: (repoPath: string, sessionId: string) => Promise<import('@guru/shared').WorktreeInfo[]>
   /** 列出新 Agent 会话可选择的 Git 分支 */
   listGitBranches: (input: ListGitBranchesInput) => Promise<GitBranchInfo[]>
   /** 准备新 Agent 会话 Git 上下文（Local checkout 或 Worktree 创建） */
   prepareSessionGitContext: (input: PrepareSessionGitContextInput) => Promise<PrepareSessionGitContextResult | null>
   /** 刷新会话头部 Git 分支徽章：检测持久化分支与实际 checkout 是否漂移，漂移则静默回写（仅 Local 模式） */
-  refreshSessionGitBranch: (input: import('@myyoda/shared').RefreshSessionGitBranchInput) => Promise<import('@myyoda/shared').RefreshSessionGitBranchResult | null>
+  refreshSessionGitBranch: (input: import('@guru/shared').RefreshSessionGitBranchInput) => Promise<import('@guru/shared').RefreshSessionGitBranchResult | null>
   /** 获取 Worktree 相对于基准分支的全量变更 */
-  getWorktreeChanges: (worktreePath: string, baseBranch: string, sessionId: string) => Promise<import('@myyoda/shared').UnstagedChangesResult>
+  getWorktreeChanges: (worktreePath: string, baseBranch: string, sessionId: string) => Promise<import('@guru/shared').UnstagedChangesResult>
   /** 在独立窗口打开当前文件预览 */
   openDetachedPreview: (input: DetachedPreviewWindowInput) => Promise<string | null>
   /** 获取独立预览窗口数据 */
   getDetachedPreviewData: (previewId: string) => Promise<DetachedPreviewWindowData | null>
 
   // ===== Pi 受管浏览器（主进程 WebContentsView） =====
-  openAgentBrowser: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState>
-  listAgentBrowserTabs: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState>
-  createAgentBrowserTab: (input: import('@myyoda/shared').BrowserCreateTabInput) => Promise<import('@myyoda/shared').BrowserViewState>
-  selectAgentBrowserTab: (input: import('@myyoda/shared').BrowserTabInput) => Promise<import('@myyoda/shared').BrowserViewState>
-  closeAgentBrowserTab: (input: import('@myyoda/shared').BrowserTabInput) => Promise<import('@myyoda/shared').BrowserViewState | null>
-  getAgentBrowserState: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState | null>
-  setAgentBrowserLayout: (layout: import('@myyoda/shared').BrowserViewLayout) => Promise<void>
+  openAgentBrowser: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState>
+  listAgentBrowserTabs: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState>
+  createAgentBrowserTab: (input: import('@guru/shared').BrowserCreateTabInput) => Promise<import('@guru/shared').BrowserViewState>
+  selectAgentBrowserTab: (input: import('@guru/shared').BrowserTabInput) => Promise<import('@guru/shared').BrowserViewState>
+  closeAgentBrowserTab: (input: import('@guru/shared').BrowserTabInput) => Promise<import('@guru/shared').BrowserViewState | null>
+  getAgentBrowserState: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState | null>
+  setAgentBrowserLayout: (layout: import('@guru/shared').BrowserViewLayout) => Promise<void>
   minimizeAgentBrowser: (sessionId: string) => Promise<void>
   hideAgentBrowserPresentation: (revision: number) => Promise<void>
-  navigateAgentBrowser: (input: import('@myyoda/shared').BrowserNavigateInput) => Promise<import('@myyoda/shared').BrowserViewState>
-  goBackAgentBrowser: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState>
-  goForwardAgentBrowser: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState>
-  reloadAgentBrowser: (sessionId: string) => Promise<import('@myyoda/shared').BrowserViewState>
+  navigateAgentBrowser: (input: import('@guru/shared').BrowserNavigateInput) => Promise<import('@guru/shared').BrowserViewState>
+  goBackAgentBrowser: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState>
+  goForwardAgentBrowser: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState>
+  reloadAgentBrowser: (sessionId: string) => Promise<import('@guru/shared').BrowserViewState>
   closeAgentBrowser: (sessionId: string) => Promise<void>
-  onAgentBrowserStateChanged: (callback: (state: import('@myyoda/shared').BrowserViewState) => void) => () => void
+  onAgentBrowserStateChanged: (callback: (state: import('@guru/shared').BrowserViewState) => void) => () => void
 
   // ===== 会话内嵌终端（PTY） =====
   /** 打开（或复用）终端实例 */
-  openAgentTerminal: (input: import('@myyoda/shared').TerminalOpenInput) => Promise<import('@myyoda/shared').TerminalViewState>
+  openAgentTerminal: (input: import('@guru/shared').TerminalOpenInput) => Promise<import('@guru/shared').TerminalViewState>
   /** 写入终端输入 */
-  writeAgentTerminal: (input: import('@myyoda/shared').TerminalWriteInput) => Promise<void>
+  writeAgentTerminal: (input: import('@guru/shared').TerminalWriteInput) => Promise<void>
   /** 调整终端尺寸 */
-  resizeAgentTerminal: (input: import('@myyoda/shared').TerminalResizeInput) => Promise<void>
+  resizeAgentTerminal: (input: import('@guru/shared').TerminalResizeInput) => Promise<void>
   /** 关闭单个终端实例 */
-  closeAgentTerminal: (input: import('@myyoda/shared').TerminalCloseInput) => Promise<import('@myyoda/shared').TerminalViewState | null>
+  closeAgentTerminal: (input: import('@guru/shared').TerminalCloseInput) => Promise<import('@guru/shared').TerminalViewState | null>
   /** 关闭会话全部终端实例（面板整体关闭） */
   closeAgentTerminalSession: (sessionId: string) => Promise<void>
   /** 拉取并清空终端输出缓冲（面板挂载时回放预启动期间的历史输出） */
   getAgentTerminalBuffer: (terminalId: string) => Promise<string>
   /** 获取终端状态 */
-  getAgentTerminalState: (terminalId: string) => Promise<import('@myyoda/shared').TerminalViewState | null>
+  getAgentTerminalState: (terminalId: string) => Promise<import('@guru/shared').TerminalViewState | null>
   /** 订阅终端输出（onData 推送） */
-  onAgentTerminalData: (callback: (event: import('@myyoda/shared').TerminalDataEvent) => void) => () => void
+  onAgentTerminalData: (callback: (event: import('@guru/shared').TerminalDataEvent) => void) => () => void
   /** 订阅终端状态变更（打开/退出/错误） */
-  onAgentTerminalStateChanged: (callback: (event: import('@myyoda/shared').TerminalStateEvent) => void) => () => void
+  onAgentTerminalStateChanged: (callback: (event: import('@guru/shared').TerminalStateEvent) => void) => () => void
 
   // ===== 通用工具 =====
 
@@ -760,7 +760,7 @@ export interface ElectronAPI {
   updateSessionCodexFastMode: (sessionId: string, enabled: boolean) => Promise<AgentSessionMeta>
 
   /** 查询 Pi catalog 或专属 profile 支持的会话级推理档位 */
-  getPiReasoningCapability: (channelId: string, modelId: string) => Promise<import('@myyoda/shared').ReasoningCapability | undefined>
+  getPiReasoningCapability: (channelId: string, modelId: string) => Promise<import('@guru/shared').ReasoningCapability | undefined>
 
   /** 更新当前会话的思考深度（Pi sticky） */
   updateSessionThinkingLevel: (sessionId: string, thinkingLevel: AgentThinkingLevel) => Promise<AgentSessionMeta>
@@ -879,7 +879,7 @@ export interface ElectronAPI {
   deleteWorkspaceAsset: (workspaceSlug: string, filename: string) => Promise<void>
 
   /** 更新 Agent 工作区 */
-  updateAgentWorkspace: (id: string, updates: { name?: string; kanbanColumns?: import('@myyoda/shared').KanbanColumnDef[] }) => Promise<AgentWorkspace>
+  updateAgentWorkspace: (id: string, updates: { name?: string; kanbanColumns?: import('@guru/shared').KanbanColumnDef[] }) => Promise<AgentWorkspace>
 
   /** 删除 Agent 工作区 */
   deleteAgentWorkspace: (id: string) => Promise<void>
@@ -898,25 +898,25 @@ export interface ElectronAPI {
   /** 保存工作区 MCP 配置 */
   saveWorkspaceMcpConfig: (workspaceSlug: string, config: WorkspaceMcpConfig) => Promise<void>
 
-  /** 读取全局 MCP 配置（~/.myyoda/mcp.json，所有工作区共享） */
+  /** 读取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享） */
   getGlobalMcpConfig: () => Promise<WorkspaceMcpConfig>
 
   /** 保存全局 MCP 配置 */
   saveGlobalMcpConfig: (config: WorkspaceMcpConfig) => Promise<void>
 
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
-  getGlobalScopeReviewHints: () => Promise<import('@myyoda/shared').GlobalScopeReviewHints>
+  getGlobalScopeReviewHints: () => Promise<import('@guru/shared').GlobalScopeReviewHints>
 
-  /** 获取全局 Skills 目录绝对路径（~/.myyoda/global-skills/） */
+  /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
   getGlobalSkillsDir: () => Promise<string>
 
   /** 测试 MCP 服务器连接 */
-  testMcpServer: (name: string, entry: import('@myyoda/shared').McpServerEntry) => Promise<{ success: boolean; message: string }>
+  testMcpServer: (name: string, entry: import('@guru/shared').McpServerEntry) => Promise<{ success: boolean; message: string }>
 
   /** 测试内置连接器依赖（如 Chrome / npx） */
   testBuiltinConnector: (id: string) => Promise<{ success: boolean; message: string }>
 
-  /** 启用或关闭 MyYoda 内置 MCP */
+  /** 启用或关闭 Guru 内置 MCP */
   setBuiltinMcpEnabled: (workspaceSlug: string, id: string, enabled: boolean) => Promise<WorkspaceCapabilities>
 
   /** 获取工作区 Skill 列表（含活跃和不活跃） */
@@ -943,7 +943,7 @@ export interface ElectronAPI {
   /** 获取其他工作区的 Skill 列表 */
   getOtherWorkspaceSkills: (currentSlug: string) => Promise<OtherWorkspaceSkillsGroup[]>
 
-  /** 获取默认 Skills 的 slug 列表（来自 ~/.myyoda/default-skills/） */
+  /** 获取默认 Skills 的 slug 列表（来自 ~/.guru/default-skills/） */
   getDefaultSkillSlugs: () => Promise<string[]>
 
   // 项目级 Skills / MCP（嵌套 Project 可选覆盖工作区级）
@@ -964,15 +964,15 @@ export interface ElectronAPI {
   /** 保存项目级 MCP 配置 */
   saveProjectMcpConfig: (workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig) => Promise<void>
   /** 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project） */
-  getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => Promise<import('@myyoda/shared').OtherProjectSkillsGroup[]>
+  getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => Promise<import('@guru/shared').OtherProjectSkillsGroup[]>
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */
-  batchImportSkillsToProject: (workspaceSlug: string, targetProjectId: string, selections: import('@myyoda/shared').BulkImportProjectSelection[]) => Promise<import('@myyoda/shared').BulkImportSkillsResult>
+  batchImportSkillsToProject: (workspaceSlug: string, targetProjectId: string, selections: import('@guru/shared').BulkImportProjectSelection[]) => Promise<import('@guru/shared').BulkImportSkillsResult>
 
   /** 从其他工作区导入 Skill */
   importSkillFromWorkspace: (targetSlug: string, sourceSlug: string, skillSlug: string) => Promise<SkillMeta>
 
   /** 从其他工作区批量导入多个 Skill */
-  batchImportSkillsFromWorkspaces: (targetSlug: string, selections: import('@myyoda/shared').BulkImportWorkspaceSelection[]) => Promise<import('@myyoda/shared').BulkImportSkillsResult>
+  batchImportSkillsFromWorkspaces: (targetSlug: string, selections: import('@guru/shared').BulkImportWorkspaceSelection[]) => Promise<import('@guru/shared').BulkImportSkillsResult>
 
   /** 从源工作区同步更新已导入的 Skill */
   updateSkillFromSource: (targetSlug: string, skillSlug: string) => Promise<SkillMeta>
@@ -1010,43 +1010,43 @@ export interface ElectronAPI {
   // 以下 Skill 内容/子文件通道均支持可选 scope/projectId（默认 'workspace'），用于定位到全局/项目层 Skill。
 
   /** 读取 SKILL.md 全文内容 */
-  readSkillContent: (workspaceSlug: string, skillSlug: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<string>
+  readSkillContent: (workspaceSlug: string, skillSlug: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<string>
 
   /** 写入 SKILL.md 全文内容 */
-  writeSkillContent: (workspaceSlug: string, skillSlug: string, content: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<void>
+  writeSkillContent: (workspaceSlug: string, skillSlug: string, content: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<void>
 
   /** 列出 Skill 目录下的子文件树（不含 SKILL.md） */
-  listSkillFiles: (workspaceSlug: string, skillSlug: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<import('@myyoda/shared').SkillFileNode[]>
+  listSkillFiles: (workspaceSlug: string, skillSlug: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<import('@guru/shared').SkillFileNode[]>
 
   /** 读取 Skill 目录下的子文件内容 */
-  readSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<import('@myyoda/shared').SkillFileContent>
+  readSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<import('@guru/shared').SkillFileContent>
 
   /** 写入 Skill 目录下的子文件内容（文本） */
-  writeSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, content: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<void>
+  writeSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, content: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<void>
 
   /** 在 Skill 目录下创建文件或目录 */
-  createSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, type: 'file' | 'directory', scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<void>
+  createSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, type: 'file' | 'directory', scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<void>
 
   /** 删除 Skill 目录下的文件或目录 */
-  deleteSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<void>
+  deleteSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<void>
 
   /** 重命名/移动 Skill 目录下的文件或目录 */
-  renameSkillEntry: (workspaceSlug: string, skillSlug: string, fromRelative: string, toRelative: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => Promise<void>
+  renameSkillEntry: (workspaceSlug: string, skillSlug: string, fromRelative: string, toRelative: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => Promise<void>
 
   /** 获取工作区记忆摘要 */
   getWorkspaceMemorySummary: (workspaceSlug: string) => Promise<WorkspaceMemorySummary>
 
   /** 读取工作区 CLAUDE.md */
-  readWorkspaceAgentsMd: (workspaceSlug: string) => Promise<import('@myyoda/shared').SkillFileContent>
+  readWorkspaceAgentsMd: (workspaceSlug: string) => Promise<import('@guru/shared').SkillFileContent>
 
   /** 写入工作区 CLAUDE.md */
   writeWorkspaceAgentsMd: (workspaceSlug: string, content: string) => Promise<void>
 
   /** 列出工作区 auto memory 文件树 */
-  listWorkspaceAutoMemoryFiles: (workspaceSlug: string) => Promise<import('@myyoda/shared').SkillFileNode[]>
+  listWorkspaceAutoMemoryFiles: (workspaceSlug: string) => Promise<import('@guru/shared').SkillFileNode[]>
 
   /** 读取工作区 auto memory 文件 */
-  readWorkspaceAutoMemoryFile: (workspaceSlug: string, relativePath: string) => Promise<import('@myyoda/shared').SkillFileContent>
+  readWorkspaceAutoMemoryFile: (workspaceSlug: string, relativePath: string) => Promise<import('@guru/shared').SkillFileContent>
 
   /** 写入工作区 auto memory 文件 */
   writeWorkspaceAutoMemoryFile: (workspaceSlug: string, relativePath: string, content: string) => Promise<void>
@@ -1066,7 +1066,7 @@ export interface ElectronAPI {
   /** 仅在当前 Memory 页面存活时订阅当前 workspace 的 memory/ 文件变化。 */
   subscribeWorkspaceMemoryChanges: (
     workspaceSlug: string,
-    callback: (change: import('@myyoda/shared').WorkspaceMemoryFileChange) => void,
+    callback: (change: import('@guru/shared').WorkspaceMemoryFileChange) => void,
   ) => () => void
 
   /** 授权 Agent 主动维护工作区/项目 AGENTS.md 知识 */
@@ -1094,7 +1094,7 @@ export interface ElectronAPI {
   respondPermission: (response: PermissionResponse) => Promise<void>
 
   /** 热切换指定会话的权限模式（运行中生效，仅影响该 session） */
-  updateSessionPermissionMode: (sessionId: string, mode: MyYodaPermissionMode) => Promise<void>
+  updateSessionPermissionMode: (sessionId: string, mode: GuruPermissionMode) => Promise<void>
 
   // ===== Chat 工具管理 =====
 
@@ -1138,15 +1138,15 @@ export interface ElectronAPI {
   // ===== 代码图谱工具（repo map + Graphify） =====
 
   /** 查询图谱工具状态（纯读） */
-  getRepoMapToolsState: (cwd: string) => Promise<import('@myyoda/shared').RepoMapToolsState>
+  getRepoMapToolsState: (cwd: string) => Promise<import('@guru/shared').RepoMapToolsState>
   /** 幂等创建（对话栏按钮唯一主动入口） */
-  ensureRepoMapTools: (cwd: string, forceUpdate?: boolean) => Promise<import('@myyoda/shared').RepoMapToolsState>
+  ensureRepoMapTools: (cwd: string, forceUpdate?: boolean) => Promise<import('@guru/shared').RepoMapToolsState>
   /** 订阅状态变更推送（不轮询） */
-  onRepoMapToolsStatus: (callback: (state: import('@myyoda/shared').RepoMapToolsState) => void) => () => void
+  onRepoMapToolsStatus: (callback: (state: import('@guru/shared').RepoMapToolsState) => void) => () => void
   /** 一键安装 graphify（进度经 onRepoMapToolsInstallProgress 推送） */
-  installGraphify: () => Promise<import('@myyoda/shared').RepoMapToolsInstallResult>
+  installGraphify: () => Promise<import('@guru/shared').RepoMapToolsInstallResult>
   /** 卸载 graphify */
-  uninstallGraphify: () => Promise<import('@myyoda/shared').RepoMapToolsInstallResult>
+  uninstallGraphify: () => Promise<import('@guru/shared').RepoMapToolsInstallResult>
   /** 安装/卸载进度推送（原始输出行） */
   onRepoMapToolsInstallProgress: (callback: (line: string) => void) => () => void
 
@@ -1198,11 +1198,11 @@ export interface ElectronAPI {
   /** 获取工作区附加文件列表 */
   getWorkspaceAttachedFiles: (workspaceSlug: string) => Promise<string[]>
   /** 获取工作区 worktree 仓库配置列表 */
-  getWorktreeRepos: (workspaceSlug: string) => Promise<import('@myyoda/shared').WorkspaceWorktreeRepo[]>
+  getWorktreeRepos: (workspaceSlug: string) => Promise<import('@guru/shared').WorkspaceWorktreeRepo[]>
   /** 添加 worktree 仓库到工作区配置 */
-  addWorktreeRepo: (workspaceSlug: string, repo: import('@myyoda/shared').WorkspaceWorktreeRepo) => Promise<import('@myyoda/shared').WorkspaceWorktreeRepo[]>
+  addWorktreeRepo: (workspaceSlug: string, repo: import('@guru/shared').WorkspaceWorktreeRepo) => Promise<import('@guru/shared').WorkspaceWorktreeRepo[]>
   /** 从工作区配置移除 worktree 仓库 */
-  removeWorktreeRepo: (workspaceSlug: string, repoPath: string) => Promise<import('@myyoda/shared').WorkspaceWorktreeRepo[]>
+  removeWorktreeRepo: (workspaceSlug: string, repoPath: string) => Promise<import('@guru/shared').WorkspaceWorktreeRepo[]>
 
   /** 获取默认工作区目录（应用设置；未绑定项目的新会话回退使用） */
   getAgentDefaultWorkingDirectory: () => Promise<string | undefined>
@@ -1219,85 +1219,85 @@ export interface ElectronAPI {
   listAgentSessionOutputs: (workspaceId: string, sessionId: string) => Promise<AgentOutputRecord[]>
 
   /** 列出目录内容 */
-  listDirectory: (dirPath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<FileEntry[]>
+  listDirectory: (dirPath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<FileEntry[]>
 
   /** 删除文件/目录 */
-  deleteFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  deleteFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 用系统默认应用打开文件 */
-  openFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  openFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 将剪贴板文本写入临时预览文件并返回绝对路径 */
   writeClipboardPreview: (filename: string, content: string) => Promise<string>
 
   /** 用系统默认应用打开任意文件（无工作区限制） */
-  systemOpenFile: (filePath: string, appName?: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  systemOpenFile: (filePath: string, appName?: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 扫描系统中可用的编辑器应用（仅 macOS） */
-  scanEditors: () => Promise<import('@myyoda/shared').EditorApp[]>
+  scanEditors: () => Promise<import('@guru/shared').EditorApp[]>
 
   /** 查询本机为该文件类型注册的默认打开应用（含图标 dataURL） */
-  getDefaultAppForFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<import('@myyoda/shared').DefaultAppInfo | null>
+  getDefaultAppForFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').DefaultAppInfo | null>
 
   /** 在系统文件管理器中显示文件 */
-  showInFolder: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  showInFolder: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 使用系统终端打开文件夹（仅 macOS） */
-  openFolderInTerminal: (folderPath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  openFolderInTerminal: (folderPath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 在系统文件管理器中显示文件（无工作区限制，支持候选基础目录） */
   showItemInFolder: (filePath: string, candidateBasePaths?: string[]) => Promise<boolean>
 
   /** 解析文件路径并读取内容（供内联预览使用） */
-  resolveAndReadFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<{ resolvedPath: string; content: string; isBinary: boolean; isTooLarge: boolean } | null>
+  resolveAndReadFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<{ resolvedPath: string; content: string; isBinary: boolean; isTooLarge: boolean } | null>
 
   /** 写入文本文件（供 Markdown 内联编辑使用） */
-  writeTextFile: (filePath: string, content: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<boolean>
+  writeTextFile: (filePath: string, content: string, access?: import('@guru/shared').FileAccessOptions) => Promise<boolean>
 
   /** 仅解析文件路径（供 PDF/图片等用 file:// 加载） */
-  resolveFilePath: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<import('@myyoda/shared').ResolvedFileUrl | null>
+  resolveFilePath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').ResolvedFileUrl | null>
 
   /** 解析 HTML 预览路径，并授权加载同目录的相对资源 */
-  resolveHtmlPreviewPath: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<import('@myyoda/shared').ResolvedFileUrl | null>
+  resolveHtmlPreviewPath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').ResolvedFileUrl | null>
 
   /** 为内联 PDF 预览生成临时 HTML 文件，返回文件路径 */
-  preparePdfPreview: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<{ tmpHtmlUrl: string } | null>
+  preparePdfPreview: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<{ tmpHtmlUrl: string } | null>
 
   /** 为内联 HTML 预览注册文件所在目录 URL（相对路径资源自动解析） */
-  prepareHtmlPreview: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<{ tmpUrl: string } | null>
+  prepareHtmlPreview: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<{ tmpUrl: string } | null>
 
   /** 读取文件为 base64（带路径校验，供内联图片预览等） */
-  readBinaryBase64: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions, maxSize?: number) => Promise<string | null>
+  readBinaryBase64: (filePath: string, access?: import('@guru/shared').FileAccessOptions, maxSize?: number) => Promise<string | null>
 
   /** DOCX 转 HTML（内联预览） */
-  docxToHtml: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<{ resolvedPath: string; html: string } | null>
+  docxToHtml: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<{ resolvedPath: string; html: string } | null>
 
   /** XLSX/PPTX 转 HTML（内联预览） */
-  officeToHtml: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<import('@myyoda/shared').OfficePreviewResult | null>
+  officeToHtml: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').OfficePreviewResult | null>
 
   /** 截图导出：将 HTML 渲染为 PNG 并复制到剪贴板或保存文件 */
   screenshotCapture: (input: { html: string; isDark: boolean; width?: number; mode: 'clipboard' | 'file'; css?: string; themeClass?: string }) => Promise<{ success: boolean; message: string; filePath?: string }>
 
   /** 重命名文件/目录 */
-  renameFile: (filePath: string, newName: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  renameFile: (filePath: string, newName: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 移动文件/目录到目标目录 */
-  moveFile: (filePath: string, targetDir: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  moveFile: (filePath: string, targetDir: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 列出附加目录内容 */
-  listAttachedDirectory: (dirPath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<FileEntry[]>
+  listAttachedDirectory: (dirPath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<FileEntry[]>
 
   /** 读取附加目录文件内容为 base64（限制在已附加目录范围内） */
   readAttachedFile: (filePath: string, sessionId?: string, workspaceSlug?: string) => Promise<string>
 
   /** 在文件管理器中显示附加目录文件 */
-  showAttachedInFolder: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  showAttachedInFolder: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 重命名附加目录文件/目录（无工作区路径限制） */
-  renameAttachedFile: (filePath: string, newName: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  renameAttachedFile: (filePath: string, newName: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 移动附加目录文件/目录（无工作区路径限制） */
-  moveAttachedFile: (filePath: string, targetDir: string, access?: import('@myyoda/shared').FileAccessOptions) => Promise<void>
+  moveAttachedFile: (filePath: string, targetDir: string, access?: import('@guru/shared').FileAccessOptions) => Promise<void>
 
   /** 检查路径类型（文件 or 目录），用于拖拽检测 */
   checkPathsType: (paths: string[]) => Promise<{ directories: string[]; files: string[] }>
@@ -1364,33 +1364,33 @@ export interface ElectronAPI {
   getCombinedReleaseNotes: () => Promise<string>
 
   // ===== 用户反馈（→ GitHub Issues）=====
-  feedbackSubmit: (input: import('@myyoda/shared').FeedbackSubmitInput, appVersion?: string, platform?: string) => Promise<import('@myyoda/shared').FeedbackSubmitResult>
-  feedbackTestConnection: (config: import('@myyoda/shared').FeedbackGithubConfig) => Promise<import('@myyoda/shared').FeedbackTestConnectionResult>
+  feedbackSubmit: (input: import('@guru/shared').FeedbackSubmitInput, appVersion?: string, platform?: string) => Promise<import('@guru/shared').FeedbackSubmitResult>
+  feedbackTestConnection: (config: import('@guru/shared').FeedbackGithubConfig) => Promise<import('@guru/shared').FeedbackTestConnectionResult>
   feedbackGetConfig: () => Promise<{ configured: boolean; repo: string; legacyNotionDetected: boolean }>
-  feedbackSaveConfig: (config: import('@myyoda/shared').FeedbackGithubConfig) => Promise<void>
+  feedbackSaveConfig: (config: import('@guru/shared').FeedbackGithubConfig) => Promise<void>
   feedbackCaptureWindow: () => Promise<{ filePath: string; dataUrl: string } | null>
   feedbackPickImages: () => Promise<Array<{ filePath: string; dataUrl: string }>>
-  feedbackListDrafts: () => Promise<import('@myyoda/shared').FeedbackDraftItem[]>
+  feedbackListDrafts: () => Promise<import('@guru/shared').FeedbackDraftItem[]>
   feedbackDeleteDraft: (fileName: string) => Promise<boolean>
 
   // ===== 「发现」面板（官方内容流 + 社区 + 反馈入口）=====
-  discoverGetFeed: (force?: boolean) => Promise<import('@myyoda/shared').DiscoverFeedResult>
+  discoverGetFeed: (force?: boolean) => Promise<import('@guru/shared').DiscoverFeedResult>
   discoverGetArticle: (contentUrl: string) => Promise<string>
-  discoverGetVideoStatus: (itemId: string, version: string, size?: number) => Promise<import('@myyoda/shared').VideoDownloadState>
-  discoverDownloadVideo: (item: import('@myyoda/shared').DiscoverContentItem) => Promise<{ filePath: string }>
+  discoverGetVideoStatus: (itemId: string, version: string, size?: number) => Promise<import('@guru/shared').VideoDownloadState>
+  discoverDownloadVideo: (item: import('@guru/shared').DiscoverContentItem) => Promise<{ filePath: string }>
   discoverMarkSeen: (itemId: string, version: string) => Promise<void>
-  discoverGetUnreadSummary: () => Promise<import('@myyoda/shared').DiscoverUnreadSummary>
+  discoverGetUnreadSummary: () => Promise<import('@guru/shared').DiscoverUnreadSummary>
   discoverMarkDiscussionViewed: (number: number, commentCount: number) => Promise<void>
-  discoverListDiscussions: (categorySlug: import('@myyoda/shared').DiscussionCategorySlug, force?: boolean) => Promise<import('@myyoda/shared').DiscussionListResult>
-  discoverGetDiscussion: (number: number, force?: boolean) => Promise<import('@myyoda/shared').DiscussionDetail>
+  discoverListDiscussions: (categorySlug: import('@guru/shared').DiscussionCategorySlug, force?: boolean) => Promise<import('@guru/shared').DiscussionListResult>
+  discoverGetDiscussion: (number: number, force?: boolean) => Promise<import('@guru/shared').DiscussionDetail>
   discoverGetVideoUrl: (filePath: string) => Promise<string>
   discoverGetVideoStreamUrl: (remoteUrl: string) => Promise<string>
   discoverDeleteVideoCache: (itemId: string, version: string) => Promise<void>
-  onVideoDownloadProgress: (listener: (event: import('@myyoda/shared').VideoDownloadProgressEvent) => void) => () => void
-  onVideoDownloadDone: (listener: (event: import('@myyoda/shared').VideoDownloadDoneEvent) => void) => () => void
-  discoverGetWikiPages: (force?: boolean) => Promise<import('@myyoda/shared').WikiPagesResult>
-  discoverGetWikiPage: (name: string) => Promise<import('@myyoda/shared').WikiPageContent>
-  discoverRefreshWiki: () => Promise<import('@myyoda/shared').WikiPagesResult>
+  onVideoDownloadProgress: (listener: (event: import('@guru/shared').VideoDownloadProgressEvent) => void) => () => void
+  onVideoDownloadDone: (listener: (event: import('@guru/shared').VideoDownloadDoneEvent) => void) => () => void
+  discoverGetWikiPages: (force?: boolean) => Promise<import('@guru/shared').WikiPagesResult>
+  discoverGetWikiPage: (name: string) => Promise<import('@guru/shared').WikiPageContent>
+  discoverRefreshWiki: () => Promise<import('@guru/shared').WikiPagesResult>
   onWikiUpdated: (listener: (event: { commitHash: string }) => void) => () => void
 
   // 工作区文件变化通知
@@ -1406,7 +1406,7 @@ export interface ElectronAPI {
   /** 保存飞书配置（appSecret 为明文） */
   saveFeishuConfig: (input: FeishuConfigInput) => Promise<FeishuConfig>
   /** 测试飞书连接 */
-  testFeishuConnection: (appId: string, appSecret: string, domain?: import('@myyoda/shared').FeishuDomain) => Promise<FeishuTestResult>
+  testFeishuConnection: (appId: string, appSecret: string, domain?: import('@guru/shared').FeishuDomain) => Promise<FeishuTestResult>
   /** 启动飞书 Bridge */
   startFeishuBridge: () => Promise<void>
   /** 停止飞书 Bridge */
@@ -1427,9 +1427,9 @@ export interface ElectronAPI {
   // --- 多 Bot v2 API ---
 
   /** 获取多 Bot 配置 */
-  getFeishuMultiConfig: () => Promise<import('@myyoda/shared').FeishuMultiBotConfig>
+  getFeishuMultiConfig: () => Promise<import('@guru/shared').FeishuMultiBotConfig>
   /** 保存单个 Bot 配置 */
-  saveFeishuBotConfig: (input: import('@myyoda/shared').FeishuBotConfigInput) => Promise<import('@myyoda/shared').FeishuBotConfig>
+  saveFeishuBotConfig: (input: import('@guru/shared').FeishuBotConfigInput) => Promise<import('@guru/shared').FeishuBotConfig>
   /** 获取单个 Bot 解密后的 App Secret */
   getDecryptedFeishuBotSecret: (botId: string) => Promise<string>
   /** 删除 Bot */
@@ -1439,18 +1439,18 @@ export interface ElectronAPI {
   /** 停止单个 Bot */
   stopFeishuBot: (botId: string) => Promise<void>
   /** 获取多 Bot 状态 */
-  getFeishuMultiStatus: () => Promise<import('@myyoda/shared').FeishuMultiBridgeState>
+  getFeishuMultiStatus: () => Promise<import('@guru/shared').FeishuMultiBridgeState>
 
   // --- 扫码注册 ---
 
   /** 启动扫码注册流程，等待用户扫码 + 飞书确认后返回 App ID/Secret */
-  registerFeishuApp: () => Promise<import('@myyoda/shared').FeishuRegisterAppResult>
+  registerFeishuApp: () => Promise<import('@guru/shared').FeishuRegisterAppResult>
   /** 取消正在进行的扫码注册流程 */
   cancelFeishuRegistration: () => Promise<void>
   /** 监听二维码 URL 生成 */
-  onFeishuRegisterQrcode: (callback: (payload: import('@myyoda/shared').FeishuRegisterAppQRCode) => void) => () => void
+  onFeishuRegisterQrcode: (callback: (payload: import('@guru/shared').FeishuRegisterAppQRCode) => void) => () => void
   /** 监听注册流程状态变化 */
-  onFeishuRegisterStatus: (callback: (payload: import('@myyoda/shared').FeishuRegisterAppStatus) => void) => () => void
+  onFeishuRegisterStatus: (callback: (payload: import('@guru/shared').FeishuRegisterAppStatus) => void) => () => void
 
   // ===== 钉钉集成 =====
 
@@ -1474,9 +1474,9 @@ export interface ElectronAPI {
   // --- 钉钉多 Bot v2 API ---
 
   /** 获取多 Bot 配置 */
-  getDingTalkMultiConfig: () => Promise<import('@myyoda/shared').DingTalkMultiBotConfig>
+  getDingTalkMultiConfig: () => Promise<import('@guru/shared').DingTalkMultiBotConfig>
   /** 保存单个 Bot 配置 */
-  saveDingTalkBotConfig: (input: import('@myyoda/shared').DingTalkBotConfigInput) => Promise<import('@myyoda/shared').DingTalkBotConfig>
+  saveDingTalkBotConfig: (input: import('@guru/shared').DingTalkBotConfigInput) => Promise<import('@guru/shared').DingTalkBotConfig>
   /** 获取单个 Bot 解密后的 Client Secret */
   getDecryptedDingTalkBotSecret: (botId: string) => Promise<string>
   /** 删除 Bot */
@@ -1486,7 +1486,7 @@ export interface ElectronAPI {
   /** 停止单个 Bot */
   stopDingTalkBot: (botId: string) => Promise<void>
   /** 获取多 Bot 状态 */
-  getDingTalkMultiStatus: () => Promise<import('@myyoda/shared').DingTalkMultiBridgeState>
+  getDingTalkMultiStatus: () => Promise<import('@guru/shared').DingTalkMultiBridgeState>
 
   // ===== 微信集成 =====
 
@@ -1547,7 +1547,7 @@ export interface ElectronAPI {
   cancelVoiceDictation: (input: VoiceDictationStopInput) => Promise<void>
   /** 输出最终语音文本 */
   commitVoiceDictation: (input: VoiceDictationCommitInput) => Promise<VoiceDictationCommitResult>
-  /** 更新 MyYoda 输入框中的临时识别文本 */
+  /** 更新 Guru 输入框中的临时识别文本 */
   previewVoiceDictation: (input: VoiceDictationPreviewInput) => Promise<void>
   /** 隐藏语音输入窗口 */
   hideVoiceDictation: () => Promise<void>
@@ -1586,7 +1586,7 @@ export interface ElectronAPI {
 
   // ===== 数据迁移 =====
 
-  /** 在系统文件管理器中打开 MyYoda 数据文件夹 */
+  /** 在系统文件管理器中打开 Guru 数据文件夹 */
   openMigrationDataFolder: () => Promise<void>
 
   // ===== 存储管理 =====
@@ -1840,19 +1840,19 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.INVALIDATE_GIT_DIFF_CACHE, changedPath)
   },
 
-  getFileDiff: (input: import('@myyoda/shared').GetFileDiffInput) => {
+  getFileDiff: (input: import('@guru/shared').GetFileDiffInput) => {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_FILE_DIFF, input)
   },
 
-  getUntrackedContent: (input: import('@myyoda/shared').GetFileDiffInput) => {
+  getUntrackedContent: (input: import('@guru/shared').GetFileDiffInput) => {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_UNTRACKED_CONTENT, input)
   },
 
-  revertFile: (input: import('@myyoda/shared').RevertFileInput) => {
+  revertFile: (input: import('@guru/shared').RevertFileInput) => {
     return ipcRenderer.invoke(IPC_CHANNELS.REVERT_FILE, input)
   },
 
-  getDiffContents: (input: import('@myyoda/shared').GetFileDiffInput) => {
+  getDiffContents: (input: import('@guru/shared').GetFileDiffInput) => {
     return ipcRenderer.invoke(IPC_CHANNELS.GET_DIFF_CONTENTS, input)
   },
 
@@ -1868,7 +1868,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.PREPARE_SESSION_GIT_CONTEXT, input)
   },
 
-  refreshSessionGitBranch: (input: import('@myyoda/shared').RefreshSessionGitBranchInput) => {
+  refreshSessionGitBranch: (input: import('@guru/shared').RefreshSessionGitBranchInput) => {
     return ipcRenderer.invoke(IPC_CHANNELS.REFRESH_SESSION_GIT_BRANCH, input)
   },
 
@@ -1888,44 +1888,44 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.OPEN_BROWSER, sessionId)
   },
   listAgentBrowserTabs: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.LIST_BROWSER_TABS, sessionId),
-  createAgentBrowserTab: (input: import('@myyoda/shared').BrowserCreateTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.CREATE_BROWSER_TAB, input),
-  selectAgentBrowserTab: (input: import('@myyoda/shared').BrowserTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.SELECT_BROWSER_TAB, input),
-  closeAgentBrowserTab: (input: import('@myyoda/shared').BrowserTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.CLOSE_BROWSER_TAB, input),
+  createAgentBrowserTab: (input: import('@guru/shared').BrowserCreateTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.CREATE_BROWSER_TAB, input),
+  selectAgentBrowserTab: (input: import('@guru/shared').BrowserTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.SELECT_BROWSER_TAB, input),
+  closeAgentBrowserTab: (input: import('@guru/shared').BrowserTabInput) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.CLOSE_BROWSER_TAB, input),
   getAgentBrowserState: (sessionId: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_BROWSER_STATE, sessionId)
   },
-  setAgentBrowserLayout: (layout: import('@myyoda/shared').BrowserViewLayout) => {
+  setAgentBrowserLayout: (layout: import('@guru/shared').BrowserViewLayout) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SET_BROWSER_LAYOUT, layout)
   },
   minimizeAgentBrowser: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.MINIMIZE_BROWSER, sessionId),
   hideAgentBrowserPresentation: (revision: number) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.HIDE_BROWSER_PRESENTATION, revision)
   },
-  navigateAgentBrowser: (input: import('@myyoda/shared').BrowserNavigateInput) => {
+  navigateAgentBrowser: (input: import('@guru/shared').BrowserNavigateInput) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.NAVIGATE_BROWSER, input)
   },
   goBackAgentBrowser: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.GO_BACK_BROWSER, sessionId),
   goForwardAgentBrowser: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.GO_FORWARD_BROWSER, sessionId),
   reloadAgentBrowser: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.RELOAD_BROWSER, sessionId),
   closeAgentBrowser: (sessionId: string) => ipcRenderer.invoke(AGENT_IPC_CHANNELS.CLOSE_BROWSER, sessionId),
-  onAgentBrowserStateChanged: (callback: (state: import('@myyoda/shared').BrowserViewState) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, state: import('@myyoda/shared').BrowserViewState) => callback(state)
+  onAgentBrowserStateChanged: (callback: (state: import('@guru/shared').BrowserViewState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: import('@guru/shared').BrowserViewState) => callback(state)
     ipcRenderer.on(AGENT_IPC_CHANNELS.BROWSER_STATE_CHANGED, listener)
     return () => ipcRenderer.removeListener(AGENT_IPC_CHANNELS.BROWSER_STATE_CHANGED, listener)
   },
 
   // 会话内嵌终端（PTY）
-  openAgentTerminal: (input: import('@myyoda/shared').TerminalOpenInput) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_OPEN, input) as Promise<import('@myyoda/shared').TerminalViewState>
+  openAgentTerminal: (input: import('@guru/shared').TerminalOpenInput) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_OPEN, input) as Promise<import('@guru/shared').TerminalViewState>
   },
-  writeAgentTerminal: (input: import('@myyoda/shared').TerminalWriteInput) => {
+  writeAgentTerminal: (input: import('@guru/shared').TerminalWriteInput) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_WRITE, input) as Promise<void>
   },
-  resizeAgentTerminal: (input: import('@myyoda/shared').TerminalResizeInput) => {
+  resizeAgentTerminal: (input: import('@guru/shared').TerminalResizeInput) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_RESIZE, input) as Promise<void>
   },
-  closeAgentTerminal: (input: import('@myyoda/shared').TerminalCloseInput) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_CLOSE, input) as Promise<import('@myyoda/shared').TerminalViewState | null>
+  closeAgentTerminal: (input: import('@guru/shared').TerminalCloseInput) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_CLOSE, input) as Promise<import('@guru/shared').TerminalViewState | null>
   },
   closeAgentTerminalSession: (sessionId: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_CLOSE_SESSION, sessionId) as Promise<void>
@@ -1934,15 +1934,15 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_BUFFER, terminalId) as Promise<string>
   },
   getAgentTerminalState: (terminalId: string) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_GET_STATE, terminalId) as Promise<import('@myyoda/shared').TerminalViewState | null>
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TERMINAL_GET_STATE, terminalId) as Promise<import('@guru/shared').TerminalViewState | null>
   },
-  onAgentTerminalData: (callback: (event: import('@myyoda/shared').TerminalDataEvent) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: import('@myyoda/shared').TerminalDataEvent) => callback(data)
+  onAgentTerminalData: (callback: (event: import('@guru/shared').TerminalDataEvent) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: import('@guru/shared').TerminalDataEvent) => callback(data)
     ipcRenderer.on(AGENT_IPC_CHANNELS.TERMINAL_DATA, listener)
     return () => ipcRenderer.removeListener(AGENT_IPC_CHANNELS.TERMINAL_DATA, listener)
   },
-  onAgentTerminalStateChanged: (callback: (event: import('@myyoda/shared').TerminalStateEvent) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: import('@myyoda/shared').TerminalStateEvent) => callback(data)
+  onAgentTerminalStateChanged: (callback: (event: import('@guru/shared').TerminalStateEvent) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: import('@guru/shared').TerminalStateEvent) => callback(data)
     ipcRenderer.on(AGENT_IPC_CHANNELS.TERMINAL_STATE_CHANGED, listener)
     return () => ipcRenderer.removeListener(AGENT_IPC_CHANNELS.TERMINAL_STATE_CHANGED, listener)
   },
@@ -2533,7 +2533,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_WORKSPACE_ASSET, workspaceSlug, filename)
   },
 
-  updateAgentWorkspace: (id: string, updates: { name?: string; kanbanColumns?: import('@myyoda/shared').KanbanColumnDef[] }) => {
+  updateAgentWorkspace: (id: string, updates: { name?: string; kanbanColumns?: import('@guru/shared').KanbanColumnDef[] }) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.UPDATE_WORKSPACE, id, updates)
   },
 
@@ -2574,7 +2574,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_GLOBAL_SKILLS_DIR)
   },
 
-  testMcpServer: (name: string, entry: import('@myyoda/shared').McpServerEntry) => {
+  testMcpServer: (name: string, entry: import('@guru/shared').McpServerEntry) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TEST_MCP_SERVER, name, entry) as Promise<{ success: boolean; message: string }>
   },
 
@@ -2658,7 +2658,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_OTHER_PROJECT_SKILLS, workspaceSlug, currentProjectId)
   },
 
-  batchImportSkillsToProject: (workspaceSlug: string, targetProjectId: string, selections: import('@myyoda/shared').BulkImportProjectSelection[]) => {
+  batchImportSkillsToProject: (workspaceSlug: string, targetProjectId: string, selections: import('@guru/shared').BulkImportProjectSelection[]) => {
     return ipcRenderer.invoke(
       AGENT_IPC_CHANNELS.BATCH_IMPORT_SKILLS_TO_PROJECT,
       workspaceSlug,
@@ -2676,7 +2676,7 @@ const electronAPI: ElectronAPI = {
     )
   },
 
-  batchImportSkillsFromWorkspaces: (targetSlug: string, selections: import('@myyoda/shared').BulkImportWorkspaceSelection[]) => {
+  batchImportSkillsFromWorkspaces: (targetSlug: string, selections: import('@guru/shared').BulkImportWorkspaceSelection[]) => {
     return ipcRenderer.invoke(
       AGENT_IPC_CHANNELS.BATCH_IMPORT_SKILLS_FROM_WORKSPACES,
       targetSlug,
@@ -2744,7 +2744,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.COMMUNITY_INSTALL_SKILL, workspaceSlug, skill)
   },
 
-  readSkillContent: (workspaceSlug: string, skillSlug: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  readSkillContent: (workspaceSlug: string, skillSlug: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(
       AGENT_IPC_CHANNELS.READ_SKILL_CONTENT,
       workspaceSlug,
@@ -2754,7 +2754,7 @@ const electronAPI: ElectronAPI = {
     )
   },
 
-  writeSkillContent: (workspaceSlug: string, skillSlug: string, content: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  writeSkillContent: (workspaceSlug: string, skillSlug: string, content: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(
       AGENT_IPC_CHANNELS.WRITE_SKILL_CONTENT,
       workspaceSlug,
@@ -2765,27 +2765,27 @@ const electronAPI: ElectronAPI = {
     )
   },
 
-  listSkillFiles: (workspaceSlug: string, skillSlug: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  listSkillFiles: (workspaceSlug: string, skillSlug: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.LIST_SKILL_FILES, workspaceSlug, skillSlug, scope, projectId)
   },
 
-  readSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  readSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.READ_SKILL_FILE, workspaceSlug, skillSlug, relativePath, scope, projectId)
   },
 
-  writeSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, content: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  writeSkillFile: (workspaceSlug: string, skillSlug: string, relativePath: string, content: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.WRITE_SKILL_FILE, workspaceSlug, skillSlug, relativePath, content, scope, projectId)
   },
 
-  createSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, type: 'file' | 'directory', scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  createSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, type: 'file' | 'directory', scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.CREATE_SKILL_ENTRY, workspaceSlug, skillSlug, relativePath, type, scope, projectId)
   },
 
-  deleteSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  deleteSkillEntry: (workspaceSlug: string, skillSlug: string, relativePath: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_SKILL_ENTRY, workspaceSlug, skillSlug, relativePath, scope, projectId)
   },
 
-  renameSkillEntry: (workspaceSlug: string, skillSlug: string, fromRelative: string, toRelative: string, scope?: import('@myyoda/shared').SkillScope, projectId?: string) => {
+  renameSkillEntry: (workspaceSlug: string, skillSlug: string, fromRelative: string, toRelative: string, scope?: import('@guru/shared').SkillScope, projectId?: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.RENAME_SKILL_ENTRY, workspaceSlug, skillSlug, fromRelative, toRelative, scope, projectId)
   },
 
@@ -2837,8 +2837,8 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.WORKSPACE_MEMORY_WINDOW_READY, workspaceSlug)
   },
 
-  subscribeWorkspaceMemoryChanges: (workspaceSlug: string, callback: (change: import('@myyoda/shared').WorkspaceMemoryFileChange) => void) => {
-    const listener = (_: unknown, payload: { workspaceSlug: string; change: import('@myyoda/shared').WorkspaceMemoryFileChange }): void => {
+  subscribeWorkspaceMemoryChanges: (workspaceSlug: string, callback: (change: import('@guru/shared').WorkspaceMemoryFileChange) => void) => {
+    const listener = (_: unknown, payload: { workspaceSlug: string; change: import('@guru/shared').WorkspaceMemoryFileChange }): void => {
       if (payload.workspaceSlug === workspaceSlug) callback(payload.change)
     }
     ipcRenderer.on(AGENT_IPC_CHANNELS.WORKSPACE_MEMORY_FILE_CHANGED, listener)
@@ -2887,7 +2887,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.PERMISSION_RESPOND, response)
   },
 
-  updateSessionPermissionMode: (sessionId: string, mode: MyYodaPermissionMode) => {
+  updateSessionPermissionMode: (sessionId: string, mode: GuruPermissionMode) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.UPDATE_SESSION_PERMISSION_MODE, sessionId, mode)
   },
 
@@ -2948,8 +2948,8 @@ const electronAPI: ElectronAPI = {
   ensureRepoMapTools: (cwd: string, forceUpdate?: boolean) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_ENSURE, cwd, forceUpdate === true)
   },
-  onRepoMapToolsStatus: (callback: (state: import('@myyoda/shared').RepoMapToolsState) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, state: import('@myyoda/shared').RepoMapToolsState): void => callback(state)
+  onRepoMapToolsStatus: (callback: (state: import('@guru/shared').RepoMapToolsState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: import('@guru/shared').RepoMapToolsState): void => callback(state)
     ipcRenderer.on(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_STATUS, listener)
     return () => { ipcRenderer.removeListener(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_STATUS, listener) }
   },
@@ -3047,7 +3047,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_WORKTREE_REPOS, workspaceSlug)
   },
 
-  addWorktreeRepo: (workspaceSlug: string, repo: import('@myyoda/shared').WorkspaceWorktreeRepo) => {
+  addWorktreeRepo: (workspaceSlug: string, repo: import('@guru/shared').WorkspaceWorktreeRepo) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.ADD_WORKTREE_REPO, workspaceSlug, repo)
   },
 
@@ -3074,15 +3074,15 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.LIST_SESSION_OUTPUTS, workspaceId, sessionId) as Promise<AgentOutputRecord[]>
   },
 
-  listDirectory: (dirPath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  listDirectory: (dirPath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.LIST_DIRECTORY, dirPath, access)
   },
 
-  deleteFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  deleteFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_FILE, filePath, access)
   },
 
-  openFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  openFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.OPEN_FILE, filePath, access)
   },
 
@@ -3090,7 +3090,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.WRITE_CLIPBOARD_PREVIEW, filename, content)
   },
 
-  systemOpenFile: (filePath: string, appName?: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  systemOpenFile: (filePath: string, appName?: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(IPC_CHANNELS.SYSTEM_OPEN_FILE, filePath, appName, access)
   },
 
@@ -3098,15 +3098,15 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.SCAN_EDITORS)
   },
 
-  getDefaultAppForFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
-    return ipcRenderer.invoke(IPC_CHANNELS.GET_DEFAULT_APP_FOR_FILE, filePath, access) as Promise<import('@myyoda/shared').DefaultAppInfo | null>
+  getDefaultAppForFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
+    return ipcRenderer.invoke(IPC_CHANNELS.GET_DEFAULT_APP_FOR_FILE, filePath, access) as Promise<import('@guru/shared').DefaultAppInfo | null>
   },
 
-  showInFolder: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  showInFolder: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SHOW_IN_FOLDER, filePath, access)
   },
 
-  openFolderInTerminal: (folderPath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  openFolderInTerminal: (folderPath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.OPEN_FOLDER_IN_TERMINAL, folderPath, access)
   },
 
@@ -3115,55 +3115,55 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.SHOW_ITEM_IN_FOLDER, filePath, candidateBasePaths)
   },
 
-  resolveAndReadFile: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  resolveAndReadFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:resolve-and-read', filePath, access) as Promise<{ resolvedPath: string; content: string; isBinary: boolean; isTooLarge: boolean } | null>
   },
 
-  writeTextFile: (filePath: string, content: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  writeTextFile: (filePath: string, content: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:write-text', filePath, content, access) as Promise<boolean>
   },
 
-  resolveFilePath: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
-    return ipcRenderer.invoke('file:resolve-path', filePath, access) as Promise<import('@myyoda/shared').ResolvedFileUrl | null>
+  resolveFilePath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
+    return ipcRenderer.invoke('file:resolve-path', filePath, access) as Promise<import('@guru/shared').ResolvedFileUrl | null>
   },
 
-  resolveHtmlPreviewPath: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
-    return ipcRenderer.invoke('file:resolve-html-preview-path', filePath, access) as Promise<import('@myyoda/shared').ResolvedFileUrl | null>
+  resolveHtmlPreviewPath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
+    return ipcRenderer.invoke('file:resolve-html-preview-path', filePath, access) as Promise<import('@guru/shared').ResolvedFileUrl | null>
   },
 
-  preparePdfPreview: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  preparePdfPreview: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:prepare-pdf-preview', filePath, access) as Promise<{ tmpHtmlUrl: string } | null>
   },
 
-  prepareHtmlPreview: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  prepareHtmlPreview: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:prepare-html-preview', filePath, access) as Promise<{ tmpUrl: string } | null>
   },
 
-  readBinaryBase64: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions, maxSize?: number) => {
+  readBinaryBase64: (filePath: string, access?: import('@guru/shared').FileAccessOptions, maxSize?: number) => {
     return ipcRenderer.invoke('file:read-binary-base64', filePath, access, maxSize) as Promise<string | null>
   },
 
-  docxToHtml: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  docxToHtml: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:docx-to-html', filePath, access) as Promise<{ resolvedPath: string; html: string } | null>
   },
 
-  officeToHtml: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
-    return ipcRenderer.invoke('file:office-to-html', filePath, access) as Promise<import('@myyoda/shared').OfficePreviewResult | null>
+  officeToHtml: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
+    return ipcRenderer.invoke('file:office-to-html', filePath, access) as Promise<import('@guru/shared').OfficePreviewResult | null>
   },
 
   screenshotCapture: (input: { html: string; isDark: boolean; width?: number; mode: 'clipboard' | 'file'; css?: string; themeClass?: string }) => {
     return ipcRenderer.invoke(IPC_CHANNELS.SCREENSHOT_CAPTURE, input) as Promise<{ success: boolean; message: string; filePath?: string }>
   },
 
-  renameFile: (filePath: string, newName: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  renameFile: (filePath: string, newName: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.RENAME_FILE, filePath, newName, access)
   },
 
-  moveFile: (filePath: string, targetDir: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  moveFile: (filePath: string, targetDir: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.MOVE_FILE, filePath, targetDir, access)
   },
 
-  listAttachedDirectory: (dirPath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  listAttachedDirectory: (dirPath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.LIST_ATTACHED_DIRECTORY, dirPath, access)
   },
 
@@ -3171,15 +3171,15 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.READ_ATTACHED_FILE, filePath, sessionId, workspaceSlug)
   },
 
-  showAttachedInFolder: (filePath: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  showAttachedInFolder: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SHOW_ATTACHED_IN_FOLDER, filePath, access)
   },
 
-  renameAttachedFile: (filePath: string, newName: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  renameAttachedFile: (filePath: string, newName: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.RENAME_ATTACHED_FILE, filePath, newName, access)
   },
 
-  moveAttachedFile: (filePath: string, targetDir: string, access?: import('@myyoda/shared').FileAccessOptions) => {
+  moveAttachedFile: (filePath: string, targetDir: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.MOVE_ATTACHED_FILE, filePath, targetDir, access)
   },
 
@@ -3343,7 +3343,7 @@ const electronAPI: ElectronAPI = {
   },
 
   onVideoDownloadProgress: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: import('@myyoda/shared').VideoDownloadProgressEvent): void => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: import('@guru/shared').VideoDownloadProgressEvent): void => {
       listener(payload)
     }
     ipcRenderer.on(DISCOVER_IPC_CHANNELS.VIDEO_DOWNLOAD_PROGRESS, handler)
@@ -3353,7 +3353,7 @@ const electronAPI: ElectronAPI = {
   },
 
   onVideoDownloadDone: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: import('@myyoda/shared').VideoDownloadDoneEvent): void => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: import('@guru/shared').VideoDownloadDoneEvent): void => {
       listener(payload)
     }
     ipcRenderer.on(DISCOVER_IPC_CHANNELS.VIDEO_DOWNLOAD_DONE, handler)
@@ -3398,7 +3398,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(FEISHU_IPC_CHANNELS.SAVE_CONFIG, input)
   },
 
-  testFeishuConnection: (appId: string, appSecret: string, domain?: import('@myyoda/shared').FeishuDomain) => {
+  testFeishuConnection: (appId: string, appSecret: string, domain?: import('@guru/shared').FeishuDomain) => {
     return ipcRenderer.invoke(FEISHU_IPC_CHANNELS.TEST_CONNECTION, appId, appSecret, domain)
   },
 
@@ -3442,7 +3442,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(FEISHU_IPC_CHANNELS.GET_MULTI_CONFIG)
   },
 
-  saveFeishuBotConfig: (input: import('@myyoda/shared').FeishuBotConfigInput) => {
+  saveFeishuBotConfig: (input: import('@guru/shared').FeishuBotConfigInput) => {
     return ipcRenderer.invoke(FEISHU_IPC_CHANNELS.SAVE_BOT_CONFIG, input)
   },
 
@@ -3476,14 +3476,14 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(FEISHU_IPC_CHANNELS.REGISTER_APP_CANCEL)
   },
 
-  onFeishuRegisterQrcode: (callback: (payload: import('@myyoda/shared').FeishuRegisterAppQRCode) => void) => {
-    const listener = (_: unknown, payload: import('@myyoda/shared').FeishuRegisterAppQRCode) => callback(payload)
+  onFeishuRegisterQrcode: (callback: (payload: import('@guru/shared').FeishuRegisterAppQRCode) => void) => {
+    const listener = (_: unknown, payload: import('@guru/shared').FeishuRegisterAppQRCode) => callback(payload)
     ipcRenderer.on(FEISHU_IPC_CHANNELS.REGISTER_APP_QRCODE, listener)
     return () => { ipcRenderer.removeListener(FEISHU_IPC_CHANNELS.REGISTER_APP_QRCODE, listener) }
   },
 
-  onFeishuRegisterStatus: (callback: (payload: import('@myyoda/shared').FeishuRegisterAppStatus) => void) => {
-    const listener = (_: unknown, payload: import('@myyoda/shared').FeishuRegisterAppStatus) => callback(payload)
+  onFeishuRegisterStatus: (callback: (payload: import('@guru/shared').FeishuRegisterAppStatus) => void) => {
+    const listener = (_: unknown, payload: import('@guru/shared').FeishuRegisterAppStatus) => callback(payload)
     ipcRenderer.on(FEISHU_IPC_CHANNELS.REGISTER_APP_STATUS, listener)
     return () => { ipcRenderer.removeListener(FEISHU_IPC_CHANNELS.REGISTER_APP_STATUS, listener) }
   },
@@ -3562,7 +3562,7 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(DINGTALK_IPC_CHANNELS.GET_MULTI_CONFIG)
   },
 
-  saveDingTalkBotConfig: (input: import('@myyoda/shared').DingTalkBotConfigInput) => {
+  saveDingTalkBotConfig: (input: import('@guru/shared').DingTalkBotConfigInput) => {
     return ipcRenderer.invoke(DINGTALK_IPC_CHANNELS.SAVE_BOT_CONFIG, input)
   },
 
@@ -3622,7 +3622,7 @@ const electronAPI: ElectronAPI = {
     return () => { ipcRenderer.removeListener('quick-task:open-session', listener) }
   },
   onQuickTaskEvent: (callback: (event: QuickTaskWindowEvent) => void) => {
-    // MyYoda: planning quick-task IPC stub, to be completed with quick-task window
+    // Guru: planning quick-task IPC stub, to be completed with quick-task window
     const listener = (_: unknown, event: QuickTaskWindowEvent): void => callback(event)
     ipcRenderer.on('quick-task:event', listener)
     return () => { ipcRenderer.removeListener('quick-task:event', listener) }
@@ -4133,18 +4133,18 @@ const electronAPI: ElectronAPI = {
   },
 }
 
-const myyodaWindowKind = process.argv
-  .find((arg) => arg.startsWith('--myyoda-window='))
-  ?.slice('--myyoda-window='.length)
+const guruWindowKind = process.argv
+  .find((arg) => arg.startsWith('--guru-window='))
+  ?.slice('--guru-window='.length)
 
 // 将 API 暴露到渲染进程的 window 对象上
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
-contextBridge.exposeInMainWorld('__myyodaWindowKind', myyodaWindowKind)
+contextBridge.exposeInMainWorld('__guruWindowKind', guruWindowKind)
 
 // 扩展 Window 接口的类型定义
 declare global {
   interface Window {
     electronAPI: ElectronAPI
-    __myyodaWindowKind?: string
+    __guruWindowKind?: string
   }
 }

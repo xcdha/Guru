@@ -12,7 +12,7 @@ import {
   SESSION_COMMAND_CHANNEL,
   SESSION_GROUP_IPC_CHANNELS,
   TASK_IPC_CHANNELS,
-} from '@myyoda/shared/channels'
+} from '@guru/shared/channels'
 import type {
   CreateProjectInput,
   AgentSessionMeta,
@@ -24,17 +24,17 @@ import type {
   UploadProjectAssetInput,
   ProjectDeleteImpact,
   TaskDeleteImpact,
-} from '@myyoda/shared'
-import type { TaskSpec } from '@myyoda/shared/tasks/schema'
-import type { TaskMetadataPatch, TaskWorkflow } from '@myyoda/shared/tasks/task-record'
+} from '@guru/shared'
+import type { TaskSpec } from '@guru/shared/tasks/schema'
+import type { TaskMetadataPatch, TaskWorkflow } from '@guru/shared/tasks/task-record'
 import {
   buildGeneratorPrompt,
   buildRepairPrompt,
   extractYaml,
-} from '@myyoda/shared/tasks'
+} from '@guru/shared/tasks'
 import {
   getProjectPath,
-} from '@myyoda/shared/projects/storage'
+} from '@guru/shared/projects/storage'
 import {
   taskDir,
   getLatestRunId,
@@ -45,8 +45,8 @@ import {
   readRunContextSnapshot,
   readRunLog,
   readRunSpecSnapshot,
-} from '@myyoda/shared/tasks/storage'
-import { createMyYodaConductorSessionHost, type MyYodaConductorSessionHost } from './conductor-session-host'
+} from '@guru/shared/tasks/storage'
+import { createGuruConductorSessionHost, type GuruConductorSessionHost } from './conductor-session-host'
 import { deleteAgentSession, getAgentSessionMeta, listAgentSessions, updateAgentSessionMeta } from './agent-session-manager'
 import { createSessionGroup, deleteSessionGroup, listSessionGroups, renameSessionGroup } from './agent-session-group-service'
 import { isAgentSessionActive } from './agent-service'
@@ -62,7 +62,7 @@ import {
   resolveExpertOrTeamKind,
 } from './expert-service'
 import { buildLeaderPlanningPrompt, buildTeamExecutionSpec } from './team-run'
-import { validateTeamSquad, type TeamMemberResolver } from '@myyoda/shared/experts'
+import { validateTeamSquad, type TeamMemberResolver } from '@guru/shared/experts'
 import type { RunSnapshot } from './task-runner'
 import { loadExpertWorkspaceBinding } from './expert-binding-service'
 import { projectRepository } from './project-repository'
@@ -96,7 +96,7 @@ const GENERATE_TIMEOUT_MS = 180_000
 
 let handlersRegistered = false
 let mainWindow: BrowserWindow | null = null
-let sessionHostPromise: Promise<MyYodaConductorSessionHost> | undefined
+let sessionHostPromise: Promise<GuruConductorSessionHost> | undefined
 
 const runners = new Map<string, TaskRunner>()
 
@@ -127,8 +127,8 @@ export async function stopTaskRun(
   await (await resolveRunner(workspaceRoot, workspaceId)).stop(slug, runId)
 }
 
-function getSessionHost(): Promise<MyYodaConductorSessionHost> {
-  sessionHostPromise ??= createMyYodaConductorSessionHost()
+function getSessionHost(): Promise<GuruConductorSessionHost> {
+  sessionHostPromise ??= createGuruConductorSessionHost()
   return sessionHostPromise
 }
 
@@ -549,7 +549,7 @@ export function buildTaskValidationPayload(result: ReturnType<typeof parseTaskYa
 
 /** 通过 Host 的完成事件等待一轮生成，避免悬挂监听器和未等待的 Agent 请求。 */
 async function sendGenerationPrompt(
-  host: MyYodaConductorSessionHost,
+  host: GuruConductorSessionHost,
   sessionId: string,
   prompt: string,
 ): Promise<string> {

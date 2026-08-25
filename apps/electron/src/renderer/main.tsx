@@ -92,7 +92,7 @@ import { dingtalkBotStatesAtom } from './atoms/dingtalk-atoms'
 import { currentConversationIdAtom, channelsAtom, channelsLoadedAtom, selectedModelAtom } from './atoms/chat-atoms'
 import { chatToolsAtom } from './atoms/chat-tool-atoms'
 import { appModeAtom } from './atoms/app-mode'
-import type { FeishuBotBridgeState, FeishuBridgeState, DingTalkBotBridgeState, DingTalkBridgeState } from '@myyoda/shared'
+import type { FeishuBotBridgeState, FeishuBridgeState, DingTalkBotBridgeState, DingTalkBridgeState } from '@guru/shared'
 import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import { ArrowUpRight } from 'lucide-react'
@@ -105,8 +105,8 @@ import {
   DialogTitle,
 } from './components/ui/dialog'
 import { ReleaseNotesViewer } from './components/settings/ReleaseNotesViewer'
-import { diffCapabilities, UPDATER_LINKS } from '@myyoda/shared'
-import type { GitHubRelease, WorkspaceCapabilities } from '@myyoda/shared'
+import { diffCapabilities, UPDATER_LINKS } from '@guru/shared'
+import type { GitHubRelease, WorkspaceCapabilities } from '@guru/shared'
 import { showCapabilityChangeToasts } from './lib/capabilities-toast'
 import { ProjectsInitializer } from './components/ProjectsInitializer'
 import { GlobalShortcuts } from './components/shortcuts/GlobalShortcuts'
@@ -115,7 +115,7 @@ import { FaqDialog } from './components/faq/FaqDialog'
 import { VoiceDictationApp } from './components/voice-dictation/VoiceDictationApp'
 import { TabSwitcher } from './components/tabs/TabSwitcher'
 import { htmlToMarkdown, markdownToHtml } from './lib/markdown-rich-text'
-import { MyYodaLogo } from './lib/model-logo'
+import { GuruLogo } from './lib/model-logo'
 import { initShortcutRegistry, updateShortcutOverrides } from './lib/shortcut-registry'
 import { initializePerformanceMonitor } from './lib/performance-monitor'
 import './styles/globals.css'
@@ -125,7 +125,7 @@ import 'katex/dist/katex.min.css'
 const windowKindFromQuery = new URLSearchParams(window.location.search).get('window')
 // 辅助窗口不要只依赖 URL query：开发服务器或 loadFile 异常时 query 可能丢失，
 // 会导致 220x220 的辅助窗口误渲染主界面。preload additionalArguments 是兜底信号。
-const windowKind = windowKindFromQuery ?? window.__myyodaWindowKind
+const windowKind = windowKindFromQuery ?? window.__guruWindowKind
 const isQuickTaskWindow = windowKind === 'quick-task'
 const isVoiceDictationIndicatorWindow = windowKind === 'voice-dictation-indicator'
 const isDetachedPreviewWindow = windowKind === 'detached-preview'
@@ -138,7 +138,7 @@ initializePerformanceMonitor()
 
 // 仅主窗口禁用页面级滚动；独立浮窗各自管理自己的内容高度和滚动。
 if (isMainWindow) {
-  document.documentElement.classList.add('myyoda-main-window')
+  document.documentElement.classList.add('guru-main-window')
 }
 
 /**
@@ -412,7 +412,7 @@ function UpdaterInitializer(): React.ReactElement | null {
     toast.custom((toastId) => (
       <div className="w-[344px] max-w-[calc(100vw-32px)] rounded-xl bg-background/95 p-3 text-foreground shadow-[0_12px_32px_rgba(0,0,0,0.14)] ring-1 ring-black/5 backdrop-blur-xl dark:ring-white/10">
         <div className="flex items-center gap-2.5">
-          <img src={MyYodaLogo} alt="MyYoda" className="size-8 rounded-lg" />
+          <img src={GuruLogo} alt="Guru" className="size-8 rounded-lg" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-sm leading-5">
               <span className="font-semibold tracking-tight">发现新版本</span>
@@ -464,10 +464,10 @@ function UpdaterInitializer(): React.ReactElement | null {
     toast.custom((toastId) => (
       <div className="w-[344px] max-w-[calc(100vw-32px)] rounded-xl bg-background/95 p-3 text-foreground shadow-[0_12px_32px_rgba(0,0,0,0.14)] ring-1 ring-black/5 backdrop-blur-xl dark:ring-white/10">
         <div className="flex items-center gap-2.5">
-          <img src={MyYodaLogo} alt="MyYoda" className="size-8 rounded-lg" />
+          <img src={GuruLogo} alt="Guru" className="size-8 rounded-lg" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-sm leading-5">
-              <span className="font-semibold tracking-tight">MyYoda 更新已下载</span>
+              <span className="font-semibold tracking-tight">Guru 更新已下载</span>
               <span className="text-xs text-primary">{versionLabel}</span>
             </div>
             <p className="text-xs leading-4 text-muted-foreground">所有 Agent 完成后即可自动安装。</p>
@@ -504,7 +504,7 @@ function UpdaterInitializer(): React.ReactElement | null {
                     toast.custom((scheduledToastId) => (
                       <div className="w-[312px] max-w-[calc(100vw-32px)] rounded-xl bg-background/95 p-3 text-foreground shadow-[0_12px_32px_rgba(0,0,0,0.14)] ring-1 ring-black/5 backdrop-blur-xl dark:ring-white/10">
                         <div className="flex items-center gap-2.5">
-                          <img src={MyYodaLogo} alt="MyYoda" className="size-7 rounded-md" />
+                          <img src={GuruLogo} alt="Guru" className="size-7 rounded-md" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold tracking-tight">已安排空闲时更新</p>
                             <p className="text-xs leading-4 text-muted-foreground">当前任务结束后会自动重启安装。</p>

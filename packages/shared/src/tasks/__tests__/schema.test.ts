@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { TaskSpecSchema, validateTaskInput, type TaskSpec } from '@myyoda/shared/tasks';
-import * as taskContracts from '@myyoda/shared/tasks';
+import { TaskSpecSchema, validateTaskInput, type TaskSpec } from '@guru/shared/tasks';
+import * as taskContracts from '@guru/shared/tasks';
 import { parseTaskYaml, serializeTaskYaml } from '../storage.ts';
 import * as taskStorage from '../storage.ts';
 

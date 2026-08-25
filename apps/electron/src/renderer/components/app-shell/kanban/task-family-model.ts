@@ -1,4 +1,4 @@
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 
 /**
  * 任务家族会话聚合（纯函数，便于单测）

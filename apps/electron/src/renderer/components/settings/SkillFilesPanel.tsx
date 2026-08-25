@@ -21,7 +21,7 @@ import {
   X,
   RefreshCw,
 } from 'lucide-react'
-import type { SkillFileNode, SkillFileContent, SkillScope } from '@myyoda/shared'
+import type { SkillFileNode, SkillFileContent, SkillScope } from '@guru/shared'
 import { Button } from '@/components/ui/button'
 import { SettingsCard } from './primitives'
 import { cn } from '@/lib/utils'

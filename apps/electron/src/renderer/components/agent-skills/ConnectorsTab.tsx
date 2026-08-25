@@ -21,7 +21,7 @@ import {
   type ConnectorFilterChip,
   type ConnectorItem,
 } from '@/lib/connectors-model'
-import type { BuiltinMcpServerSummary, GlobalScopeReviewHints, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, GlobalScopeReviewHints, McpServerEntry } from '@guru/shared'
 import { ConnectorCard } from './ConnectorCard'
 import { ConnectorDetailDialog } from './ConnectorDetailDialog'
 import { AddConnectorMenu } from './AddConnectorMenu'
@@ -314,7 +314,7 @@ function HintsBanner({
         )}
         {hints.leftoverWorkspaceMcp.length > 0 && (
           <div className="text-amber-600/80 dark:text-amber-400/70">
-            以下工作区迁移尚未完成：{hints.leftoverWorkspaceMcp.join('、')}（重启 MyYoda 会自动重试）
+            以下工作区迁移尚未完成：{hints.leftoverWorkspaceMcp.join('、')}（重启 Guru 会自动重试）
           </div>
         )}
       </div>

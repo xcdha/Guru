@@ -8,7 +8,7 @@
 import * as React from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { CodeBlock } from '@myyoda/ui'
+import { CodeBlock } from '@guru/ui'
 import { cn } from '@/lib/utils'
 import { copyTextToClipboard } from '@/lib/clipboard'
 

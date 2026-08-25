@@ -306,7 +306,7 @@ export interface FileAccessOptions {
   unrestricted?: boolean
 }
 
-/** 已授权本地文件的 myyoda-file URL */
+/** 已授权本地文件的 guru-file URL */
 export interface ResolvedFileUrl {
   url: string
 }

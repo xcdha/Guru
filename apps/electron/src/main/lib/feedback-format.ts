@@ -6,7 +6,7 @@ import {
   FEEDBACK_TYPE_TITLE_PREFIX,
   type FeedbackSubmitInput,
   type FeedbackType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 标题截断长度（描述前 N 字） */
 const TITLE_PREFIX_LIMIT = 40
@@ -28,7 +28,7 @@ export interface IssueBodyOptions {
 /** 生成 issue 正文（类型/描述/截图/联系方式/环境信息） */
 export function buildIssueBody(input: FeedbackSubmitInput, options: IssueBodyOptions): string {
   const lines: string[] = [
-    '<!-- 来自 MyYoda 应用内反馈 -->',
+    '<!-- 来自 Guru 应用内反馈 -->',
     '',
     `**类型**：${FEEDBACK_TYPE_TITLE_PREFIX[input.type]}`,
     '',
@@ -48,7 +48,7 @@ export function buildIssueBody(input: FeedbackSubmitInput, options: IssueBodyOpt
   lines.push(
     '',
     '**环境信息**：',
-    `- MyYoda 版本：${options.appVersion || '未知版本'}`,
+    `- Guru 版本：${options.appVersion || '未知版本'}`,
     `- 系统：${options.platform || 'unknown'}`,
     `- 提交时间：${options.submittedAt}`,
   )

@@ -12,12 +12,12 @@ import { Zap, Map as MapIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { agentPermissionModeMapAtom, agentDefaultPermissionModeAtom, sessionPersistedPermissionModeAtom, sessionExistsAtom, agentPlanModeSessionsAtom } from '@/atoms/agent-atoms'
-import type { MyYodaPermissionMode } from '@myyoda/shared'
-import { MYYODA_PERMISSION_MODE_CONFIG, MYYODA_PERMISSION_MODE_ORDER } from '@myyoda/shared'
+import type { GuruPermissionMode } from '@guru/shared'
+import { GURU_PERMISSION_MODE_CONFIG, GURU_PERMISSION_MODE_ORDER } from '@guru/shared'
 import { getDisplayedPermissionMode, updatePlanModeSessionSet } from '@/lib/agent-plan-mode'
 import { inputToolbarButtonClass } from '@/components/ai-elements/input-toolbar-styles'
 
-const MODE_ICONS: Record<MyYodaPermissionMode, React.ComponentType<{ className?: string }>> = {
+const MODE_ICONS: Record<GuruPermissionMode, React.ComponentType<{ className?: string }>> = {
   bypassPermissions: Zap,
   plan: MapIcon,
 }
@@ -44,7 +44,7 @@ export function PermissionModeSelector({ sessionId }: PermissionModeSelectorProp
   React.useEffect(() => {
     if (!sessionExistsInList) return
 
-    setModeMap((prev: Map<string, MyYodaPermissionMode>) => {
+    setModeMap((prev: Map<string, GuruPermissionMode>) => {
       if (prev.has(sessionId)) return prev
       const next = new Map(prev)
       next.set(sessionId, persistedSessionMode ?? defaultMode)
@@ -54,14 +54,14 @@ export function PermissionModeSelector({ sessionId }: PermissionModeSelectorProp
 
   /** 循环切换模式 */
   const cycleMode = React.useCallback(async () => {
-    const currentIndex = MYYODA_PERMISSION_MODE_ORDER.indexOf(displayMode)
-    const nextIndex = (currentIndex + 1) % MYYODA_PERMISSION_MODE_ORDER.length
-    const nextMode = MYYODA_PERMISSION_MODE_ORDER[nextIndex]!
+    const currentIndex = GURU_PERMISSION_MODE_ORDER.indexOf(displayMode)
+    const nextIndex = (currentIndex + 1) % GURU_PERMISSION_MODE_ORDER.length
+    const nextMode = GURU_PERMISSION_MODE_ORDER[nextIndex]!
     const prevMode = mode
     const prevPlanModeActive = planModeActive
 
     // 乐观更新当前 session 的模式
-    setModeMap((prev: Map<string, MyYodaPermissionMode>) => {
+    setModeMap((prev: Map<string, GuruPermissionMode>) => {
       const next = new Map(prev)
       next.set(sessionId, nextMode)
       return next
@@ -75,7 +75,7 @@ export function PermissionModeSelector({ sessionId }: PermissionModeSelectorProp
       await window.electronAPI.updateSessionPermissionMode(sessionId, nextMode)
     } catch (error) {
       console.error('[PermissionModeSelector] 运行中切换权限模式失败，回滚 UI:', error)
-      setModeMap((prev: Map<string, MyYodaPermissionMode>) => {
+      setModeMap((prev: Map<string, GuruPermissionMode>) => {
         const next = new Map(prev)
         next.set(sessionId, prevMode)
         return next
@@ -86,7 +86,7 @@ export function PermissionModeSelector({ sessionId }: PermissionModeSelectorProp
     }
   }, [displayMode, mode, planModeActive, sessionId, setModeMap, setPlanModeSessions])
 
-  const config = MYYODA_PERMISSION_MODE_CONFIG[displayMode]
+  const config = GURU_PERMISSION_MODE_CONFIG[displayMode]
   const Icon = MODE_ICONS[displayMode]
 
   return (

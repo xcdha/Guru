@@ -24,7 +24,7 @@ interface AgentHeaderProps {
   sessionId: string
 }
 
-/** 根据工作区 slug 异步取工作区文件目录绝对路径（~/.myyoda/agent-workspaces/{slug}/workspace-files），
+/** 根据工作区 slug 异步取工作区文件目录绝对路径（~/.guru/agent-workspaces/{slug}/workspace-files），
  * 仅用于未绑定项目的会话头部面包屑回退显示。slug 变化时重新拉取，切换前不残留旧值。 */
 function useWorkspaceFilesPath(workspaceSlug: string | undefined): string | null {
   const [path, setPath] = React.useState<string | null>(null)

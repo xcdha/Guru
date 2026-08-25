@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for MyYoda
+ * Shared type definitions for Guru
  */
 
 // Placeholder types - will be expanded as needed
@@ -73,7 +73,7 @@ export { EXPERT_IPC_CHANNELS } from '../experts/channels'
 // Projects 相关类型（仅类型，避免 renderer 引入 Node.js 文件存储实现）
 export type * from '../projects/types'
 
-// Tasks（Conductor）相关类型（仅类型，运行时实现从 @myyoda/shared/tasks 导入）
+// Tasks（Conductor）相关类型（仅类型，运行时实现从 @guru/shared/tasks 导入）
 export type * from '../tasks/schema'
 export type * from '../tasks/refs'
 export type * from '../tasks/validate'

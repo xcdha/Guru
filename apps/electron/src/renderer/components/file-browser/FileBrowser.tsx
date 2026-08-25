@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { workspaceFilesVersionAtom, fileBrowserAutoRevealAtom, recentlyModifiedPathsAtom, currentAgentSessionIdAtom } from '@/atoms/agent-atoms'
-import type { FileAccessOptions, FileEntry } from '@myyoda/shared'
+import type { FileAccessOptions, FileEntry } from '@guru/shared'
 import { FileTypeIcon } from './FileTypeIcon'
 import { DefaultAppMenuItem } from './DefaultAppMenuItem'
 import {

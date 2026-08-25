@@ -6,10 +6,10 @@
  * 本模块负责把团长输出「校验 + 展开」成可静态执行的完整 spec：
  * 成员节点（校验 expertId 归属）+ 自动追加的团长汇总节点。
  */
-import type { TeamSquad } from '@myyoda/shared/experts'
-import type { TaskSpec, TaskNode } from '@myyoda/shared/tasks/schema'
-import { nodeTitle } from '@myyoda/shared/tasks/schema'
-import { buildTeamBriefing, type TeamMemberResolver } from '@myyoda/shared/experts'
+import type { TeamSquad } from '@guru/shared/experts'
+import type { TaskSpec, TaskNode } from '@guru/shared/tasks/schema'
+import { nodeTitle } from '@guru/shared/tasks/schema'
+import { buildTeamBriefing, type TeamMemberResolver } from '@guru/shared/experts'
 
 /** 汇总节点 id 前缀（团长输出不得占用；冲突时自动加数字后缀） */
 const SUMMARY_NODE_PREFIX = 'team-summary'

@@ -5,7 +5,7 @@
  *   bun run release-notes <version> <content-file> [--force]
  *
  * <version>      语义化版本号，如 0.7.3（不带 v 前缀）
- * <content-file> 本次版本说明正文（markdown），可带 "# MyYoda vX.Y.Z 更新" 标题，缺失会自动补上
+ * <content-file> 本次版本说明正文（markdown），可带 "# Guru vX.Y.Z 更新" 标题，缺失会自动补上
  * --force        bundled 版本文件已存在时允许覆盖（默认拒绝，避免误改历史版本说明）
  *
  * 写入：
@@ -44,7 +44,7 @@ if (appVersion !== version) {
 
 let content = readFileSync(contentFile, 'utf-8').trimEnd() + '\n'
 if (!content.startsWith('# ')) {
-  content = `# MyYoda v${version} 更新\n\n${content}`
+  content = `# Guru v${version} 更新\n\n${content}`
 }
 
 const releaseNotesPath = join(repoRoot, 'apps/electron/RELEASE_NOTES.md')

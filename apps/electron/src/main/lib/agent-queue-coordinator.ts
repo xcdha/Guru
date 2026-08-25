@@ -5,7 +5,7 @@ import type {
   AgentQueuedMessageControlInput,
   AgentQueuedMessageSnapshot,
   AgentQueuedMessageStatus,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 interface QueueEntry {
   input: AgentDeferredQueueMessageInput
@@ -38,7 +38,7 @@ export interface AgentQueueCoordinatorOptions {
 /**
  * 主进程持有 deferred queue；renderer 只保留展示投影。
  *
- * 相比 upstream 简化版，额外保留 MyYoda 本地渲染进程调度器的安全检查与失败回滚：
+ * 相比 upstream 简化版，额外保留 Guru 本地渲染进程调度器的安全检查与失败回滚：
  * - canDispatch：派发前逐个校验阻塞请求 / stoppedByUser / continuationRequired / 渠道可用性
  * - suppressed：派发失败的队首重新入队后抑制自动重试，直到用户调整队列（与本地行为一致）
  * - backgroundWaiting：run 完成但后台任务未结束期间不派发，task_notification 到达后再唤醒

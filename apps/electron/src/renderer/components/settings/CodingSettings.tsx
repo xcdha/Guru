@@ -26,8 +26,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Button } from '../ui/button'
-import type { CodeClawThemeId } from '@myyoda/shared'
-import { CODECLAW_THEMES, DEFAULT_CODECLAW_THEME_ID, isCodeClawThemeId } from '@myyoda/shared'
+import type { CodeClawThemeId } from '@guru/shared'
+import { CODECLAW_THEMES, DEFAULT_CODECLAW_THEME_ID, isCodeClawThemeId } from '@guru/shared'
 import { repoMapToolsAtom } from '@/atoms/settings-tab'
 
 export function CodingSettings(): React.ReactElement {
@@ -290,7 +290,7 @@ export function CodingSettings(): React.ReactElement {
           </SettingsRow>
           <SettingsToggle
             label="CodeClaw"
-            description="在桌面显示 MyYoda Agent 助手：执行中、完成、错误或需要你接手时用动画提醒"
+            description="在桌面显示 Guru Agent 助手：执行中、完成、错误或需要你接手时用动画提醒"
             checked={codeClawEnabled}
             onCheckedChange={(checked) => {
               void handleCodeClawChange(checked);
@@ -321,7 +321,7 @@ export function CodingSettings(): React.ReactElement {
           </SettingsRow>
           <SettingsToggle
             label="Git/PR 标识"
-            description="Agent 代你提交 commit 或创建 PR 时，附加 Co-Authored-By: MyYoda <MyYoda@noreply.github.com> 与仓库链接，便于推广；可随时关闭"
+            description="Agent 代你提交 commit 或创建 PR 时，附加 Co-Authored-By: Guru <Guru@noreply.github.com> 与仓库链接，便于推广；可随时关闭"
             checked={gitAttributionEnabled}
             onCheckedChange={(checked) => {
               void handleGitAttributionChange(checked);

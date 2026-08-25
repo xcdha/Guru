@@ -13,7 +13,7 @@ import * as React from 'react'
 import { useSetAtom } from 'jotai'
 import { HelpCircle, Keyboard, ChevronRight, CircleHelp, BookOpen, Sparkles, MessageSquareHeart } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { extractReleaseHeadline, type ReleaseNote } from '@myyoda/shared'
+import { extractReleaseHeadline, type ReleaseNote } from '@guru/shared'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ReleaseNotesDialog } from './ReleaseNotesDialog'
@@ -107,7 +107,7 @@ export function ReleaseNotesPopover({
           <div className="border-b border-border/60 bg-[radial-gradient(circle_at_100%_0%,rgba(121,170,139,0.2),transparent_42%),hsl(var(--muted)/0.28)] px-4 pb-3 pt-3.5">
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Sparkles size={14} /></span>
-              <div className="min-w-0 flex-1"><p className="text-sm font-semibold">更新与帮助</p><p className="mt-0.5 text-[10px] text-muted-foreground">MyYoda v{version}</p></div>
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold">更新与帮助</p><p className="mt-0.5 text-[10px] text-muted-foreground">Guru v{version}</p></div>
               {unseen && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">有新内容</span>}
             </div>
           </div>

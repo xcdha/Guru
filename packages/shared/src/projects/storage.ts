@@ -107,7 +107,7 @@ const PROJECT_CONTEXT_DIRNAME = '.context';
  *
  * `memoryLocation === 'project'`（创建时按是否提供 workingDirectory 一次性决定，不做事后迁移）
  * 的本地目录项目落在 `workingDirectory/.context/MEMORY.md`，跟随项目真实文件夹；
- * 其余（空白项目、隐藏容器 Project、老项目未设置该字段）沿用 MyYoda 托管目录，保持完全兼容。
+ * 其余（空白项目、隐藏容器 Project、老项目未设置该字段）沿用 Guru 托管目录，保持完全兼容。
  */
 export function getProjectMemoryPath(workspaceRootPath: string, projectSlug: string): string {
   const config = loadProjectConfig(workspaceRootPath, projectSlug);
@@ -366,7 +366,7 @@ export function createProject(workspaceRootPath: string, input: CreateProjectInp
   const now = Date.now();
 
   // memoryLocation 只在创建时决定一次，不做事后迁移：只有真正的本地目录项目（非历史隐藏容器）才把
-  // 记忆放进项目真实文件夹；历史隐藏容器（home/ad-hoc）的 workingDirectory 指向 MyYoda 自己的托管目录，
+  // 记忆放进项目真实文件夹；历史隐藏容器（home/ad-hoc）的 workingDirectory 指向 Guru 自己的托管目录，
   // 不算"项目真实文件夹"，仍走托管路径。新建项目不再产生隐藏容器 kind。
   const isRegularProject = !input.kind || input.kind === 'project';
   const hasWorkingDirectory = Boolean(input.workingDirectory?.trim());

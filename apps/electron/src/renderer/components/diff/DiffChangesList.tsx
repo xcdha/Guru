@@ -17,7 +17,7 @@ import {
   agentSessionsAtom,
   workspaceGitDiffRefreshVersionAtom,
 } from '@/atoms/agent-atoms'
-import type { ChangedFileEntry, ChangedFileStatus, ChangeSource, UntrackedFileEntry, WorktreeInfo } from '@myyoda/shared'
+import type { ChangedFileEntry, ChangedFileStatus, ChangeSource, UntrackedFileEntry, WorktreeInfo } from '@guru/shared'
 import { WorktreeSelector } from './WorktreeSelector'
 import { buildDiffFileTree } from './diff-file-tree'
 import type { DiffFileTreeNode } from './diff-file-tree'

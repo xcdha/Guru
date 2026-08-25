@@ -139,7 +139,7 @@ describe('isRelocationCandidate', () => {
     expect(isRelocationCandidate('LuxAgentX', 'LuxAgents')).toBe(true)
   })
   test('明显无关不匹配', () => {
-    expect(isRelocationCandidate('MyYoda', 'LuxAgents')).toBe(false)
+    expect(isRelocationCandidate('Guru', 'LuxAgents')).toBe(false)
     expect(isRelocationCandidate('CoderHub', 'LuxAgents')).toBe(false)
   })
   test('过短名称不参与复数/前缀规则（防误报）', () => {
@@ -151,7 +151,7 @@ describe('findRelocationCandidates', () => {
   test('命中父目录下的候选并返回绝对路径', () => {
     const parent = makeTempParent()
     mkdirSync(join(parent, 'LuxAgent'), { recursive: true })
-    mkdirSync(join(parent, 'MyYoda'), { recursive: true })
+    mkdirSync(join(parent, 'Guru'), { recursive: true })
     writeFileSync(join(parent, 'not-a-dir'), 'x')
 
     const result = findRelocationCandidates(join(parent, 'LuxAgents'), 'LuxAgents')

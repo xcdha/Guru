@@ -8,7 +8,7 @@ import {
   type WorkspaceLabel,
   type WorkspaceLabelConfig,
   type WorkspaceLabelConfigLoadResult,
-} from '@myyoda/shared/labels'
+} from '@guru/shared/labels'
 
 export interface WorkspaceLabelServiceOptions {
   now?: () => number

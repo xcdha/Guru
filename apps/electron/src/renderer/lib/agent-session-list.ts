@@ -1,4 +1,4 @@
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 
 interface AgentSessionTreeLike {
   session: Pick<AgentSessionMeta, 'id'>

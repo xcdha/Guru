@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import type {
   ExpertWorkspaceBinding,
   ExpertWorkspaceBindingLoadResult,
-} from '@myyoda/shared/experts/workspace-binding'
+} from '@guru/shared/experts/workspace-binding'
 
 export function workspaceExpertBindingsDir(workspaceRoot: string): string {
   return join(workspaceRoot, 'expert-bindings')

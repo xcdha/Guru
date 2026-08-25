@@ -1,14 +1,14 @@
-# MyYoda 使用指南
+# Guru 使用指南
 
 最后更新：2026 年 8 月 21 日
 
 ---
 
-## 1. MyYoda 是什么
+## 1. Guru 是什么
 
-<video src="https://github.com/GeoffBao/MyYoda/releases/download/tutorial-assets/myyoda-promo-30s.mp4" controls poster="https://github.com/GeoffBao/MyYoda/releases/download/tutorial-assets/promo-thumbnail.png" style="max-width:100%;border-radius:12px;margin:1rem 0;"></video>
+<video src="https://github.com/xcdha/Guru/releases/download/tutorial-assets/guru-promo-30s.mp4" controls poster="https://github.com/xcdha/Guru/releases/download/tutorial-assets/promo-thumbnail.png" style="max-width:100%;border-radius:12px;margin:1rem 0;"></video>
 
-MyYoda 是一个本地优先的 AI 工作台，面向研发、产品、测试、研究、运营、管理和知识工作场景。它既可以帮助你讨论和表达，也可以在可信环境中读取文件、调用工具、执行命令并交付可追踪的结果。
+Guru 是一个本地优先的 AI 工作台，面向研发、产品、测试、研究、运营、管理和知识工作场景。它既可以帮助你讨论和表达，也可以在可信环境中读取文件、调用工具、执行命令并交付可追踪的结果。
 
 当前有两个顶层工作模式：
 
@@ -37,7 +37,7 @@ MyYoda 是一个本地优先的 AI 工作台，面向研发、产品、测试、
 
 一句话：**Chat 是默认的思考与表达入口；Project 是可执行、可追踪、可交付的工作入口。Project 不限于写代码，办公和知识工作同样可以使用 Project。**
 
-![Project 模式界面](https://github.com/GeoffBao/MyYoda/releases/download/tutorial-assets/code-mode-empty-state.png)
+![Project 模式界面](https://github.com/xcdha/Guru/releases/download/tutorial-assets/code-mode-empty-state.png)
 
 Project 看板和 Task 不再是独立顶层模式，而是 Project 内的工作区域。进入 Project 后，可以在会话、项目和 Project 看板之间切换。
 
@@ -66,7 +66,7 @@ Project 看板和 Task 不再是独立顶层模式，而是 Project 内的工作
 
 ### 第三步：确认 Workspace
 
-Workspace 是 MyYoda 的隔离与能力容器，管理会话、Projects、Skills、MCP、Yoda 记忆、附加资料和自动任务。
+Workspace 是 Guru 的隔离与能力容器，管理会话、Projects、Skills、MCP、Yoda 记忆、附加资料和自动任务。
 
 默认用户通常只需要一个 Workspace。创建、重命名、切换或删除多工作区，请打开 **设置 → 连接与数据 → 工作区**。Project 折叠侧栏的 Project 图标也可能提供快速切换入口，但 Workspace 的正式管理入口是设置页。
 
@@ -147,24 +147,24 @@ Project 是 Workspace 内的长期工作容器，负责：
 - 默认 Agent 专家；
 - 可选的项目级技能叠加 / 自建 MCP（有则整份覆盖全局）。
 
-技能按全局 + 工作区 + 项目三层叠加。MCP 默认来自全局 `~/.myyoda/mcp.json`，所有工作区共享；只有 Project 自己配置过 MCP 时才整份覆盖全局，且仅该项目生效。在 Yoda 插件顶部用**作用域选择器**切到某个 Project，即可查看或编辑该项目层。Memory 始终是 Workspace 级（另见第 12 节）。
+技能按全局 + 工作区 + 项目三层叠加。MCP 默认来自全局 `~/.guru/mcp.json`，所有工作区共享；只有 Project 自己配置过 MCP 时才整份覆盖全局，且仅该项目生效。在 Yoda 插件顶部用**作用域选择器**切到某个 Project，即可查看或编辑该项目层。Memory 始终是 Workspace 级（另见第 12 节）。
 
 ### Session cwd
 
 每个 Project 会话都有自己的隔离目录，作为临时工作台和会话 cwd。它不是你的代码仓库。
 
-当会话绑定 Project 时，MyYoda 会把 Project 的有效工作目录明确注入上下文，告诉 Agent 应在哪里读代码、改文件和运行命令，同时保留会话目录存放 `.context/` 等临时资料。
+当会话绑定 Project 时，Guru 会把 Project 的有效工作目录明确注入上下文，告诉 Agent 应在哪里读代码、改文件和运行命令，同时保留会话目录存放 `.context/` 等临时资料。
 
 ### 目录示意
 
 ```text
-~/.myyoda/mcp.json                 # 全局 MCP，所有工作区共享
-~/.myyoda/agent-workspaces/{workspace-slug}/
+~/.guru/mcp.json                 # 全局 MCP，所有工作区共享
+~/.guru/agent-workspaces/{workspace-slug}/
 ├── AGENTS.md                     # Workspace 级长期指令（Agent 可写）
 ├── memory/                       # Workspace auto-memory 与用户画像（MEMORY.md 索引+主题文件）
 ├── workspace-files/              # Workspace 跨会话共享资料
 │   └── .context/                 # 跨会话 Context 文档
-├── mcp.json                      # 遗留工作区 MCP（已迁移到全局 ~/.myyoda/mcp.json）
+├── mcp.json                      # 遗留工作区 MCP（已迁移到全局 ~/.guru/mcp.json）
 ├── skills/                       # 工作区 Skills overlay
 ├── skills-inactive/              # 已禁用的工作区 Skills
 ├── projects/
@@ -203,7 +203,7 @@ Project 是 Workspace 内的长期工作容器，负责：
 
 ## 5. Chat 模式
 
-![Chat 模式界面](https://github.com/GeoffBao/MyYoda/releases/download/tutorial-assets/chat-mode-empty-state.png)
+![Chat 模式界面](https://github.com/xcdha/Guru/releases/download/tutorial-assets/chat-mode-empty-state.png)
 
 Chat 面向日常工作、知识处理和轻量创作。它默认不要求绑定本地工程，也不会因为一次普通问答就修改你的代码仓库。
 
@@ -314,7 +314,7 @@ Project 会话的右侧面板按当前 Session 展示两类主要文件来源：
 
 面板还保留 Workspace 附加目录/文件作为辅助访问入口，并支持文件预览、引用到输入框和代码改动 Diff。需要浏览当前 Workspace Files 时，应使用输入框的 `@` 选择器；它与右侧 Files 的“项目文件”不是同一个来源。
 
-当前右侧面板是 Project 会话的文件面板，不是 Excalidraw 画布面板。Project 工作目录可能是外部目录，也可能是 MyYoda 为 Project 创建的托管目录。
+当前右侧面板是 Project 会话的文件面板，不是 Excalidraw 画布面板。Project 工作目录可能是外部目录，也可能是 Guru 为 Project 创建的托管目录。
 
 ### Excalidraw 画板
 
@@ -346,7 +346,7 @@ Chat 左栏的 **Excalidraw 画板**用于创建、编辑、重命名、删除�
 
 Workspace Task 不是“自动落到 Workspace 的默认 Project”；它的 `projectId` 为空，运行时使用显式 `cwd` 或 Workspace 默认工作目录策略。若任务需要 Project Knowledge、Project assets、Project 默认专家或项目工作目录，应明确选择 Project。
 
-这不是临时兼容分支，而是 MyYoda 当前的正式数据模型：Workspace 是 Task 的必选边界，Project 是可选的长期工作容器。它保留了 Proma/通用工作台式的跨项目任务能力，同时吸收 craft-agents-oss 的 Project Task、Run、Session 追踪；Project Task 与 Workspace Task 在看板中应保持清晰的 scope 标识。
+这不是临时兼容分支，而是 Guru 当前的正式数据模型：Workspace 是 Task 的必选边界，Project 是可选的长期工作容器。它保留了 Proma/通用工作台式的跨项目任务能力，同时吸收 craft-agents-oss 的 Project Task、Run、Session 追踪；Project Task 与 Workspace Task 在看板中应保持清晰的 scope 标识。
 
 ### 默认列
 
@@ -400,7 +400,7 @@ Workspace Task 不是“自动落到 Workspace 的默认 Project”；它的 `pr
 - 一个子 Agent 独立做风险审查；
 - 父 Agent 汇总并决策。
 
-MyYoda collaboration 子会话：
+Guru collaboration 子会话：
 
 - 在侧边栏中真实可见；
 - 保留完整上下文和结果；
@@ -424,7 +424,7 @@ MyYoda collaboration 子会话：
 
 作用域规则：
 
-- **MCP**：全局 `~/.myyoda/mcp.json`，所有工作区共享。只有某个 Project 自己配置过 MCP 时，才整份覆盖全局，且仅该 Project 生效。
+- **MCP**：全局 `~/.guru/mcp.json`，所有工作区共享。只有某个 Project 自己配置过 MCP 时，才整份覆盖全局，且仅该 Project 生效。
 - **技能**：全局 + 工作区 + 项目三层叠加。
 - **专家 / Chat 工具 / builtin MCP**：全局，不受作用域选择器影响。
 - **记忆**：工作区级，不受作用域选择器影响。
@@ -451,7 +451,7 @@ Project 可以设置默认专家，Task 也可以单独选择专家。当前专�
 
 代表性内置 Skills 包括：
 
-- `myyoda-coach`：优化 MyYoda 使用方式和知识沉淀；
+- `guru-coach`：优化 Guru 使用方式和知识沉淀；
 - `skill-creator`：创建、改进和测试 Skill；
 - `find-skills`：发现可安装的 Skill；
 - `agent-collaboration`：判断并组织协作子会话；
@@ -476,7 +476,7 @@ Project 可以设置默认专家，Task 也可以单独选择专家。当前专�
 
 **Brave Search MCP 与 Tavily 联网搜索都属于连接器，但凭据不能混用。** 不要把 Brave Key 填到 Tavily 联网搜索配置中，也不要把 Tavily Key 填到 Brave MCP。
 
-MCP 仍是 Agent 的外部工具扩展机制（stdio / HTTP / SSE）。使用 `#` 可以在输入框中精准引用某个 MCP。用户 MCP 默认写在全局 `~/.myyoda/mcp.json`；仅当某个 Project 自己配置过 MCP 时，该项目会整份覆盖全局。MCP 目前没有跨 Project/工作区的批量导入入口，需要在对应作用域下手动添加。
+MCP 仍是 Agent 的外部工具扩展机制（stdio / HTTP / SSE）。使用 `#` 可以在输入框中精准引用某个 MCP。用户 MCP 默认写在全局 `~/.guru/mcp.json`；仅当某个 Project 自己配置过 MCP 时，该项目会整份覆盖全局。MCP 目前没有跨 Project/工作区的批量导入入口，需要在对应作用域下手动添加。
 
 定时任务、协作子 Agent、创建任务和 Planning 不在连接器里，见上方「总览」的内置能力。
 
@@ -649,7 +649,7 @@ Chat 左栏的 **Yoda 知识库**是 Workspace 级知识库入口，设计目标
 移植第三方方案或新增功能时，推荐逐项执行：
 
 1. 说明功能价值；
-2. 对比 MyYoda 当前能力；
+2. 对比 Guru 当前能力；
 3. 识别冲突和回归风险；
 4. 决定移植、改良、暂缓或跳过；
 5. 小批量实现；
@@ -727,4 +727,4 @@ Project 可以设置默认专家，正式 Project Task 也可以单独选择专�
 
 如有疑问，可以直接在 Project 中问：
 
-> 请根据当前 MyYoda 功能告诉我应该用 Chat、Project、Project Task、collaboration 还是 Automation，并说明原因。
+> 请根据当前 Guru 功能告诉我应该用 Chat、Project、Project Task、collaboration 还是 Automation，并说明原因。

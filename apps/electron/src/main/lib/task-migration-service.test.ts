@@ -2,15 +2,15 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { AgentSessionMeta } from '@myyoda/shared'
-import { loadTaskRecord, saveTaskSpec, taskRecordPath, taskYamlPath } from '@myyoda/shared/tasks/storage'
-import type { TaskSpec } from '@myyoda/shared/tasks/schema'
+import type { AgentSessionMeta } from '@guru/shared'
+import { loadTaskRecord, saveTaskSpec, taskRecordPath, taskYamlPath } from '@guru/shared/tasks/storage'
+import type { TaskSpec } from '@guru/shared/tasks/schema'
 import { backfillLegacyTaskRecords } from './task-migration-service'
 
 const tempRoots: string[] = []
 
 function createTempWorkspaceRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-task-migration-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-task-migration-'))
   tempRoots.push(root)
   return root
 }

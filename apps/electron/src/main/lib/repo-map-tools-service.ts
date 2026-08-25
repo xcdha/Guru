@@ -17,7 +17,7 @@ import type {
   RepoMapToolsState,
   RepoMapToolsStatus,
   RepoMapToolsInstallResult,
-} from "@myyoda/shared";
+} from "@guru/shared";
 
 import { repoMapService } from "./repo-map/repo-map-service";
 
@@ -649,7 +649,7 @@ export class RepoMapToolsService {
   }
 
   /**
-   * 一键安装 graphify（半内置：MyYoda 触发 pip，进度经回调实时可见）。
+   * 一键安装 graphify（半内置：Guru 触发 pip，进度经回调实时可见）。
    * 安装 graphifyy[mcp]：基础包 + MCP serve 依赖（mcp/uvicorn），一体装齐。
    * 安装完成后 graphify 可用性缓存立即刷新。
    */

@@ -1,7 +1,7 @@
 /**
  * CommunityMarketDialog — 社区市场
  *
- * 拉取 MyYoda 私有市场清单，浏览/搜索 Skill（支持分类筛选、版本号、下载量），一键安装到当前工作区。
+ * 拉取 Guru 私有市场清单，浏览/搜索 Skill（支持分类筛选、版本号、下载量），一键安装到当前工作区。
  */
 
 import * as React from 'react'
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { CommunitySkill } from '@myyoda/shared'
+import type { CommunitySkill } from '@guru/shared'
 
 interface CommunityMarketDialogProps {
   open: boolean
@@ -122,7 +122,7 @@ export function CommunityMarketDialog({ open, onOpenChange, workspaceSlug, insta
           <DialogDescription>
             {projectScoped
               ? `浏览社区 Skills（${skills.length} 个）。将安装到当前工作区 Skills，本项目会叠加使用；项目专属副本请用「导入」。`
-              : `浏览社区贡献的 Agent Skills（${skills.length} 个），一键安装到当前工作区。由 MyYoda 官方维护，遵循各 Skill 的许可证。`}
+              : `浏览社区贡献的 Agent Skills（${skills.length} 个），一键安装到当前工作区。由 Guru 官方维护，遵循各 Skill 的许可证。`}
           </DialogDescription>
         </DialogHeader>
 

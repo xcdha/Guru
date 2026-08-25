@@ -1,4 +1,4 @@
-import type { SkillActivation } from '@myyoda/shared'
+import type { SkillActivation } from '@guru/shared'
 
 export interface PendingPromptSkillActivation {
   id: number

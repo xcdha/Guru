@@ -1,5 +1,5 @@
 /**
- * MyYoda 全局 FAQ 弹窗。
+ * Guru 全局 FAQ 弹窗。
  *
  * 采用「目录 + 内容」布局，内容侧支持关键词过滤，适合快速查阅而不是替代完整文档。
  */
@@ -140,7 +140,7 @@ export function FaqDialog(): React.ReactElement {
               <div>
                 <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-primary">
                   <Sparkles className="size-3.5" />
-                  MyYoda Help Desk
+                  Guru Help Desk
                 </div>
                 <DialogPrimitive.Title className="text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
                   你想了解什么？
@@ -208,7 +208,7 @@ export function FaqDialog(): React.ReactElement {
                       <div className="mb-3 flex items-end justify-between gap-3">
                         <div>
                           <h2 id="faq-featured-heading" className="text-base font-semibold tracking-[-0.01em]">先看几个核心能力</h2>
-                          <p className="mt-0.5 text-xs text-muted-foreground">用真实界面快速建立 MyYoda 的整体认知。</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">用真实界面快速建立 Guru 的整体认知。</p>
                         </div>
                         <span className="hidden text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/60 sm:block">精选导览</span>
                       </div>

@@ -29,14 +29,14 @@ describe('appendVisionRelayAllowedRoot', () => {
 
   test('sessionSandboxDir 不在基础列表 → 追加到授权根（project 模式下上传附件所在目录）', () => {
     const base = ['/tmp/additional', PROJECT_DIR]
-    const sandbox = '/Users/admin/.myyoda/agent-workspaces/default/abc-123'
+    const sandbox = '/Users/admin/.guru/agent-workspaces/default/abc-123'
     const result = appendVisionRelayAllowedRoot(base, PROJECT_DIR, HOME, sandbox)
     expect(result).toEqual([...base, sandbox])
   })
 
   test('sessionSandboxDir 已在基础列表 → 不重复追加', () => {
     const base = ['/tmp/additional', PROJECT_DIR]
-    const sandbox = '/Users/admin/.myyoda/agent-workspaces/default/abc-123'
+    const sandbox = '/Users/admin/.guru/agent-workspaces/default/abc-123'
     const result = appendVisionRelayAllowedRoot([...base, sandbox], PROJECT_DIR, HOME, sandbox)
     expect(result).toEqual([...base, sandbox])
   })

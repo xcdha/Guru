@@ -3,7 +3,7 @@ import type {
   ChatToolInfo,
   McpServerEntry,
   SkillMeta,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { isInternalBuiltinCategory, buildConnectorItems, isConnectorAttentionStatus, type ConnectorItem } from './connectors-model'
 import type { PluginCenterTab } from './plugin-center-model'
 

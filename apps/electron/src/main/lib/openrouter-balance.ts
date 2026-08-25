@@ -1,4 +1,4 @@
-import type { ChannelPlanQuotaResult } from '@myyoda/shared'
+import type { ChannelPlanQuotaResult } from '@guru/shared'
 
 interface OpenRouterKeyData {
   usage?: unknown

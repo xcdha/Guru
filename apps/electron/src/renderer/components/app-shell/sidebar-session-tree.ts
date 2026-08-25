@@ -1,4 +1,4 @@
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 import type { SessionIndicatorStatus } from '@/atoms/agent-atoms'
 
 export interface AgentSessionTreeItem {

@@ -18,7 +18,7 @@ import { getConnectorIcon } from '@/lib/builtin-mcp-icons'
 import { describeConnectorDetail } from '@/lib/connector-detail-model'
 import { cn } from '@/lib/utils'
 import type { ConnectorItem } from '@/lib/connectors-model'
-import type { BuiltinMcpServerSummary, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, McpServerEntry } from '@guru/shared'
 
 interface ConnectorDetailDialogProps {
   item: ConnectorItem | null

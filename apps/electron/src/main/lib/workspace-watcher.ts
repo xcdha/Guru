@@ -1,7 +1,7 @@
 /**
  * 工作区文件监听器
  *
- * 使用 fs.watch 递归监听 ~/.myyoda/agent-workspaces/ 目录，
+ * 使用 fs.watch 递归监听 ~/.guru/agent-workspaces/ 目录，
  * 根据变化的文件路径区分事件类型：
  * - mcp.json / skills/ 变化 → 推送 CAPABILITIES_CHANGED（侧边栏刷新）
  * - 其他文件变化 → 推送 WORKSPACE_FILES_CHANGED（文件浏览器刷新）
@@ -16,7 +16,7 @@ import type { FSWatcher } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import type { BrowserWindow } from 'electron'
-import { AGENT_IPC_CHANNELS } from '@myyoda/shared'
+import { AGENT_IPC_CHANNELS } from '@guru/shared'
 import { getAgentWorkspacesDir, getGlobalMcpPath } from './config-paths'
 import { listAgentSessions } from './agent-session-manager'
 import { invalidateGitDiffCache } from './git-diff-service'
@@ -48,7 +48,7 @@ let capabilitiesTimer: ReturnType<typeof setTimeout> | null = null
 let filesTimer: ReturnType<typeof setTimeout> | null = null
 let globalCapabilitiesTimer: ReturnType<typeof setTimeout> | null = null
 const changedWorkspaceFilePaths = new Set<string>()
-/** 全局 MCP 配置监听器（监听 ~/.myyoda/mcp.json 变化） */
+/** 全局 MCP 配置监听器（监听 ~/.guru/mcp.json 变化） */
 let globalMcpWatcher: FSWatcher | null = null
 
 /** 已存在的附加目录监听器：路径 → FSWatcher */
@@ -308,7 +308,7 @@ export function startWorkspaceWatcher(win: BrowserWindow): void {
       })
     })
 
-    // 全局 MCP 监听（~/.myyoda/mcp.json 变化时通知侧边栏刷新）
+    // 全局 MCP 监听（~/.guru/mcp.json 变化时通知侧边栏刷新）
     const globalMcpPath = getGlobalMcpPath()
     try {
       if (existsSync(globalMcpPath)) {

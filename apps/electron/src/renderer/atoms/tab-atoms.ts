@@ -29,7 +29,7 @@ export const SCRATCH_PAD_ID = '__scratch-pad__'
 
 /** 教程 Tab 固定 ID */
 export const TUTORIAL_TAB_ID = '__tutorial__'
-export const TUTORIAL_TAB_TITLE = 'MyYoda 使用指南'
+export const TUTORIAL_TAB_TITLE = 'Guru 使用指南'
 
 /** 会话预览 Tab 的 ID 前缀：运行时临时入口，不参与持久化 */
 const PREVIEW_TAB_PREFIX = '__preview__:'
@@ -99,7 +99,7 @@ export const sessionViewStateMapAtom = atom<Map<string, SessionViewState>>(new M
 
 /** 侧边栏是否收起（持久化） */
 export const sidebarCollapsedAtom = atomWithStorage<boolean>(
-  'myyoda-sidebar-collapsed',
+  'guru-sidebar-collapsed',
   false,
 )
 
@@ -159,7 +159,7 @@ export const scratchPadLoadedAtom = atom<boolean>(false)
 export const scratchPadPanelOpenAtom = atom<boolean>(false)
 /** 右侧工作区中 Preview 与 Scratch 并排时，Preview 占比 */
 export const rightWorkspaceSplitRatioAtom = atomWithStorage<number>(
-  'myyoda-right-workspace-split-ratio',
+  'guru-right-workspace-split-ratio',
   0.58,
   undefined,
   { getOnInit: true },

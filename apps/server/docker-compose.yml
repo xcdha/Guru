@@ -1,27 +1,27 @@
-# MyYoda Server — 本地/内网快速部署
+# Guru Server — 本地/内网快速部署
 #
 # 用法：
 #   docker compose -f apps/server/docker-compose.yml up -d
 # 然后客户端连接 http://localhost:8787
 #
-# 生产环境务必设置 MYYODA_SERVER_JWT_SECRET 为强随机值。
+# 生产环境务必设置 GURU_SERVER_JWT_SECRET 为强随机值。
 
 services:
-  myyoda-server:
+  guru-server:
     build:
       context: ../..
       dockerfile: apps/server/Dockerfile
-    container_name: myyoda-server
+    container_name: guru-server
     ports:
       - "8787:8787"
     environment:
       PORT: 8787
-      MYYODA_SERVER_DB: /data/myyoda-server.db
-      MYYODA_SERVER_SKILLS_DIR: /data/skills
-      MYYODA_SERVER_JWT_SECRET: ${MYYODA_SERVER_JWT_SECRET:-change-me-in-production}
+      GURU_SERVER_DB: /data/guru-server.db
+      GURU_SERVER_SKILLS_DIR: /data/skills
+      GURU_SERVER_JWT_SECRET: ${GURU_SERVER_JWT_SECRET:-change-me-in-production}
     volumes:
-      - myyoda-server-data:/data
+      - guru-server-data:/data
     restart: unless-stopped
 
 volumes:
-  myyoda-server-data:
+  guru-server-data:

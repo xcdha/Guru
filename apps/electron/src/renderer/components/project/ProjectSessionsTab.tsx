@@ -3,7 +3,7 @@ import { useAtomValue } from 'jotai'
 import { ExternalLink, MessageSquare } from 'lucide-react'
 import { agentSessionsAtom } from '@/atoms/agent-atoms'
 import { useOpenSession } from '@/hooks/useOpenSession'
-import type { AgentWorkspace } from '@myyoda/shared'
+import type { AgentWorkspace } from '@guru/shared'
 
 interface ProjectSessionsTabProps {
   workspaceRoot: string

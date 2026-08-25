@@ -7,8 +7,8 @@
  *
  * 设计约束：
  * - 手动触发（设置页按钮），不做启动自动迁移，避免意外改动用户数据；
- * - 执行前完整备份 workspace 目录到 ~/.myyoda/backups/（带时间戳），可整目录回滚；
- * - migration marker（~/.myyoda/.project-workspace-migration.json）保证幂等；
+ * - 执行前完整备份 workspace 目录到 ~/.guru/backups/（带时间戳），可整目录回滚；
+ * - migration marker（~/.guru/.project-workspace-migration.json）保证幂等；
  * - 无 workingDirectory / 不可访问 / home / ad-hoc / 占位项目（project-*）跳过，
  *   数据留在默认工作区；
  * - 原 projects/{slug}/ 目录在成功后移入 recovery-trash（30 天可恢复）。
@@ -22,7 +22,7 @@ import { projectRepository } from './project-repository'
 import { listAgentSessions, moveSessionToWorkspace, updateAgentSessionMeta } from './agent-session-manager'
 import { listAutomations, updateAutomation } from './automation-manager'
 import { quarantineForRecovery } from './recovery-trash-service'
-import type { Automation } from '@myyoda/shared'
+import type { Automation } from '@guru/shared'
 import { getProjectPath, getProjectMemoryPath } from '../../../../../packages/shared/src/projects/storage.ts'
 
 // ===== Marker =====

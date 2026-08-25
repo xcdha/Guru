@@ -188,9 +188,9 @@ Expected: PASS — 6 个用例全部通过。
 **Step 5: Commit**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/app-shell/draft-recall-model.ts apps/electron/src/renderer/components/app-shell/__tests__/draft-recall-model.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块跨项目展示（去工作区过滤 + workspaceId 透出）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块跨项目展示（去工作区过滤 + workspaceId 透出）"
 ```
 
 ---
@@ -285,9 +285,9 @@ Expected: PASS — `findRecallableDraftSession` describe 内 6 个用例全部�
 **Step 5: Commit**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/hooks/create-agent-session-flow.ts apps/electron/src/renderer/hooks/__tests__/create-session-options.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 新会话智能跳回草稿跨工作区兜底（当前工作区优先）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 新会话智能跳回草稿跨工作区兜底（当前工作区优先）"
 ```
 
 ---
@@ -419,9 +419,9 @@ cd apps/electron && bun run dev
 **Step 6: Commit**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块非会话视图保留入口 + 跨项目工作区标签"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块非会话视图保留入口 + 跨项目工作区标签"
 ```
 
 ---
@@ -453,7 +453,7 @@ Expected: 无 lint 报错（若 `lint` script 不存在则用 eslint 直接检�
 **Step 3: 复查 diff**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda && git log --oneline -3 && git status
+cd /Users/admin/Workspace/ClaudeCode/Guru && git log --oneline -3 && git status
 ```
 
 Expected: 3 个功能 commit（Task 1/2/3）在列，工作区干净（未提交内容为空）。

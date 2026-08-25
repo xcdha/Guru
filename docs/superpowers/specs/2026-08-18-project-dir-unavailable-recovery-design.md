@@ -11,7 +11,7 @@
 会话绑定的 Kanban Project 的 `workingDirectory` 指向的目录被移动/重命名/删除后，Agent preflight 直接失败：
 
 - `agent-orchestrator.ts:1292-1301`：`resolveSessionCwd` 返回 `unavailable` → `reportPreflightError({ code: 'project_directory_unavailable', canRetry: false, actions: [] })` → **整个会话拒绝启动**。
-- 真实案例（2026-08-18）：会话「帮忙打开浏览器找一下刘亦菲最近在干嘛？」因绑定的 `/Users/admin/Workspace/ClaudeCode/LuxAgents`（已迁移为 MyYoda）失效而完全无法执行——即使该任务根本不依赖项目目录。
+- 真实案例（2026-08-18）：会话「帮忙打开浏览器找一下刘亦菲最近在干嘛？」因绑定的 `/Users/admin/Workspace/ClaudeCode/LuxAgents`（已迁移为 Guru）失效而完全无法执行——即使该任务根本不依赖项目目录。
 - 现状 `actions: []` 且 `canRetry: false`，用户只能手动去设置里处理，没有一键恢复路径。
 
 ### 问题 2：默认工作区目录存在但无设置时机、不参与 cwd
@@ -51,7 +51,7 @@
 
 - 新增私有解析 `resolveDefaultWorkingDirectoryForSession()`：取 `getAgentDefaultWorkingDirectory()`（应用设置优先，兼容回退 default workspace config 旧值）；若路径存在且为目录 → 返回该路径；否则 `console.warn` 并返回 `undefined`（**降级 sandbox，不阻断**）。
 - 传入 `resolveSessionCwd` 的 `defaultWorkingDirectory` 字段。
-- 语义边界：workspace 已绑定 `projectRootPath` 时（如 luxcoder → MyYoda），未绑定项目会话仍走 workspace-root；默认目录只在无根的 workspace（如 default）参与决策。
+- 语义边界：workspace 已绑定 `projectRootPath` 时（如 luxcoder → Guru），未绑定项目会话仍走 workspace-root；默认目录只在无根的 workspace（如 default）参与决策。
 
 ### 2. 失效报错 actions + 候选探测（方案 A）
 

@@ -2,8 +2,8 @@
  * Agent 会话管理器
  *
  * 负责 Agent 会话的 CRUD 操作和消息持久化。
- * - 会话索引：~/.myyoda/agent-sessions.json（轻量元数据）
- * - 消息存储：~/.myyoda/agent-sessions/{id}.jsonl（JSONL 格式，逐行追加）
+ * - 会话索引：~/.guru/agent-sessions.json（轻量元数据）
+ * - 消息存储：~/.guru/agent-sessions/{id}.jsonl（JSONL 格式，逐行追加）
  *
  * 照搬 conversation-manager.ts 的模式。
  */
@@ -41,7 +41,7 @@ import type {
   AgentCwdMode,
   AgentActiveWorktree,
   SessionWorkbenchLayout,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   getSessionThinkingLevel,
   migratePermissionMode,
@@ -49,10 +49,10 @@ import {
   sessionThinkingLevelPatch,
   findBestSearchMatch,
   insertTopSearchResult,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { getConversationMessages } from './conversation-manager'
-// 旧格式 → SDKMessage 的转换逻辑下沉到 @myyoda/session-core 作为唯一真源，避免主进程与渲染层各存一份。
-import { convertLegacyMessage } from '@myyoda/session-core'
+// 旧格式 → SDKMessage 的转换逻辑下沉到 @guru/session-core 作为唯一真源，避免主进程与渲染层各存一份。
+import { convertLegacyMessage } from '@guru/session-core'
 import { clearNanoBananaAgentHistory } from './chat-tools/nano-banana-mcp'
 import { assertEnabledModelForChannel } from './agent-model-selection'
 import { copyForkWorkspaceFiles } from './agent-fork-workspace-copy'
@@ -222,7 +222,7 @@ function migrateMessageCountBackfill(index: AgentSessionsIndex): boolean {
 }
 
 /**
- * Claude runtime 已退役。历史 transcript 仍由 MyYoda JSONL 展示，但 Claude session
+ * Claude runtime 已退役。历史 transcript 仍由 Guru JSONL 展示，但 Claude session
  * artifact 不能交给 Pi SessionManager 恢复，否则会被误识别为 Pi JSONL。
  */
 function migrateRetiredClaudeRuntime(index: AgentSessionsIndex): boolean {
@@ -486,7 +486,7 @@ export function resolveSessionWorkbenchContextDir(
   return layout === 'root' ? sessionDir : join(sessionDir, '.context')
 }
 
-/** Agent 运行 cwd 与 MyYoda 会话 sidecar 工作台目录解析。 */
+/** Agent 运行 cwd 与 Guru 会话 sidecar 工作台目录解析。 */
 export function resolveAgentCwd(
   workspace: Pick<AgentWorkspace, 'slug'> | undefined,
   sessionId: string,
@@ -844,7 +844,7 @@ export function getRecentAgentSessionSDKMessages(
 }
 
 /**
- * convertLegacyMessage 已迁移至 @myyoda/session-core（本文件从该包 import 使用）。
+ * convertLegacyMessage 已迁移至 @guru/session-core（本文件从该包 import 使用）。
  */
 
 /**
@@ -1260,7 +1260,7 @@ async function forkPiAgentSession(sourceMeta: AgentSessionMeta, input: ForkSessi
   const targetUuid = input.upToMessageUuid
   if (!targetUuid) throw new Error('Pi 分叉需要指定一条已完成的 assistant 消息')
   const entryId = sourceMeta.piEntryBindings?.[targetUuid]
-  if (!entryId) throw new Error('该 Pi 历史消息尚无 entry ID 映射，无法安全分叉；请在新版 MyYoda 中继续一次对话后再试')
+  if (!entryId) throw new Error('该 Pi 历史消息尚无 entry ID 映射，无法安全分叉；请在新版 Guru 中继续一次对话后再试')
   if (!sourceMeta.piSessionFile || !existsSync(sourceMeta.piSessionFile)) {
     throw new Error('未找到 Pi session artifact，无法安全分叉')
   }
@@ -1572,11 +1572,11 @@ export function removeSDKErrorMessage(id: string, errorUuid: string): boolean {
 /**
  * 从 SDK session JSONL 中查找指定 assistant message 之后最近的 user message UUID
  *
- * SDK session JSONL（~/.myyoda/sdk-config/projects/...）中的消息都带有 uuid，
- * 但 MyYoda 自己构造的 user message 没有 uuid。此函数直接读取 SDK 的 JSONL
+ * SDK session JSONL（~/.guru/sdk-config/projects/...）中的消息都带有 uuid，
+ * 但 Guru 自己构造的 user message 没有 uuid。此函数直接读取 SDK 的 JSONL
  * 来解析 rewindFiles 所需的 user message UUID。
  *
- * 对于 fork 会话：MyYoda JSONL 中的 UUID 来自**源会话**（fork 时直接复制），
+ * 对于 fork 会话：Guru JSONL 中的 UUID 来自**源会话**（fork 时直接复制），
  * 而 forked SDK JSONL 中的 UUID 已被重映射。因此 fork 会话需要搜索**源**
  * SDK JSONL 来匹配 assistant UUID。通过 forkSourceSdkSessionId 参数指定。
  *
@@ -1607,7 +1607,7 @@ export function resolveUserUuidFromSDK(
         } catch { return false }
       })
       if (!hasUuidAsField) {
-        // MyYoda JSONL 中的 UUID 来自源会话，forked JSONL 中已重映射
+        // Guru JSONL 中的 UUID 来自源会话，forked JSONL 中已重映射
         const sourceFilePath = findSdkSessionJsonl(forkSourceSdkSessionId, projectDir)
         if (sourceFilePath) {
           console.log(`[Agent 会话] resolveUserUuid: fork 会话 UUID 不匹配（非 .uuid 字段），切换到源会话 ${forkSourceSdkSessionId}`)
@@ -1687,7 +1687,7 @@ function findSdkSessionJsonl(sdkSessionId: string, _projectDir?: string): string
   const sdkConfigDir = getSdkConfigDir()
 
   // 遍历所有项目目录查找匹配的 session JSONL
-  // （SDK 的目录命名规则与 MyYoda 不完全一致，直接遍历最可靠）
+  // （SDK 的目录命名规则与 Guru 不完全一致，直接遍历最可靠）
   const projectsDir = join(sdkConfigDir, 'projects')
   if (existsSync(projectsDir)) {
     for (const dir of readdirSync(projectsDir)) {

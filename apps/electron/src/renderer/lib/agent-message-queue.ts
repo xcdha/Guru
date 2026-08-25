@@ -1,4 +1,4 @@
-import type { SDKMessage } from '@myyoda/shared'
+import type { SDKMessage } from '@guru/shared'
 import type { AgentStreamState } from '@/atoms/agent-atoms'
 import type { QuotedSelection } from '@/atoms/preview-atoms'
 import {

@@ -8,13 +8,13 @@ version: "1.0.0"
 
 在代码改动后进入**自主验证循环**：运行质量门禁 → 失败则诊断根因 → 修复 → 重跑，直到目标达成或达到退出条件。
 
-> 参考：yeachan-heo/oh-my-claudecode 的 ultraqa（QA cycling workflow），按 MyYoda 流程适配。
+> 参考：yeachan-heo/oh-my-claudecode 的 ultraqa（QA cycling workflow），按 Guru 流程适配。
 
 ## 目标解析
 
 | 参数 | 目标类型 | 验证命令 |
 |---|---|---|
-| `--tests` | tests | 项目测试命令（MyYoda：`bun test`） |
+| `--tests` | tests | 项目测试命令（Guru：`bun test`） |
 | `--build` | build | 项目构建命令（`bun run build`） |
 | `--lint` | lint | lint 命令（如有） |
 | `--typecheck` | typecheck | 类型检查（`bun run typecheck`） |

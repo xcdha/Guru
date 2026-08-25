@@ -1,16 +1,16 @@
 import { app, BrowserWindow, WebContentsView, session as electronSession, type DownloadItem, type Session, type WebContents } from 'electron'
 import path from 'node:path'
-import type { BrowserExecutionSource, BrowserOperationStatus, BrowserTraceAction, BrowserTraceItem, BrowserViewLayout, BrowserViewState, BrowserTabState } from '@myyoda/shared'
-import { AGENT_IPC_CHANNELS } from '@myyoda/shared'
+import type { BrowserExecutionSource, BrowserOperationStatus, BrowserTraceAction, BrowserTraceItem, BrowserViewLayout, BrowserViewState, BrowserTabState } from '@guru/shared'
+import { AGENT_IPC_CHANNELS } from '@guru/shared'
 import { assertSafeBrowserDestination, assertSafeBrowserDestinationWithFallback, assertSafeBrowserDownloadUrl, assertSafeBrowserUrl, isSupportedBrowserPopupUrl, isTransientBrowserPopupUrl, USER_NEW_TAB_URL } from './browser-policy'
 import { createAuthorizedPreviewUrl, isAuthorizedPreviewProtocol } from './browser-preview-service'
-import { handleMyYodaFileRequest } from './local-file-protocol'
+import { handleGuruFileRequest } from './local-file-protocol'
 import { BrowserCdpTimeoutError, BrowserOperationAbortedError, BROWSER_OBSERVE_TIMEOUT_MS, resolveBrowserObserveAxDepth, throwIfBrowserOperationAborted, withBrowserCdpTimeout } from './browser-cdp'
 import { parseBrowserPressAction } from './browser-key-policy'
 import { browserObservationNameLimit, prioritizeBrowserObservationCandidates, resolveBrowserObserveMaxElements } from './browser-observation-policy'
 import { buildPersistentBrowserPartition, resolveBrowserProfileKey } from './browser-profile-policy'
 import { hasAcknowledgedBrowserRiskDisclaimer } from './browser-risk-disclaimer'
-import { buildMyYodaBrowserUserAgent } from './browser-identity'
+import { buildGuruBrowserUserAgent } from './browser-identity'
 import { assertBrowserScript, buildBrowserDomActionExpression, type BrowserDomActionInput } from './browser-script-policy'
 import { getSettings } from './settings-service'
 import { isValidImageBytes } from './image-content-validation'
@@ -204,7 +204,7 @@ export class BrowserController {
   private readonly configurations = new Map<string, BrowserSessionConfiguration>()
   /** Electron persistent partition 生命周期长于 Agent session；同一 Session 只安装一次网络 guard。 */
   private readonly guardedSessions = new WeakSet<Session>()
-  /** 下载事件属于 Electron Session，不能随 MyYoda 会话重复注册或闭包捕获已关闭的会话。 */
+  /** 下载事件属于 Electron Session，不能随 Guru 会话重复注册或闭包捕获已关闭的会话。 */
   private readonly downloadGuardedSessions = new WeakSet<Session>()
   /** 自定义 partition 不继承 default session 的协议处理器，必须单独注册本地预览协议。 */
   private readonly previewProtocolSessions = new WeakSet<Session>()
@@ -450,7 +450,7 @@ export class BrowserController {
     browserSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
     browserSession.setCertificateVerifyProc((_request, callback) => {
       // 受管浏览器面向用户明确打开的网页；内网自签名证书和企业 CA 由用户自行负责，
-      // 仅在该浏览器 Session 内放行，不影响 MyYoda 主窗口或其他 Electron Session。
+      // 仅在该浏览器 Session 内放行，不影响 Guru 主窗口或其他 Electron Session。
       callback(0)
     })
     browserSession.webRequest.onBeforeRequest((details, callback) => {
@@ -467,7 +467,7 @@ export class BrowserController {
   }
 
   /**
-   * 下载事件属于 Electron Session，而 workspace profile 会被多个 MyYoda 会话复用。
+   * 下载事件属于 Electron Session，而 workspace profile 会被多个 Guru 会话复用。
    * 因而监听器只注册一次；每次触发时再用 WebContents 找到仍存活的来源 tab，避免
    * 关闭会话遗留的 handler 重复 pause/resume/cancel 同一个 DownloadItem。
    */
@@ -512,7 +512,7 @@ export class BrowserController {
       })
   }
 
-  /** 从共享 Electron Session 的所有当前 MyYoda 会话中定位下载来源，绝不保留过期会话引用。 */
+  /** 从共享 Electron Session 的所有当前 Guru 会话中定位下载来源，绝不保留过期会话引用。 */
   private findManagedDownloadOrigin(electronBrowserSession: Session, webContents: WebContents): { browserSession: BrowserSessionRecord; tab: BrowserTabRecord } | null {
     for (const browserSession of this.sessions.values()) {
       if (browserSession.browserSession !== electronBrowserSession) continue
@@ -529,7 +529,7 @@ export class BrowserController {
 
   private installPreviewProtocol(browserSession: Session): void {
     if (this.previewProtocolSessions.has(browserSession)) return
-    browserSession.protocol.handle('myyoda-file', handleMyYodaFileRequest)
+    browserSession.protocol.handle('guru-file', handleGuruFileRequest)
     this.previewProtocolSessions.add(browserSession)
   }
 
@@ -539,8 +539,8 @@ export class BrowserController {
     const profileKey = configuration?.profileKey ?? resolveBrowserProfileKey(undefined, sessionId)
     const partition = buildPersistentBrowserPartition(profileKey)
     const browserSession = electronSession.fromPartition(partition)
-    // 默认 UA 会暴露 Electron；受管网页改为诚实的 MyYoda 标识，并保留 Chromium token 保证站点兼容。
-    browserSession.setUserAgent(buildMyYodaBrowserUserAgent(browserSession.getUserAgent(), app.getVersion()))
+    // 默认 UA 会暴露 Electron；受管网页改为诚实的 Guru 标识，并保留 Chromium token 保证站点兼容。
+    browserSession.setUserAgent(buildGuruBrowserUserAgent(browserSession.getUserAgent(), app.getVersion()))
     const record: BrowserSessionRecord = {
       sessionId,
       partition,
@@ -976,7 +976,7 @@ export class BrowserController {
 
   private disposeTab(browserSession: BrowserSessionRecord, tab: BrowserTabRecord): void {
     if (!browserSession.tabs.has(tab.tabId)) return
-    // Child windows use Electron's opener lifetime and must not outlive a tab closed from MyYoda UI either.
+    // Child windows use Electron's opener lifetime and must not outlive a tab closed from Guru UI either.
     this.disposePopupChildren(browserSession, tab.tabId)
     browserSession.tabs.delete(tab.tabId)
     this.clearAgentTargetHighlight(tab)

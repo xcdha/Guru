@@ -2,8 +2,8 @@
  * Agent 工作区管理器
  *
  * 负责 Agent 工作区的 CRUD 操作。
- * - 工作区索引：~/.myyoda/agent-workspaces.json（轻量元数据）
- * - 工作区目录：~/.myyoda/agent-workspaces/{slug}/（Agent 的 cwd）
+ * - 工作区索引：~/.guru/agent-workspaces.json（轻量元数据）
+ * - 工作区目录：~/.guru/agent-workspaces/{slug}/（Agent 的 cwd）
  */
 
 import { readFileSync, writeFileSync, existsSync, readdirSync, cpSync, mkdirSync, statSync, openSync, readSync, closeSync, realpathSync, lstatSync, accessSync, constants } from 'node:fs'
@@ -33,8 +33,8 @@ import { findAllGitRoots, normalizeGitRoot } from './git-diff-service'
 import { projectRepository } from './project-repository'
 import { listBuiltinMcpServers } from './builtin-mcp/catalog'
 import { RESERVED_BUILTIN_KEYS } from './builtin-mcp/baseline'
-import { inferMcpTransportType, normalizeMcpTransportType } from '@myyoda/shared'
-import type { AgentWorkspace, LocalProjectRootStatus, CreateAgentWorkspaceInput, KanbanColumnDef, WorkspaceMcpConfig, SkillMeta, SkillScope, SkillImportSource, OtherWorkspaceSkillsGroup, OtherProjectSkillsGroup, WorkspaceCapabilities, SkillFileNode, SkillFileContent, WorkspaceMemorySummary, BulkImportSkillItemResult, BulkImportSkillsResult, BulkImportWorkspaceSelection, BulkImportProjectSelection, OrganizationConnection, OrganizationSkill } from '@myyoda/shared'
+import { inferMcpTransportType, normalizeMcpTransportType } from '@guru/shared'
+import type { AgentWorkspace, LocalProjectRootStatus, CreateAgentWorkspaceInput, KanbanColumnDef, WorkspaceMcpConfig, SkillMeta, SkillScope, SkillImportSource, OtherWorkspaceSkillsGroup, OtherProjectSkillsGroup, WorkspaceCapabilities, SkillFileNode, SkillFileContent, WorkspaceMemorySummary, BulkImportSkillItemResult, BulkImportSkillsResult, BulkImportWorkspaceSelection, BulkImportProjectSelection, OrganizationConnection, OrganizationSkill } from '@guru/shared'
 import { extractSkillZip, orgDownloadSkill, buildOrganizationImportSource } from './org-skill-service'
 import { assertRecoveryRootSafe, assertRecoveryTargetSafe, quarantineForRecovery } from './recovery-trash-service'
 import { getSettings, updateSettings } from './settings-service'
@@ -202,7 +202,7 @@ export function getAgentWorkspaceBySlug(slug: string): AgentWorkspace | undefine
 
 /**
  * 返回项目文件根。本地目录项目直接使用用户选择的目录；空白项目继续
- * 使用 MyYoda 托管的 workspace-files/，以保持历史项目完全兼容。
+ * 使用 Guru 托管的 workspace-files/，以保持历史项目完全兼容。
  */
 export function getProjectFilesPath(workspaceSlug: string): string {
   return getAgentWorkspaceBySlug(workspaceSlug)?.projectRootPath ?? getWorkspaceFilesDir(workspaceSlug)
@@ -231,7 +231,7 @@ export function getAgentWorkspace(id: string): AgentWorkspace | undefined {
   return index.workspaces.find((w) => w.id === id)
 }
 
-/** 将 ~/.myyoda/default-skills/ 的内容逐个复制到工作区 skills/ 目录 */
+/** 将 ~/.guru/default-skills/ 的内容逐个复制到工作区 skills/ 目录 */
 function copyDefaultSkills(workspaceSlug: string, options: { throwOnError?: boolean } = {}): void {
   const defaultDir = getDefaultSkillsDir()
   const targetDir = getWorkspaceSkillsDir(workspaceSlug)
@@ -596,7 +596,7 @@ function removeRetiredDefaultSkillsFromWorkspace(workspace: AgentWorkspace): voi
  * 兼容层：升级存量工作区中残留的默认 Skill 副本。
  *
  * Skills 已全局化（见 getGlobalSkillsDir / getEffectiveSkillsDirs）：预制 Skill 的“真真正正
- * 生效副本”仅存在 ~/.myyoda/global-skills/，运行时优先读它（见 seedDefaultSkills 同步到
+ * 生效副本”仅存在 ~/.guru/global-skills/，运行时优先读它（见 seedDefaultSkills 同步到
  * 全局层的逻辑）。本函数不再向工作区 skills/ 注入新副本——否则会把
  * migrateGlobalScopes 的 skills-cleanup 步骤刚搬走的副本在同一次启动内立刻搬回来。
  *
@@ -758,7 +758,7 @@ export function ensurePluginManifest(workspaceSlug: string, workspaceName: strin
   }
 
   const manifest = {
-    name: `myyoda-workspace-${workspaceSlug}`,
+    name: `guru-workspace-${workspaceSlug}`,
     version: '1.0.0',
   }
 
@@ -830,7 +830,7 @@ export function saveWorkspaceMcpConfig(workspaceSlug: string, config: WorkspaceM
 
 // ===== 全局作用域 MCP（全局默认 + 项目覆盖合并） =====
 
-/** 读取全局 MCP 配置（~/.myyoda/mcp.json）；不存在时返回空配置 */
+/** 读取全局 MCP 配置（~/.guru/mcp.json）；不存在时返回空配置 */
 export function getGlobalMcpConfig(): WorkspaceMcpConfig {
   const mcpPath = getGlobalMcpPath()
 
@@ -848,7 +848,7 @@ export function getGlobalMcpConfig(): WorkspaceMcpConfig {
   }
 }
 
-/** 保存全局 MCP 配置（~/.myyoda/mcp.json） */
+/** 保存全局 MCP 配置（~/.guru/mcp.json） */
 export function saveGlobalMcpConfig(config: WorkspaceMcpConfig): void {
   const mcpPath = getGlobalMcpPath()
 
@@ -864,7 +864,7 @@ export function saveGlobalMcpConfig(config: WorkspaceMcpConfig): void {
 /**
  * 读取生效的 MCP 配置（全局单层）。
  *
- * MCP 是「全局唯一配置」：运行时只读 ~/.myyoda/mcp.json。工作区/嵌套项目的 mcp.json
+ * MCP 是「全局唯一配置」：运行时只读 ~/.guru/mcp.json。工作区/嵌套项目的 mcp.json
  * 已在 migrateGlobalScopes 中合并并改名为 .migrated；若仍发现未改名的遗留文件，
  * 只打告警、不参与合并，避免和 UI「只编全局」的心智模型打架。
  */
@@ -933,7 +933,7 @@ export function getEnabledGlobalSkillSlugs(): Set<string> {
 /**
  * 返回生效的 Skills 目录列表（三层：global < workspace < project）。
  *
- * - global：~/.myyoda/global-skills/（预制 skill 默认在此，所有工作区共享）
+ * - global：~/.guru/global-skills/（预制 skill 默认在此，所有工作区共享）
  * - workspace：工作区 skills/（项目级，按项目隔离）
  * - project：嵌套 Project 的 .context/skills/（仅绑定嵌套 Project 且已配置时存在）
  *
@@ -1144,7 +1144,7 @@ function scanSkillsInDir(dir: string, enabled: boolean, scope?: SkillMeta['scope
   return skills
 }
 
-/** 获取默认 Skills 的 slug 列表（来自 ~/.myyoda/default-skills/） */
+/** 获取默认 Skills 的 slug 列表（来自 ~/.guru/default-skills/） */
 export function getDefaultSkillSlugs(): string[] {
   const dir = getDefaultSkillsDir()
   if (!existsSync(dir)) return []
@@ -1470,7 +1470,7 @@ function summarizeBulkImport(items: BulkImportSkillItemResult[]): BulkImportSkil
 }
 
 // ===== 跨 Project 导入 Skill（对齐 Proma“跨工作区导入”的真实粒度：Proma 一个 workspace = 一个仓库，
-// 等价于这里的一个嵌套 Project，所以这里的“其他来源”限定在同一 MyYoda 工作区内，不跨 MyYoda 工作区） =====
+// 等价于这里的一个嵌套 Project，所以这里的“其他来源”限定在同一 Guru 工作区内，不跨 Guru 工作区） =====
 
 /**
  * 获取当前 Project 之外、同工作区内可导入的 Skill 来源：工作区默认（跨项目共享）+ 其他嵌套 Project 自己的 Skills。
@@ -2460,7 +2460,7 @@ function isNewerVersion(a: string, b: string): boolean {
 interface WorkspaceConfig {
   attachedDirectories?: string[]
   attachedFiles?: string[]
-  worktreeRepos?: import('@myyoda/shared').WorkspaceWorktreeRepo[]
+  worktreeRepos?: import('@guru/shared').WorkspaceWorktreeRepo[]
   /** 旧版工作区默认工作目录（2026-08-15 起迁移到应用设置 agentDefaultWorkingDirectory，此处仅作迁移回退）。 */
   defaultWorkingDirectory?: string
   /** 用户授权 Agent 主动维护工作区/项目 AGENTS.md 知识。 */
@@ -2673,11 +2673,11 @@ export function setWorkspaceDefaultWorkingDirectory(_workspaceSlug: string, path
  * 静默找不到 worktree）。同时保留 config 中仍然存在的手动配置项（如不在附加
  * 目录内的额外仓库），并自动过滤掉路径已不存在的陈旧条目。
  */
-export async function getWorktreeRepos(workspaceSlug: string): Promise<import('@myyoda/shared').WorkspaceWorktreeRepo[]> {
+export async function getWorktreeRepos(workspaceSlug: string): Promise<import('@guru/shared').WorkspaceWorktreeRepo[]> {
   const config = readWorkspaceConfig(workspaceSlug)
 
   // repoPath 归一化后去重
-  const byPath = new Map<string, import('@myyoda/shared').WorkspaceWorktreeRepo>()
+  const byPath = new Map<string, import('@guru/shared').WorkspaceWorktreeRepo>()
 
   // 1. 从附加目录自动探测 git 仓库根
   const attachedDirs = config.attachedDirectories ?? []
@@ -2711,7 +2711,7 @@ export async function getWorktreeRepos(workspaceSlug: string): Promise<import('@
   return Array.from(byPath.values()).sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99))
 }
 
-export function addWorktreeRepo(workspaceSlug: string, repo: import('@myyoda/shared').WorkspaceWorktreeRepo): import('@myyoda/shared').WorkspaceWorktreeRepo[] {
+export function addWorktreeRepo(workspaceSlug: string, repo: import('@guru/shared').WorkspaceWorktreeRepo): import('@guru/shared').WorkspaceWorktreeRepo[] {
   const config = readWorkspaceConfig(workspaceSlug)
   const existing = config.worktreeRepos ?? []
 
@@ -2725,7 +2725,7 @@ export function addWorktreeRepo(workspaceSlug: string, repo: import('@myyoda/sha
   return updated
 }
 
-export function removeWorktreeRepo(workspaceSlug: string, repoPath: string): import('@myyoda/shared').WorkspaceWorktreeRepo[] {
+export function removeWorktreeRepo(workspaceSlug: string, repoPath: string): import('@guru/shared').WorkspaceWorktreeRepo[] {
   const config = readWorkspaceConfig(workspaceSlug)
   const existing = config.worktreeRepos ?? []
   const updated = existing.filter((r) => r.repoPath !== repoPath)

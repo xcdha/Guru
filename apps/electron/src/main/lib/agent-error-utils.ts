@@ -1,16 +1,16 @@
 /**
  * Pi-only Agent runtime 的通用错误映射与终态判定。
  *
- * 这些规则属于 MyYoda 产品层，不依赖具体 Agent SDK。
+ * 这些规则属于 Guru 产品层，不依赖具体 Agent SDK。
  * 提取自已退役的 claude-agent-adapter.ts（2026-08 Claude runtime 退役，Pi-only）。
  */
 
-import type { ErrorCode, TypedError } from '@myyoda/shared'
+import type { ErrorCode, TypedError } from '@guru/shared'
 import {
   THINKING_SIGNATURE_ERROR_MESSAGE,
   THINKING_SIGNATURE_ERROR_TITLE,
   isThinkingSignatureError as matchesThinkingSignatureError,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { TRANSIENT_NETWORK_PATTERN, isMalformedResponseError } from './error-patterns'
 import { buildClaudeSubscriptionLimitMessage, isClaudeSubscriptionLimitError } from './adapters/pi-subscription-limit'
 
@@ -21,7 +21,7 @@ import { buildClaudeSubscriptionLimitMessage, isClaudeSubscriptionLimitError } f
 const FRIENDLY_ERROR_MESSAGES: Array<{ pattern: RegExp; message: string }> = [
   {
     pattern: /not logged in|please run \/login/i,
-    message: '请检查是否选择了正确的 MyYoda 供应渠道和模型',
+    message: '请检查是否选择了正确的 Guru 供应渠道和模型',
   },
   {
     pattern: /validation error/i,
@@ -318,7 +318,7 @@ export function mapSDKErrorToTypedError(
 
   // "未选择正确渠道/模型"场景：友好化后的文案已固定，无法登录多半是渠道或模型配置有误，
   // 引导用户直接重新选择模型，而非跳转设置页面
-  const isInvalidChannelOrModel = /请检查是否选择了正确的 MyYoda 供应渠道和模型/.test(mapped.message)
+  const isInvalidChannelOrModel = /请检查是否选择了正确的 Guru 供应渠道和模型/.test(mapped.message)
 
   return {
     code: mapped.code,

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useSetAtom } from 'jotai'
-import type { BrowserViewState } from '@myyoda/shared'
+import type { BrowserViewState } from '@guru/shared'
 import { BROWSER_RISK_DISCLAIMER_VERSION } from '@/types/settings'
 import {
   browserPanelMinimizedMapAtom,

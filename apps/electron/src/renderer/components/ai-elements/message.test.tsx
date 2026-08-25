@@ -24,7 +24,7 @@ function renderUserMessage(markdown: string): string {
 
 describe('MessageResponse local file Markdown links', () => {
   test('renders the reported absolute path with a line suffix as a file chip', () => {
-    const href = '/Users/bigmouth/Workspace/Project/MyYoda/apps/electron/src/renderer/components/agent/ContextUsageBadge.tsx:247'
+    const href = '/Users/bigmouth/Workspace/Project/Guru/apps/electron/src/renderer/components/agent/ContextUsageBadge.tsx:247'
     const html = renderMessage(`[ContextUsageBadge.tsx](${href})`)
 
     expect(html).toContain('<button')
@@ -33,7 +33,7 @@ describe('MessageResponse local file Markdown links', () => {
   })
 
   test('keeps Windows absolute file paths through URL sanitization and renders a file chip', () => {
-    const href = 'C:/Workspace/MyYoda/apps/electron/src/message.tsx:247'
+    const href = 'C:/Workspace/Guru/apps/electron/src/message.tsx:247'
     const html = renderMessage(`[message.tsx](${href})`)
 
     expect(html).toContain('<button')
@@ -42,9 +42,9 @@ describe('MessageResponse local file Markdown links', () => {
   })
 
   test('keeps HTTP links as external links', () => {
-    const html = renderMessage('[MyYoda](https://myyoda.ai)')
+    const html = renderMessage('[Guru](https://guru.ai)')
 
-    expect(html).toContain('href="https://myyoda.ai"')
+    expect(html).toContain('href="https://guru.ai"')
     expect(html).not.toContain('<button')
   })
 

@@ -53,7 +53,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu'
-import type { AgentSessionMeta, SessionGroup } from '@myyoda/shared'
+import type { AgentSessionMeta, SessionGroup } from '@guru/shared'
 import { sessionHoverPreviewEnabledAtom } from '@/atoms/ui-preferences'
 
 export function formatRelativeUpdatedAt(updatedAt: number, now: number): string {
@@ -352,7 +352,7 @@ export interface AgentSessionItemProps {
   /** 打开「新建分组」对话框（点击「+ 新建分组...」时调用，创建后由调用方自行归组） */
   onCreateGroup?: (sessionId: string) => void
   /** Workspace Labels for assignment submenu */
-  labels?: import('@myyoda/shared/labels').WorkspaceLabel[]
+  labels?: import('@guru/shared/labels').WorkspaceLabel[]
   onSetLabels?: (sessionId: string, labelIds: string[]) => Promise<void>
   onManageLabels?: () => void
   /** 用同一个时间戳刷新相对时间，避免每行独立计时 */

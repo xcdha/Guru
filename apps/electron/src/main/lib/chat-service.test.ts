@@ -2,14 +2,14 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import * as os from 'node:os'
 import { join } from 'node:path'
-import { CHAT_IPC_CHANNELS } from '@myyoda/shared'
+import { CHAT_IPC_CHANNELS } from '@guru/shared'
 import type { WebContents } from 'electron'
 import { mockElectronModule } from './__tests__/electron-mock'
 
 const sendMock = mock(() => undefined)
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 
 // chat-service.ts 间接 import conversation-manager / attachment-service 等模块，
 // 这些模块可能在加载时触碰 Electron API（对齐 channel-runtime-api-key.test.ts
@@ -30,7 +30,7 @@ mock.module('node:os', () => ({
 }))
 
 function writeChannels(channels: unknown[]): void {
-  const configDir = join(tempHome, '.myyoda')
+  const configDir = join(tempHome, '.guru')
   mkdirSync(configDir, { recursive: true })
   writeFileSync(
     join(configDir, 'channels.json'),
@@ -40,10 +40,10 @@ function writeChannels(channels: unknown[]): void {
 }
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-chat-service-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-chat-service-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
-  process.env.MYYODA_DEV = '0'
+  delete process.env.GURU_DEV
+  process.env.GURU_DEV = '0'
   writeChannels([
     {
       id: 'claude-oauth-1',
@@ -61,8 +61,8 @@ beforeAll(async () => {
 
 afterAll(() => {
   process.env.HOME = originalHome
-  if (originalMyyodaDev === undefined) delete process.env.MYYODA_DEV
-  else process.env.MYYODA_DEV = originalMyyodaDev
+  if (originalMyyodaDev === undefined) delete process.env.GURU_DEV
+  else process.env.GURU_DEV = originalMyyodaDev
   rmSync(tempHome, { recursive: true, force: true })
 })
 

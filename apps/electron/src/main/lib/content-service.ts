@@ -17,7 +17,7 @@ import {
   type DiscoverFeedResult,
   type DiscoverManifest,
   type VideoDownloadState,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   getDiscoverContentStatePath,
   getDiscoverManifestCachePath,
@@ -30,7 +30,7 @@ import { fetchWithSystemFallback, getFetchFn } from './proxy-fetch'
 import { getEffectiveProxyUrl } from './proxy-settings-service'
 
 /** 内容源配置（维护者公开仓库） */
-export const CONTENT_SOURCE = { owner: 'GeoffBao', repo: 'myyoda-content', branch: 'main' }
+export const CONTENT_SOURCE = { owner: 'GeoffBao', repo: 'guru-content', branch: 'main' }
 
 const RAW_BASE = `https://raw.githubusercontent.com/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}/${CONTENT_SOURCE.branch}`
 const JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}@${CONTENT_SOURCE.branch}`
@@ -249,7 +249,7 @@ async function downloadFromUrl(
   webContents: WebContents,
   lastSentAt: { t: number },
 ): Promise<boolean> {
-  // 与流式播放同样用系统网络栈兜底（见 fetchWithSystemFallback 注释）：用户未在 MyYoda 里配置代理但系统层有代理/VPN 时，下载也能成功
+  // 与流式播放同样用系统网络栈兜底（见 fetchWithSystemFallback 注释）：用户未在 Guru 里配置代理但系统层有代理/VPN 时，下载也能成功
   const response = await fetchWithSystemFallback(url, {}, await getEffectiveProxyUrl())
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   if (!response.body) throw new Error('响应无内容流')

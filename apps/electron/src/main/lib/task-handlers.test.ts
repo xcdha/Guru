@@ -2,8 +2,8 @@ import { afterAll, describe, expect, mock, test } from 'bun:test'
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { LABEL_IPC_CHANNELS, PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS } from '@myyoda/shared/channels'
-import { saveTaskSpec } from '@myyoda/shared/tasks/storage'
+import { LABEL_IPC_CHANNELS, PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS } from '@guru/shared/channels'
+import { saveTaskSpec } from '@guru/shared/tasks/storage'
 import type { BrowserWindow as ElectronBrowserWindow } from 'electron'
 import { mockElectronModule } from './__tests__/electron-mock'
 
@@ -24,7 +24,7 @@ afterAll(() => {
 })
 
 mock.module('./conductor-session-host', () => ({
-  createMyYodaConductorSessionHost: async () => ({
+  createGuruConductorSessionHost: async () => ({
     createSession: async (workspaceId: string, options: Record<string, unknown>) => {
       capturedCreateSessionCalls.push({ workspaceId, options })
       return { id: `fake-session-${(options.name as string | undefined) ?? 'untitled'}` }
@@ -33,7 +33,7 @@ mock.module('./conductor-session-host', () => ({
 }))
 
 mockElectronModule({
-  app: { getPath: () => '/tmp/myyoda-test', isPackaged: false },
+  app: { getPath: () => '/tmp/guru-test', isPackaged: false },
   ipcMain: {
     handle: (channel: string, handler: RegisteredHandler) => {
       registeredHandlers.set(channel, handler)
@@ -113,7 +113,7 @@ describe('task handler Kanban payloads', () => {
     expect(registerHandlers).toBeInstanceOf(Function)
     if (typeof registerHandlers !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-project-handler-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-project-handler-'))
     registeredWorkspaceRoot = workspaceRoot
     const windowStub = {
       isDestroyed: () => false,
@@ -209,7 +209,7 @@ describe('task handler Kanban payloads', () => {
       updatedAt: 1,
     }, [], (workspaceId: string) => workspaceId === 'workspace-beta' ? '/workspaces/beta' : undefined)).toThrow(/Workspace/)
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-session-label-handler-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-session-label-handler-'))
     try {
       expect(() => validateAssignment(workspaceRoot, {
         id: 'session-2',
@@ -315,8 +315,8 @@ describe('task handler Kanban payloads', () => {
     expect(resolveCwd).toBeInstanceOf(Function)
     if (typeof resolveCwd !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-cwd-root-'))
-    const workspaceCwd = mkdtempSync(join(tmpdir(), 'myyoda-workspace-cwd-target-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-cwd-root-'))
+    const workspaceCwd = mkdtempSync(join(tmpdir(), 'guru-workspace-cwd-target-'))
     try {
       writeFileSync(join(workspaceRoot, 'config.json'), JSON.stringify({ defaultWorkingDirectory: workspaceCwd }))
       expect(resolveCwd(workspaceRoot, {})).toEqual({
@@ -335,8 +335,8 @@ describe('task handler Kanban payloads', () => {
     expect(resolveCwd).toBeInstanceOf(Function)
     if (typeof resolveCwd !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-proj-root-'))
-    const projectRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-proj-target-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-proj-root-'))
+    const projectRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-proj-target-'))
     try {
       // 无 config.json：仅靠 workspace.projectRootPath 兜底（工作区=项目模型）
       expect(resolveCwd(workspaceRoot, {}, () => projectRoot)).toEqual({
@@ -355,9 +355,9 @@ describe('task handler Kanban payloads', () => {
     expect(resolveCwd).toBeInstanceOf(Function)
     if (typeof resolveCwd !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-cfg-priority-root-'))
-    const configuredCwd = mkdtempSync(join(tmpdir(), 'myyoda-workspace-cfg-priority-cwd-'))
-    const projectRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-cfg-priority-proj-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-cfg-priority-root-'))
+    const configuredCwd = mkdtempSync(join(tmpdir(), 'guru-workspace-cfg-priority-cwd-'))
+    const projectRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-cfg-priority-proj-'))
     try {
       writeFileSync(join(workspaceRoot, 'config.json'), JSON.stringify({ defaultWorkingDirectory: configuredCwd }))
       expect(resolveCwd(workspaceRoot, {}, () => projectRoot)).toEqual({
@@ -377,7 +377,7 @@ describe('task handler Kanban payloads', () => {
     expect(resolveCwd).toBeInstanceOf(Function)
     if (typeof resolveCwd !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-proj-missing-root-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-proj-missing-root-'))
     const missingProjectRoot = join(workspaceRoot, 'gone-project-dir')
     try {
       const result = resolveCwd(workspaceRoot, {}, () => missingProjectRoot)
@@ -397,7 +397,7 @@ describe('task handler Kanban payloads', () => {
     expect(resolveCwd).toBeInstanceOf(Function)
     if (typeof resolveCwd !== 'function') return
 
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-workspace-blank-root-'))
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-workspace-blank-root-'))
     try {
       expect(resolveCwd(workspaceRoot, {}, () => undefined)).toEqual({
         status: 'blocked',
@@ -479,7 +479,7 @@ describe('task handler Kanban payloads', () => {
       sessionStatus: 'todo',
     })
 
-    const validCwd = mkdtempSync(join(tmpdir(), 'myyoda-task-seed-cwd-'))
+    const validCwd = mkdtempSync(join(tmpdir(), 'guru-task-seed-cwd-'))
     try {
       expect(buildPatch(
         {
@@ -524,8 +524,8 @@ describe('task handler Kanban payloads', () => {
 
 describe('materializeTaskFromSpec', () => {
   test('落盘 task.yaml 并创建 todo 状态的新会话，且向 createSession 转发完整字段', async () => {
-    const { loadTaskSpec } = await import('@myyoda/shared/tasks/storage')
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-materialize-task-'))
+    const { loadTaskSpec } = await import('@guru/shared/tasks/storage')
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-materialize-task-'))
     capturedCreateSessionCalls.length = 0
     try {
       const spec = {
@@ -564,8 +564,8 @@ describe('materializeTaskFromSpec', () => {
   })
 
   test('slug 已被占用时追加后缀，不覆盖既有 task.yaml 也不孤儿化其 orchestrator 会话', async () => {
-    const { loadTaskSpec } = await import('@myyoda/shared/tasks/storage')
-    const workspaceRoot = mkdtempSync(join(tmpdir(), 'myyoda-materialize-task-collision-'))
+    const { loadTaskSpec } = await import('@guru/shared/tasks/storage')
+    const workspaceRoot = mkdtempSync(join(tmpdir(), 'guru-materialize-task-collision-'))
     capturedCreateSessionCalls.length = 0
     try {
       const first = {

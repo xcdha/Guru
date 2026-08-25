@@ -1,7 +1,7 @@
 /**
  * Pi Agent SDK 适配器
  *
- * MyYoda 内部继续使用 SDKMessage 兼容协议，避免渲染层、Jotai 状态、
+ * Guru 内部继续使用 SDKMessage 兼容协议，避免渲染层、Jotai 状态、
  * JSONL 持久化和历史会话展示在 SDK 迁移时一起改名。
  */
 
@@ -18,7 +18,7 @@ import type {
   ErrorCode,
   AgentQueryInput,
   JsonSchemaOutputFormat,
-  MyYodaPermissionMode,
+  GuruPermissionMode,
   ProviderType,
   RecoveryAction,
   SendQueuedMessageOptions,
@@ -28,21 +28,21 @@ import type {
   AgentToolCallDelta,
   SDKUserMessageInput,
   SkillActivation,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   calculatePiAutoCompactionReserveTokens,
   inferReasoningTransport,
   isCodexFastModeSupportedModel,
   resolveReasoningProfile,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   THINKING_SIGNATURE_ERROR_MESSAGE,
   THINKING_SIGNATURE_ERROR_TITLE,
   isThinkingSignatureError as matchesThinkingSignatureError,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import {
   createSkillActivationFromPath,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import type { CanUseToolOptions, PermissionResult } from '../agent-permission-service'
 import { TRANSIENT_NETWORK_PATTERN, isMalformedResponseError } from '../error-patterns'
 import { OPTIMIZED_CODING_GATED_SKILLS } from '../agent-workspace-manager'
@@ -64,7 +64,7 @@ import {
   createAgentRuntimeGuard,
   type AgentRuntimeGuard,
 } from '../agent-runtime-guards'
-import { createMyYodaAgentsFilesOverride } from './pi-resource-loader-overrides'
+import { createGuruAgentsFilesOverride } from './pi-resource-loader-overrides'
 import { createCodexFastModeExtension, withCodexFastModeServiceTier } from './pi-codex-request-settings'
 import { createDeepSeekReasoningRequestExtension } from './pi-deepseek-reasoning-request-settings'
 import { createOpenAIReasoningRequestExtension } from './pi-openai-reasoning-request-settings'
@@ -117,11 +117,11 @@ export interface PiAgentQueryOptions extends AgentQueryInput {
   provider: ProviderType
   /** 编码优化总开关：控制 D2（DeepSeek 提前压缩阈值差异化）等参数 */
   optimizedCoding?: boolean
-  /** OAuth credential coordination key; equals the selected MyYoda channel id. */
+  /** OAuth credential coordination key; equals the selected Guru channel id. */
   channelId?: string
   channelName?: string
   maxTurns?: number
-  permissionMode: MyYodaPermissionMode
+  permissionMode: GuruPermissionMode
   canUseTool?: (
     toolName: string,
     input: Record<string, unknown>,
@@ -145,7 +145,7 @@ export interface PiAgentQueryOptions extends AgentQueryInput {
   outputFormat?: JsonSchemaOutputFormat
   /** 无副作用文本生成模式：不向 Pi Agent 暴露任何自定义工具。 */
   toolPolicy?: 'none'
-  /** MyYoda 聚合的附加目录；Pi 内置工具 factory 不接收多 root 参数，编排层会把它们注入 systemPrompt。 */
+  /** Guru 聚合的附加目录；Pi 内置工具 factory 不接收多 root 参数，编排层会把它们注入 systemPrompt。 */
   additionalDirectories?: string[]
   additionalSkillPaths?: string[]
   /** 当前用户输入显式引用的 Skill name（兼容历史 slug 已在编排层归一化） */
@@ -170,11 +170,11 @@ export interface PiAgentQueryOptions extends AgentQueryInput {
   codexFastMode?: boolean
   /** Pi 的 OAuth credential store 使用真实 expires 和 refresh，不读取 ~/.pi。 */
   codexOAuthCredentials?: CodexOAuthCredentials
-  /** Pi 运行中刷新 OAuth 后，将新凭据回写到 MyYoda 渠道存储。 */
+  /** Pi 运行中刷新 OAuth 后，将新凭据回写到 Guru 渠道存储。 */
   onCodexOAuthCredentialsRefreshed?: (credentials: CodexOAuthCredentials) => void | Promise<void>
   /** xAI OAuth credential store 使用真实 expires 和 refresh，不读取 ~/.pi。 */
   xaiOAuthCredentials?: XaiOAuthCredentials
-  /** Pi 运行中刷新 xAI OAuth 后，将新凭据回写到 MyYoda 渠道存储。 */
+  /** Pi 运行中刷新 xAI OAuth 后，将新凭据回写到 Guru 渠道存储。 */
   onXaiOAuthCredentialsRefreshed?: (credentials: XaiOAuthCredentials) => void | Promise<void>
   /** 会话级 OpenAI（Codex OAuth / Responses API）思考深度。 */
   openAIThinkingLevel?: AgentThinkingLevel
@@ -205,7 +205,7 @@ interface PendingInterruptPrompt {
   rejectAccepted: (error: unknown) => void
 }
 
-interface MyYodaTaskItem {
+interface GuruTaskItem {
   id: string
   subject: string
   status: 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'error' | 'deleted'
@@ -398,7 +398,7 @@ function createAsyncQueue<T>(): AsyncQueue<T> {
 const FRIENDLY_ERROR_MESSAGES: Array<{ pattern: RegExp; message: string }> = [
   {
     pattern: /api key|unauthorized|invalid.*key|authentication/i,
-    message: '请检查是否选择了正确的 MyYoda 供应渠道和模型',
+    message: '请检查是否选择了正确的 Guru 供应渠道和模型',
   },
   {
     pattern: /validation|schema/i,
@@ -653,7 +653,7 @@ export function mapSDKErrorToTypedError(errorCode: string, message: string, orig
 
   const meta = ERROR_CODE_META[code] ?? { title: 'Agent 执行失败', canRetry: false }
   // 认证/渠道配置类错误友好化后文案固定，引导用户直接重新选择模型，而非跳转设置
-  const isInvalidChannelOrModel = /请检查是否选择了正确的 MyYoda 供应渠道和模型/.test(message)
+  const isInvalidChannelOrModel = /请检查是否选择了正确的 Guru 供应渠道和模型/.test(message)
 
   const actions: RecoveryAction[] = [
     isInvalidChannelOrModel
@@ -696,20 +696,20 @@ function buildAllowedSkillRoots(additionalSkillPaths: string[] | undefined): str
     .filter((path, index, arr) => arr.indexOf(path) === index)
 }
 
-function isMyYodaSkillPath(path: string | undefined, allowedRoots: string[]): boolean {
+function isGuruSkillPath(path: string | undefined, allowedRoots: string[]): boolean {
   if (!path || allowedRoots.length === 0) return false
   const guardedPath = resolveGuardedRealPath(path)
   return allowedRoots.some((root) => isPathWithinRoot(guardedPath, root))
 }
 
-export function createMyYodaSkillsOverride(
+export function createGuruSkillsOverride(
   additionalSkillPaths: string[] | undefined,
   gatedSkillSlugs: readonly string[] = [],
 ): (base: SkillLoadResult) => SkillLoadResult {
   const allowedRoots = buildAllowedSkillRoots(additionalSkillPaths)
   return (base) => ({
     skills: base.skills.filter((skill) => {
-      const inWorkspace = isMyYodaSkillPath(skill.filePath, allowedRoots) || isMyYodaSkillPath(skill.baseDir, allowedRoots)
+      const inWorkspace = isGuruSkillPath(skill.filePath, allowedRoots) || isGuruSkillPath(skill.baseDir, allowedRoots)
       if (!inWorkspace) return false
       // 编码优化总开关关闭时，屏蔽跟随开关的预置 skill（预置但默认不可见）
       if (gatedSkillSlugs.length > 0) {
@@ -718,7 +718,7 @@ export function createMyYodaSkillsOverride(
       }
       return true
     }),
-    diagnostics: base.diagnostics.filter((diagnostic) => isMyYodaSkillPath(diagnostic.path, allowedRoots)),
+    diagnostics: base.diagnostics.filter((diagnostic) => isGuruSkillPath(diagnostic.path, allowedRoots)),
   })
 }
 
@@ -778,7 +778,7 @@ interface PreparedPromptWithSkills {
   activations: SkillActivation[]
 }
 
-async function preparePromptWithMyYodaSkills(
+async function preparePromptWithGuruSkills(
   resourceLoader: ResourceLoader,
   prompt: string,
   explicitSkillNames?: string[],
@@ -941,13 +941,13 @@ function createTextToolResult(text: string, details?: unknown): AgentToolResult<
   } as AgentToolResult<unknown>
 }
 
-export const PI_COMPACTION_CONTINUATION_PROMPT = `<myyoda_compaction_continuation>
+export const PI_COMPACTION_CONTINUATION_PROMPT = `<guru_compaction_continuation>
 当前会话上下文已经安全压缩。请依据压缩摘要、保留的最近上下文和已持久化的交接状态，继续完成原始用户任务。
 
 - 不要重复已经完成或已提交的操作；先核验当前状态。
 - 若仍有工作，立即执行下一项具体行动。
 - 只有原始需求全部完成时才给出最终答复；若确实受阻，明确说明阻塞原因。
-</myyoda_compaction_continuation>`
+</guru_compaction_continuation>`
 
 export function planPiCompactionContinuation(options: {
   continuationCount: number
@@ -1048,8 +1048,8 @@ export function buildCurrentSessionCompactionTool(
   const definition = sdk.defineTool({
     name: 'CompactContext',
     label: '压缩当前会话上下文',
-    description: 'Compact only the current Pi Agent session after this turn finishes. Before calling, persist a durable handoff or checkpoint to workspace files. MyYoda will compact the current session, then automatically continue the original task from the compacted context.',
-    promptSnippet: 'CompactContext: after persisting a durable handoff/checkpoint, compact the current session context. MyYoda will automatically continue the original task after compaction.',
+    description: 'Compact only the current Pi Agent session after this turn finishes. Before calling, persist a durable handoff or checkpoint to workspace files. Guru will compact the current session, then automatically continue the original task from the compacted context.',
+    promptSnippet: 'CompactContext: after persisting a durable handoff/checkpoint, compact the current session context. Guru will automatically continue the original task after compaction.',
     parameters: Type.Object({}),
     async execute() {
       requestCompaction()
@@ -1117,7 +1117,7 @@ function stringFromInput(input: Record<string, unknown>, keys: string[], fallbac
   return fallback
 }
 
-function normalizeTaskStatus(value: unknown, fallback: MyYodaTaskItem['status']): MyYodaTaskItem['status'] {
+function normalizeTaskStatus(value: unknown, fallback: GuruTaskItem['status']): GuruTaskItem['status'] {
   if (
     value === 'pending' ||
     value === 'in_progress' ||
@@ -1138,15 +1138,15 @@ function normalizeStringArray(value: unknown): string[] | undefined {
   return items.length > 0 ? items : undefined
 }
 
-function buildMyYodaProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryOptions['canUseTool']): ToolDefinition[] {
-  const tasks = new Map<string, MyYodaTaskItem>()
+function buildGuruProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryOptions['canUseTool']): ToolDefinition[] {
+  const tasks = new Map<string, GuruTaskItem>()
   let nextTaskId = 1
 
   const definitions = [
     sdk.defineTool({
       name: 'EnterPlanMode',
       label: '进入计划模式',
-      description: '进入 MyYoda 计划模式。进入后只能调研、整理计划，并等待用户批准后再执行写操作。',
+      description: '进入 Guru 计划模式。进入后只能调研、整理计划，并等待用户批准后再执行写操作。',
       promptSnippet: '进入计划模式，先调研并输出计划，再等待用户确认。',
       parameters: Type.Object({
         reason: Type.Optional(Type.String({ description: '进入计划模式的原因。' })),
@@ -1174,7 +1174,7 @@ function buildMyYodaProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryO
     sdk.defineTool({
       name: 'AskUserQuestion',
       label: '询问用户',
-      description: '当需要用户选择、补充信息或确认偏好时调用，MyYoda 会展示可交互问答横幅。',
+      description: '当需要用户选择、补充信息或确认偏好时调用，Guru 会展示可交互问答横幅。',
       promptSnippet: '向用户提出结构化问题并等待回答。',
       parameters: Type.Object({
         questions: Type.Array(Type.Object({
@@ -1208,7 +1208,7 @@ function buildMyYodaProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryO
       async execute(_toolCallId, params) {
         const input = params as Record<string, unknown>
         const id = stringFromInput(input, ['id', 'taskId', 'task_id'], String(nextTaskId++))
-        const task: MyYodaTaskItem = {
+        const task: GuruTaskItem = {
           id,
           subject: stringFromInput(input, ['subject', 'title', 'name'], `任务 #${id}`),
           status: 'pending',
@@ -1246,7 +1246,7 @@ function buildMyYodaProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryO
         const id = stringFromInput(input, ['taskId', 'task_id', 'id'])
         if (!id) throw new Error('taskId 必填')
         const existing = tasks.get(id)
-        const task: MyYodaTaskItem = {
+        const task: GuruTaskItem = {
           id,
           subject: stringFromInput(input, ['subject', 'title', 'name'], existing?.subject ?? `任务 #${id}`),
           status: normalizeTaskStatus(input.status, existing?.status ?? 'pending'),
@@ -1305,7 +1305,7 @@ function buildMyYodaProductToolDefinitions(sdk: PiSdk, canUseTool: PiAgentQueryO
 }
 
 const WSL_EXPORT_ENV_KEYS = [
-  'MYYODA_CLI',
+  'GURU_CLI',
   'HTTP_PROXY',
   'HTTPS_PROXY',
   'ALL_PROXY',
@@ -1314,8 +1314,8 @@ const WSL_EXPORT_ENV_KEYS = [
   'https_proxy',
   'all_proxy',
   'no_proxy',
-  'MYYODA_WINDOWS_SHELL',
-  'MYYODA_WSL_DISTRO',
+  'GURU_WINDOWS_SHELL',
+  'GURU_WSL_DISTRO',
 ] as const
 
 function shellQuote(value: string): string {
@@ -1335,7 +1335,7 @@ function buildWslCommand(command: string, env: NodeJS.ProcessEnv | undefined): s
   for (const key of WSL_EXPORT_ENV_KEYS) {
     const rawValue = env?.[key]
     if (!rawValue) continue
-    const value = key === 'MYYODA_CLI' ? windowsPathToWslPath(rawValue) : rawValue
+    const value = key === 'GURU_CLI' ? windowsPathToWslPath(rawValue) : rawValue
     exportLines.push(`export ${key}=${shellQuote(value)}`)
   }
 
@@ -1417,7 +1417,7 @@ function createWslBashOperations(runtimeEnv: AgentRuntimeEnv): BashOperations {
   }
 }
 
-function createMyYodaBashToolOptions(runtimeEnv: AgentRuntimeEnv | undefined): BashToolOptions | undefined {
+function createGuruBashToolOptions(runtimeEnv: AgentRuntimeEnv | undefined): BashToolOptions | undefined {
   if (!runtimeEnv) return undefined
 
   const spawnHook: NonNullable<BashToolOptions['spawnHook']> = ({ command, cwd, env }) => ({
@@ -1447,7 +1447,7 @@ function buildBuiltinToolDefinitions(
 ): ToolDefinition[] {
   const definitions = [
     sdk.createReadToolDefinition(cwd),
-    sdk.createBashToolDefinition(cwd, createMyYodaBashToolOptions(runtimeEnv)),
+    sdk.createBashToolDefinition(cwd, createGuruBashToolOptions(runtimeEnv)),
     sdk.createEditToolDefinition(cwd),
     sdk.createWriteToolDefinition(cwd),
     sdk.createGrepToolDefinition(cwd),
@@ -1501,7 +1501,7 @@ export function installRuntimeGuardHooks(session: AgentSession, guard: AgentRunt
   session.agent.prepareNextTurnWithContext = async (context, signal) => {
     const previousSnapshot = await previousPrepareNextTurnWithContext?.(context, signal)
     if (guard.shouldStopBeforeNextTurn()) {
-      // Pi 的 steer/follow-up 队列在 turn 完成后才 drain；达到 MyYoda 上限时必须在这里清空，
+      // Pi 的 steer/follow-up 队列在 turn 完成后才 drain；达到 Guru 上限时必须在这里清空，
       // 否则纯文本 turn 之后追加的队列消息会绕过 afterToolCall 继续进入下一轮。
       session.agent.clearAllQueues()
     }
@@ -1598,7 +1598,7 @@ export class PiAgentAdapter implements AgentProviderAdapter {
               input.canUseTool,
               input.runtimeEnv,
             ),
-            ...buildMyYodaProductToolDefinitions(sdk, input.canUseTool),
+            ...buildGuruProductToolDefinitions(sdk, input.canUseTool),
             ...wrapCustomToolDefinitions(input.customTools, input.canUseTool),
           ]
 
@@ -1651,12 +1651,12 @@ export class PiAgentAdapter implements AgentProviderAdapter {
         settingsManager,
         noSkills: true,
         additionalSkillPaths: input.additionalSkillPaths ?? [],
-        skillsOverride: createMyYodaSkillsOverride(
+        skillsOverride: createGuruSkillsOverride(
           input.additionalSkillPaths,
           // 编码优化总开关关闭时屏蔽 gated 预置 skill；开启时放行
           input.optimizedCoding ? [] : OPTIMIZED_CODING_GATED_SKILLS,
         ),
-        agentsFilesOverride: createMyYodaAgentsFilesOverride(),
+        agentsFilesOverride: createGuruAgentsFilesOverride(),
         ...(model.reasoning && extensionFactories.length > 0 && { extensionFactories }),
         systemPromptOverride: () => input.systemPrompt,
       })
@@ -1829,7 +1829,7 @@ export class PiAgentAdapter implements AgentProviderAdapter {
                 (event.message as AssistantMessage).stopReason === 'error' || shouldDeferNativeOverflow
               )
               if (shouldDeferAssistantTerminal && converted?.type === 'assistant' && assistantUuid) {
-                // Native retry 会丢弃该失败 assistant；不应消耗 MyYoda 的 turn/budget 配额。
+                // Native retry 会丢弃该失败 assistant；不应消耗 Guru 的 turn/budget 配额。
                 // 关键：此处不能重置 UUID。retry 后的新 partial/final 必须原地替换此前
                 // 已经展示的 partial，避免用户同时看到断流残片和恢复后的完整回答。
                 retryTerminalGate.defer({
@@ -2065,7 +2065,7 @@ export class PiAgentAdapter implements AgentProviderAdapter {
             try {
               preparedPrompt = promptInput.skipSkillExpansion
                 ? { content: promptInput.content, activations: [] }
-                : await preparePromptWithMyYodaSkills(
+                : await preparePromptWithGuruSkills(
                   resourceLoader,
                   promptInput.content,
                   promptInput.skillMentions,
@@ -2204,7 +2204,7 @@ export class PiAgentAdapter implements AgentProviderAdapter {
       throw new Error(stopOverride?.errors[0] ?? 'Agent 已达到运行限制，无法继续追加消息')
     }
     const preparedPrompt = active.resourceLoader
-      ? await preparePromptWithMyYodaSkills(
+      ? await preparePromptWithGuruSkills(
         active.resourceLoader,
         message.message.content,
         options?.skillMentions,
@@ -2266,7 +2266,7 @@ export class PiAgentAdapter implements AgentProviderAdapter {
   }
 
   async setPermissionMode(_sessionId: string, _mode: string): Promise<void> {
-    // MyYoda 权限由工具包装层实时读取 sessionPermissionModes，自身无需同步给 Pi。
+    // Guru 权限由工具包装层实时读取 sessionPermissionModes，自身无需同步给 Pi。
   }
 
   dispose(): void {

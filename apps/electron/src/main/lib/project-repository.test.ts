@@ -8,7 +8,7 @@ import { ProjectRepository } from './project-repository'
 const tempRoots: string[] = []
 
 function createTempWorkspaceRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-main-project-repo-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-main-project-repo-'))
   tempRoots.push(root)
   return root
 }
@@ -65,11 +65,11 @@ describe('ProjectRepository', () => {
     const invalidCreateInputs = [
       [{ name: '' }, /name/i],
       [{ name: '   ' }, /name/i],
-      [{ name: 'MyYoda', description: 123 }, /description/i],
-      [{ name: 'MyYoda', workingDirectory: ['not-a-path'] }, /workingDirectory/i],
-      [{ name: 'MyYoda', details: { note: 'bad' } }, /details/i],
-      [{ name: 'MyYoda', colorTheme: true }, /colorTheme/i],
-      [{ name: 'MyYoda', color: 8080 }, /color/i],
+      [{ name: 'Guru', description: 123 }, /description/i],
+      [{ name: 'Guru', workingDirectory: ['not-a-path'] }, /workingDirectory/i],
+      [{ name: 'Guru', details: { note: 'bad' } }, /details/i],
+      [{ name: 'Guru', colorTheme: true }, /colorTheme/i],
+      [{ name: 'Guru', color: 8080 }, /color/i],
     ] as const
 
     for (const [input, errorPattern] of invalidCreateInputs) {
@@ -79,7 +79,7 @@ describe('ProjectRepository', () => {
 
   test('updateProject 在委托 Shared storage 前拒绝无效运行时输入', () => {
     const repository = createRepository({ 'ws-alpha': createTempWorkspaceRoot() })
-    const created = repository.createProject('ws-alpha', { name: 'MyYoda' })
+    const created = repository.createProject('ws-alpha', { name: 'Guru' })
 
     const invalidUpdateInputs = [
       [{ name: '' }, /name/i],
@@ -100,7 +100,7 @@ describe('ProjectRepository', () => {
     const repository = createRepository({ 'ws-alpha': createTempWorkspaceRoot() })
 
     const created = repository.createProject('ws-alpha', {
-      name: 'MyYoda',
+      name: 'Guru',
       description: 'bounded slice',
     })
 

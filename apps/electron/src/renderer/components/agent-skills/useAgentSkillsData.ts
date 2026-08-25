@@ -8,7 +8,7 @@
  * workspaceCapabilitiesVersionAtom，通知侧边栏等订阅方刷新。
  *
  * 范围（scope）：
- * - MCP 现在是「全局唯一配置」（~/.myyoda/mcp.json，所有工作区共享）：projectId 未传时读写
+ * - MCP 现在是「全局唯一配置」（~/.guru/mcp.json，所有工作区共享）：projectId 未传时读写
  *   全局配置；projectId 传入且该 Project 已自己配置过 MCP 时，读写路由到项目专属存储（完全覆盖，
  *   不与全局合并）。切换工作区不会改变 MCP 列表——这是预期行为，不是 bug。
  * - Skills 是「全局默认 + 工作区/项目覆盖」三层：始终通过 getAllEffectiveSkills 读取全局 + 工作区
@@ -28,7 +28,7 @@ import {
   currentAgentWorkspaceIdAtom,
   workspaceCapabilitiesVersionAtom,
 } from '@/atoms/agent-atoms'
-import type { BuiltinMcpServerSummary, SkillMeta, WorkspaceCapabilities, WorkspaceMcpConfig } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, SkillMeta, WorkspaceCapabilities, WorkspaceMcpConfig } from '@guru/shared'
 
 /**
  * Skill 在“全局+工作区+项目三层合并列表”里的唯一 key。
@@ -53,7 +53,7 @@ export interface AgentSkillsData {
   defaultSkillSlugs: Set<string>
   /** 当前 scope（工作区或项目）自有的 Skills 目录，用于“打开目录”“AI 分类”等定位到具体路径 */
   skillsDir: string
-  /** 全局 Skills 目录（~/.myyoda/global-skills/） */
+  /** 全局 Skills 目录（~/.guru/global-skills/） */
   globalSkillsDir: string
   /** 生效的 MCP 配置：projectId 未传或项目未自配置时为全局配置，否则为项目覆盖配置 */
   mcpConfig: WorkspaceMcpConfig

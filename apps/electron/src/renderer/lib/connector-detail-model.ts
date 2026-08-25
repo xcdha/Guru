@@ -66,7 +66,7 @@ export function describeConnectorDetail(
     case 'builtin-mcp':
     case 'api-tool':
       return {
-        permissionLabel: '由 MyYoda 托管的外部能力',
+        permissionLabel: '由 Guru 托管的外部能力',
         configMethodLabel: isConnectorAttentionStatus(item.status) ? '需要配置后才能使用' : '按连接器说明配置',
         capabilities: [item.description],
         nextStep: nextStepOf(item, item.nextActionLabel),

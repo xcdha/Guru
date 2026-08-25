@@ -8,7 +8,7 @@ version: "1.0.0"
 
 检测并清除 AI 生成文本的机器味：套话、机械结构、夸张标记，改写为自然的人类表达（保留语义、事实、术语）。也提供"AI 相似度"诊断。
 
-> 参考：tuwulalo/ai-slop-cleaner-en-ru（Claude skill，MIT），按 MyYoda 流程适配并内置常见标记清单。
+> 参考：tuwulalo/ai-slop-cleaner-en-ru（Claude skill，MIT），按 Guru 流程适配并内置常见标记清单。
 
 ## 核心原则：单看一个词不是证据
 

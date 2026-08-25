@@ -1,8 +1,8 @@
 /**
  * 「帮助」Wiki 服务：GitHub Wiki（git 仓库）浅克隆 + 本地缓存
  *
- * - 源：https://github.com/GeoffBao/MyYoda.wiki.git（wiki 首次建页后仓库才存在）
- * - 首次打开帮助 tab 浅克隆到 ~/.myyoda/discover/wiki-cache/；之后 git fetch --depth 1 + reset --hard
+ * - 源：https://github.com/xcdha/Guru.wiki.git（wiki 首次建页后仓库才存在）
+ * - 首次打开帮助 tab 浅克隆到 ~/.guru/discover/wiki-cache/；之后 git fetch --depth 1 + reset --hard
  * - 页面树：_Sidebar.md 解析（缺失时按文件列表构建）；正文本地 .md 直读，图片经远程媒体代理
  * - git 代理：clone/fetch 时注入 -c http.proxy=<有效代理>
  * - 更新推送：后台刷新发现 commit 变化时经 sender 推 WIKI_UPDATED
@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import type { WebContents } from 'electron'
-import { DISCOVER_IPC_CHANNELS, type WikiPageContent, type WikiPagesResult, type WikiPageTree } from '@myyoda/shared'
+import { DISCOVER_IPC_CHANNELS, type WikiPageContent, type WikiPagesResult, type WikiPageTree } from '@guru/shared'
 import { getDiscoverWikiCacheDir } from './config-paths'
 import { getEffectiveProxyUrl } from './proxy-settings-service'
 import { registerRemoteMediaUrl } from './discover-remote-media'
@@ -29,7 +29,7 @@ import {
 const execFileAsync = promisify(execFile)
 
 /** Wiki 承载仓库（与社区 Discussions 同仓库） */
-export const WIKI_REPO = { owner: 'GeoffBao', repo: 'MyYoda' }
+export const WIKI_REPO = { owner: 'GeoffBao', repo: 'Guru' }
 
 /** 默认远端 URL（测试可经参数注入本地 fixture） */
 export function getDefaultWikiRemoteUrl(): string {

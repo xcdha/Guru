@@ -1,4 +1,4 @@
-import type { GitBranchInfo, GitExecutionMode } from '@myyoda/shared'
+import type { GitBranchInfo, GitExecutionMode } from '@guru/shared'
 
 export function sortGitBranchesForPicker(branches: readonly GitBranchInfo[]): GitBranchInfo[] {
   return [...branches].sort((a, b) => {
@@ -57,7 +57,7 @@ export function canCheckoutBranchInLocal(branch: GitBranchInfo): boolean {
  * 所有新会话共用一个记忆键的缺陷。
  */
 export function getGitModeStorageKey(repoPath: string): string {
-  return `myyoda:git:execution-mode:${repoPath.replace(/[\\/]+$/, '')}`
+  return `guru:git:execution-mode:${repoPath.replace(/[\\/]+$/, '')}`
 }
 
 /**

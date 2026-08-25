@@ -1,4 +1,4 @@
-import type { SDKContentBlock, SDKTextBlock } from '@myyoda/shared'
+import type { SDKContentBlock, SDKTextBlock } from '@guru/shared'
 
 const THINK_OPEN_TAG = '<think>'
 const THINK_CLOSE_TAG = '</think>'

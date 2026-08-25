@@ -68,7 +68,7 @@ export interface AgentRuntimeHandshakePayload {
 }
 
 export interface AgentRuntimePortTransfer {
-  type: 'myyoda-agent-runtime-port'
+  type: 'guru-agent-runtime-port'
   protocolVersion: typeof AGENT_RUNTIME_PROTOCOL_VERSION
 }
 

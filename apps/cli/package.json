@@ -1,20 +1,20 @@
 {
-  "name": "@myyoda/cli",
+  "name": "@guru/cli",
   "version": "0.1.0",
   "license": "AGPL-3.0-only",
-  "description": "myyoda — MyYoda 命令行工具。面向有限上下文的 Agent 消费者，提供会话的渐进式读取（list / info / outline / search / export）。",
+  "description": "guru — Guru 命令行工具。面向有限上下文的 Agent 消费者，提供会话的渐进式读取（list / info / outline / search / export）。",
   "type": "module",
   "bin": {
-    "myyoda": "./src/index.ts"
+    "guru": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "bun build --compile --outfile dist/myyoda src/index.ts",
+    "build": "bun build --compile --outfile dist/guru src/index.ts",
     "start": "bun src/index.ts"
   },
   "dependencies": {
-    "@myyoda/session-core": "workspace:*",
-    "@myyoda/shared": "workspace:*"
+    "@guru/session-core": "workspace:*",
+    "@guru/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

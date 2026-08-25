@@ -94,7 +94,7 @@ jobs:
             echo "Release ${tag} 已存在，跳过创建"
           else
             gh release create "${tag}" \
-              --title "MyYoda ${tag}" \
+              --title "Guru ${tag}" \
               --notes-file apps/electron/RELEASE_NOTES.md
             echo "已创建 Release ${tag}"
           fi

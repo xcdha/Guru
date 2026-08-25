@@ -59,8 +59,8 @@ import {
 
 // ===== 行数计算 =====
 
-const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'myyoda:session-quick-switch-keydown'
-const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'myyoda:session-quick-switch-keyup'
+const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'guru:session-quick-switch-keydown'
+const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'guru:session-quick-switch-keyup'
 
 function isMacPlatform(): boolean {
   return typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '')

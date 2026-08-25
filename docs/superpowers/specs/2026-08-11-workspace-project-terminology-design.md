@@ -5,7 +5,7 @@
 
 ## 目标
 
-移除 MyYoda 用户界面中的“空间容器/空间”概念，恢复清晰且与当前代码模型一致的术语：
+移除 Guru 用户界面中的“空间容器/空间”概念，恢复清晰且与当前代码模型一致的术语：
 
 ```text
 工作区（AgentWorkspace）
@@ -17,7 +17,7 @@
 
 ## 当前问题
 
-MyYoda 在 0.6.8 左右发生过术语漂移：
+Guru 在 0.6.8 左右发生过术语漂移：
 
 - `AgentWorkspace` 在部分界面被称为“空间”或“项目”；
 - Craft `Project` 在部分界面被称为“工作区”；
@@ -38,12 +38,12 @@ MyYoda 在 0.6.8 左右发生过术语漂移：
 | 工作区记忆 | Workspace `memory/` | 跨项目的长期协作记忆 |
 | 项目记忆 | 现有 Project MEMORY 链路 | 本次保留，不与工作区记忆混称；未来是否退役另行决策 |
 
-“空间容器”不再是用户可见实体，也不新增持久化模型。现有 `~/.myyoda`/`agent-workspaces/` 只作为实现上的全局配置根，不在产品界面中暴露为第三层对象。
+“空间容器”不再是用户可见实体，也不新增持久化模型。现有 `~/.guru`/`agent-workspaces/` 只作为实现上的全局配置根，不在产品界面中暴露为第三层对象。
 
 ## 运行与目录关系
 
 ```text
-~/.myyoda/
+~/.guru/
 └── agent-workspaces/
     └── {workspaceSlug}/              # 工作区
         ├── memory/                   # 工作区记忆
@@ -76,7 +76,7 @@ git worktree
 - `useProjectActions`：renderer-only 动作重命名为 `selectWorkspace` / `createWorkspace`；
 - 默认工作区、最后一个工作区、工作区删除提示统一使用工作区术语。
 
-删除说明必须明确：删除 MyYoda 托管的工作区数据、会话引用和配置；不会删除外部 `workingDirectory` 指向的用户项目目录。
+删除说明必须明确：删除 Guru 托管的工作区数据、会话引用和配置；不会删除外部 `workingDirectory` 指向的用户项目目录。
 
 ### 项目入口
 

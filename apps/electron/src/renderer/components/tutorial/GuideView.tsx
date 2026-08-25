@@ -1,5 +1,5 @@
 /**
- * MyYoda 使用指南：以功能地图和真实界面截图为主的入门页。
+ * Guru 使用指南：以功能地图和真实界面截图为主的入门页。
  * 具体问题交给 FAQ，完整指南负责建立整体心智模型。
  */
 
@@ -102,11 +102,11 @@ export function GuideView(): React.ReactElement {
           <div className="relative max-w-2xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-primary">
               <Sparkles className="size-3.5" />
-              MyYoda Guide
+              Guru Guide
             </div>
             <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">从一个真实问题开始。</h1>
             <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground md:text-base">
-              MyYoda 是本地优先的 AI 工作台。Chat 负责思考与表达，Code 负责执行与交付，项目（工作区）组织长期上下文，Agent 会把你的目标转化为可追踪的工作过程。
+              Guru 是本地优先的 AI 工作台。Chat 负责思考与表达，Code 负责执行与交付，项目（工作区）组织长期上下文，Agent 会把你的目标转化为可追踪的工作过程。
             </p>
             <div className="mt-7 flex flex-wrap gap-2.5 text-xs text-muted-foreground">
               {['Chat 思考', 'Code 执行', '项目/工作区', '记忆沉淀'].map((item) => (
@@ -151,7 +151,7 @@ export function GuideView(): React.ReactElement {
 
         <section className="mt-12">
           <div className="mb-5 flex items-end justify-between gap-4">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Feature map</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.02em]">认识 MyYoda 的工作单元</h2></div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Feature map</p><h2 className="mt-1 text-xl font-semibold tracking-[-0.02em]">认识 Guru 的工作单元</h2></div>
             <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:inline-flex">从左到右逐步深入 <ArrowRight className="size-3.5" /></span>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

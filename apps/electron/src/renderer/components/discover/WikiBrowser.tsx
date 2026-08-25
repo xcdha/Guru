@@ -9,7 +9,7 @@ import * as React from 'react'
 import { useAtom } from 'jotai'
 import { toast } from 'sonner'
 import { ArrowLeft, ChevronRight, CloudOff, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react'
-import type { WikiPageNode } from '@myyoda/shared'
+import type { WikiPageNode } from '@guru/shared'
 import {
   wikiCurrentPageAtom,
   wikiPageContentAtom,
@@ -20,7 +20,7 @@ import {
 import { ReleaseNoteMarkdown } from '@/components/settings/ReleaseNoteMarkdown'
 
 /** GitHub Wiki 网页地址（空态外链用） */
-const WIKI_HTML_BASE = 'https://github.com/GeoffBao/MyYoda/wiki'
+const WIKI_HTML_BASE = 'https://github.com/xcdha/Guru/wiki'
 
 /** 拍平页面树（搜索用） */
 function flatten(nodes: WikiPageNode[]): WikiPageNode[] {

@@ -1,5 +1,5 @@
-import type { SDKMessage, SDKUserMessage } from '@myyoda/shared'
-import { groupIntoTurns, isUserInputMessage, type AssistantTurn, type MessageGroup } from '@myyoda/session-core'
+import type { SDKMessage, SDKUserMessage } from '@guru/shared'
+import { groupIntoTurns, isUserInputMessage, type AssistantTurn, type MessageGroup } from '@guru/session-core'
 
 export interface MessageGroupRenderCache {
   prefixLength: number

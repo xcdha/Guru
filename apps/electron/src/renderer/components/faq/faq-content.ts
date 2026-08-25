@@ -1,5 +1,5 @@
 /**
- * MyYoda FAQ 内容。
+ * Guru FAQ 内容。
  *
  * 这里保持为独立数据源，后续可以同时供新手引导、帮助中心和文档索引使用。
  */
@@ -21,7 +21,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
   {
     id: 'getting-started',
     topic: '开始使用',
-    description: '先理解 MyYoda 的几个核心概念。',
+    description: '先理解 Guru 的几个核心概念。',
     items: [
       {
         question: 'Chat、Code 和 Project 分别是什么？',
@@ -35,7 +35,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: '我可以只使用自己的模型 API 吗？',
-        answer: '可以。MyYoda 支持配置 Anthropic、OpenAI、Google、DeepSeek、智谱、MiniMax、通义千问、火山方舟（豆包）等渠道，也支持自定义 OpenAI 兼容端点。',
+        answer: '可以。Guru 支持配置 Anthropic、OpenAI、Google、DeepSeek、智谱、MiniMax、通义千问、火山方舟（豆包）等渠道，也支持自定义 OpenAI 兼容端点。',
         keywords: ['Provider', '模型', '自定义端点'],
       },
       {
@@ -72,7 +72,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: 'Agent 可以调用哪些工具？',
-        answer: '工具由连接器、技能和总览里的内置能力共同决定。连接器负责外部系统接入（底层可能是 MCP、API Key 或自定义 HTTP）；技能是全局 + 工作区 + 项目三层叠加；定时任务、协作、创建任务等是内置能力，不是连接器。社区市场提供 60+ 可安装技能。会话执行时右侧面板实时显示工具活动；遇到需要确认的操作，MyYoda 会先请求你的授权。',
+        answer: '工具由连接器、技能和总览里的内置能力共同决定。连接器负责外部系统接入（底层可能是 MCP、API Key 或自定义 HTTP）；技能是全局 + 工作区 + 项目三层叠加；定时任务、协作、创建任务等是内置能力，不是连接器。社区市场提供 60+ 可安装技能。会话执行时右侧面板实时显示工具活动；遇到需要确认的操作，Guru 会先请求你的授权。',
         keywords: ['连接器', '插件', '权限', '技能', '社区市场'],
       },
       {
@@ -87,7 +87,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: 'Pull Requests 工作流在哪里？',
-        answer: '代码会话的 Git 工作区提供独立的 Pull Requests 列表页：支持状态/参与度筛选、搜索，并可创建、查看、合并和评论 PR（需配置 GitHub 凭据）。提交时默认附带 MyYoda 标识，可在设置 → 通用关闭。',
+        answer: '代码会话的 Git 工作区提供独立的 Pull Requests 列表页：支持状态/参与度筛选、搜索，并可创建、查看、合并和评论 PR（需配置 GitHub 凭据）。提交时默认附带 Guru 标识，可在设置 → 通用关闭。',
         keywords: ['PR', 'Pull Request', 'GitHub', '合并', '评论'],
       },
       {
@@ -109,7 +109,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
     items: [
       {
         question: 'Project 和工作目录是什么关系？',
-        answer: 'Project（工作区）是 MyYoda 内的组织和上下文容器，工作目录是它实际读写文件的本地目录。新建项目时可选择本地文件夹绑定为工程目录（会话 cwd 与项目记忆落在此目录）；留空则为托管目录的空白项目。',
+        answer: 'Project（工作区）是 Guru 内的组织和上下文容器，工作目录是它实际读写文件的本地目录。新建项目时可选择本地文件夹绑定为工程目录（会话 cwd 与项目记忆落在此目录）；留空则为托管目录的空白项目。',
         keywords: ['工作目录', 'cwd', '文件夹', '工程目录'],
       },
       {
@@ -161,12 +161,12 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: '外部收录的 Skill 和本地托管的有什么区别？',
-        answer: '本地托管的 Skill 由 MyYoda 维护并保证兼容性；外部收录的 Skill 从原作者的 GitHub 仓库直接拉取安装，版本跟随上游更新。两者安装后使用方式一致。',
+        answer: '本地托管的 Skill 由 Guru 维护并保证兼容性；外部收录的 Skill 从原作者的 GitHub 仓库直接拉取安装，版本跟随上游更新。两者安装后使用方式一致。',
         keywords: ['外部', '托管', '上游'],
       },
       {
         question: '我想创建自己的 Skill 并分享，该怎么做？',
-        answer: '使用 skill-creator 从零创建或优化现有 Skill，完成后提交到 myyoda-skills 仓库的 PR。社区市场会自动拉取并通过版本号跟踪更新。',
+        answer: '使用 skill-creator 从零创建或优化现有 Skill，完成后提交到 guru-skills 仓库的 PR。社区市场会自动拉取并通过版本号跟踪更新。',
         keywords: ['创建', '分享', '贡献'],
       },
       {
@@ -202,7 +202,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
         keywords: ['Task', 'Kanban', '看板', '工作区'],
       },
       {
-        question: '自动任务需要 MyYoda 一直运行吗？',
+        question: '自动任务需要 Guru 一直运行吗？',
         answer: '需要。自动任务由本地应用调度，应用退出时不会在云端继续执行。每次运行都会保留状态、耗时和结果，方便回看失败原因。',
         keywords: ['定时任务', '调度', '运行历史'],
       },
@@ -251,13 +251,13 @@ export const FAQ_GROUPS: FaqGroup[] = [
     description: '连接团队协作入口和桌面工作流。',
     items: [
       {
-        question: '可以从飞书或钉钉使用 MyYoda 吗？',
+        question: '可以从飞书或钉钉使用 Guru 吗？',
         answer: '如果已配置对应的集成，可以接收消息、同步任务或发送通知。远程执行能力取决于当前部署和权限配置，不应把桌面端的全部能力默认视为可远程使用。',
         keywords: ['飞书', '钉钉', '远程'],
       },
       {
         question: 'CodeClaw 是做什么的？',
-        answer: 'CodeClaw 是 MyYoda 的桌面陪伴与状态展示能力，用来呈现 Agent 工作状态和主题化角色体验。它不替代 Project、Task 或 Agent 本身。',
+        answer: 'CodeClaw 是 Guru 的桌面陪伴与状态展示能力，用来呈现 Agent 工作状态和主题化角色体验。它不替代 Project、Task 或 Agent 本身。',
         keywords: ['CodeClaw', '主题', '状态'],
       },
     ],
@@ -306,7 +306,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: '视频是怎么播放的？需要下载吗？',
-        answer: '点「播放」直接在线流式播放（主进程代理转发，支持拖动进度条），不需要下载；在线播放失败时弹窗内提供「下载后播放」兜底和重试。想要离线观看或节省流量，可以点「下载」按钮缓存到本地（显示进度条），之后播放不再消耗流量。缓存保存在 MyYoda 本地数据目录中，可在卡片上「删除缓存」或到设置 → 磁盘管理一键清理。',
+        answer: '点「播放」直接在线流式播放（主进程代理转发，支持拖动进度条），不需要下载；在线播放失败时弹窗内提供「下载后播放」兜底和重试。想要离线观看或节省流量，可以点「下载」按钮缓存到本地（显示进度条），之后播放不再消耗流量。缓存保存在 Guru 本地数据目录中，可在卡片上「删除缓存」或到设置 → 磁盘管理一键清理。',
         keywords: ['视频', '流式', '播放', '缓存', '下载'],
       },
       {
@@ -331,7 +331,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         question: '下载的视频缓存在哪里？怎么删除？',
-        answer: '视频缓存在 MyYoda 本地数据目录的 discover/video-cache/ 下（每个视频一条，随版本更新自动清理旧版）。删除方式：官方精选里已缓存的视频卡片上有「删除缓存」按钮；也可以到设置 → 磁盘管理 →「发现内容缓存（视频）」一键清理全部。删除缓存不影响在线播放，需要时重新下载即可。',
+        answer: '视频缓存在 Guru 本地数据目录的 discover/video-cache/ 下（每个视频一条，随版本更新自动清理旧版）。删除方式：官方精选里已缓存的视频卡片上有「删除缓存」按钮；也可以到设置 → 磁盘管理 →「发现内容缓存（视频）」一键清理全部。删除缓存不影响在线播放，需要时重新下载即可。',
         keywords: ['删除', '缓存', '视频', '磁盘', '清理'],
       },
     ],
@@ -343,7 +343,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
     items: [
       {
         question: '我的数据默认保存在哪里？',
-        answer: 'MyYoda 优先使用本地文件保存设置、会话、Project 和附件，不依赖本地数据库。开发模式通常使用 ~/.myyoda-dev/，正式环境使用 ~/.myyoda/。',
+        answer: 'Guru 优先使用本地文件保存设置、会话、Project 和附件，不依赖本地数据库。开发模式通常使用 ~/.guru-dev/，正式环境使用 ~/.guru/。',
         keywords: ['本地优先', '存储', 'JSONL'],
       },
       {
@@ -357,7 +357,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
         keywords: ['权限', '安全', '确认', '边界'],
       },
       {
-        question: 'MyYoda 如何保护我的文件安全？',
+        question: 'Guru 如何保护我的文件安全？',
         answer: 'v0.8.0 全面加固了文件安全：Agent 上传拒绝路径穿越和符号链接绕过；IPC 通信收窄了授权根范围；存储清理在索引损坏时 fail-closed 不再误删；工作区元数据和恢复区全面纳入白名单保护。',
         keywords: ['文件安全', '路径穿越', '符号链接', '清理'],
       },

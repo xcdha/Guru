@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { extractHttpTemplateParams } from '@/lib/http-template-params'
-import type { ChatToolMeta } from '@myyoda/shared'
+import type { ChatToolMeta } from '@guru/shared'
 
 interface CustomHttpConnectorDialogProps {
   open: boolean

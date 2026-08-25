@@ -10,8 +10,8 @@
 
 import { existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
-import { normalizeMcpTransportType } from '@myyoda/shared'
-import type { McpServerEntry } from '@myyoda/shared'
+import { normalizeMcpTransportType } from '@guru/shared'
+import type { McpServerEntry } from '@guru/shared'
 
 /**
  * MCP 验证结果

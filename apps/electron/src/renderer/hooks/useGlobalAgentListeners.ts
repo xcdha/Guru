@@ -70,8 +70,8 @@ import { channelsAtom } from '@/atoms/chat-atoms'
 import { previewFileMapAtom } from '@/atoms/preview-atoms'
 import type { NotificationSoundType } from '@/types/settings'
 import { toast } from 'sonner'
-import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, MyYodaEvent, AgentSessionMeta, ProviderType } from '@myyoda/shared'
-import { inferAgentSdkContextWindow, inferContextWindow } from '@myyoda/shared'
+import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, GuruEvent, AgentSessionMeta, ProviderType } from '@guru/shared'
+import { inferAgentSdkContextWindow, inferContextWindow } from '@guru/shared'
 import { buildExternalAgentRunActivation, shouldActivateExternalAgentRun } from '@/lib/external-agent-run'
 import { upsertAgentSession, mergeFetchedAgentSessions } from '@/lib/agent-session-list'
 import { buildTodoAgentPrompt } from '@/lib/todo-agent-prompt'
@@ -234,7 +234,7 @@ function payloadToLegacyEvents(payload: AgentStreamPayload): AgentEvent[] {
   // sdk_delta 的文本和 thinking 已直接写入 liveMessages；只保留工具启动控制状态，
   // 避免每个 token 都触发第二份 AgentStreamState 更新和渲染路径。
   if (payload.kind === 'sdk_delta') return payload.delta.deltas.flatMap(deltaToLegacyControlEvents)
-  if (payload.kind === 'myyoda_event') {
+  if (payload.kind === 'guru_event') {
     const evt = payload.event
     switch (evt.type) {
       case 'permission_request':
@@ -619,7 +619,7 @@ export function useGlobalAgentListeners(): void {
               message: { content: [{ type: 'text', text: status.rawUserMessage ?? status.userMessage }] },
               parent_tool_use_id: null,
               _createdAt: status.startedAt,
-              _myyodaLiveRunStartedAt: status.startedAt,
+              _guruLiveRunStartedAt: status.startedAt,
             } as unknown as SDKMessage
             const map = new Map(prev)
             map.set(status.sessionId, [...current, optimisticMessage])
@@ -692,7 +692,7 @@ export function useGlobalAgentListeners(): void {
       return sessions.find((s) => s.id === sessionId)?.title ?? '未命名会话'
     }
 
-    const activateExternalAgentRun = (event: Extract<MyYodaEvent, { type: 'external_run_started' }>): void => {
+    const activateExternalAgentRun = (event: Extract<GuruEvent, { type: 'external_run_started' }>): void => {
       const currentStreamState = store.get(agentStreamingStatesAtom).get(event.sessionId)
       if (!shouldActivateExternalAgentRun(currentStreamState, event.startedAt)) {
         return
@@ -896,11 +896,11 @@ export function useGlobalAgentListeners(): void {
 
         unstable_batchedUpdates(() => {
 
-        if (payload.kind === 'myyoda_event' && payload.event.type === 'external_run_started') {
+        if (payload.kind === 'guru_event' && payload.event.type === 'external_run_started') {
           activateExternalAgentRun(payload.event)
         }
 
-        const runStartedEvent = payload.kind === 'myyoda_event' && payload.event.type === 'run_started'
+        const runStartedEvent = payload.kind === 'guru_event' && payload.event.type === 'run_started'
           ? payload.event
           : null
         if (runStartedEvent) {
@@ -928,7 +928,7 @@ export function useGlobalAgentListeners(): void {
         }
 
         // 自动任务会话被用户接管（毕业）：向用户提示，后续定时运行将新建独立会话
-        if (payload.kind === 'myyoda_event' && payload.event.type === 'automation_graduated') {
+        if (payload.kind === 'guru_event' && payload.event.type === 'automation_graduated') {
           toast('已接管自动任务会话，后续定时运行将创建新会话。', { duration: 3000 })
           window.electronAPI.listAgentSessions()
             .then((sessions) => store.set(agentSessionsAtom, (prev) => mergeFetchedAgentSessions(prev, sessions)))
@@ -964,21 +964,21 @@ export function useGlobalAgentListeners(): void {
             const existingIndex = current.findIndex((message) => {
               const record = message as unknown as Record<string, unknown>
               if (record.uuid !== deltaPayload.uuid) return false
-              return deltaRunStartedAt == null || record._myyodaLiveRunStartedAt === deltaRunStartedAt
+              return deltaRunStartedAt == null || record._guruLiveRunStartedAt === deltaRunStartedAt
             })
             const existing = existingIndex >= 0 && current[existingIndex]?.type === 'assistant'
               ? current[existingIndex] as SDKAssistantMessage
               : createAssistantDeltaPreview(deltaPayload, {
                 ...(modelId ? { _channelModelId: modelId } : {}),
                 ...(provider ? { _channelProvider: provider } : {}),
-                ...(deltaRunStartedAt != null ? { _myyodaLiveRunStartedAt: deltaRunStartedAt } : {}),
+                ...(deltaRunStartedAt != null ? { _guruLiveRunStartedAt: deltaRunStartedAt } : {}),
               })
             const nextMessage = applyAssistantDeltasToPreview(existing, deltaPayload.deltas)
             // live-group-set 依赖 run 标记区分当前队列轮次；Delta 预览也必须携带它，
             // 否则 transcript 已有 assistant，但会被误判为非 live 并额外渲染 smooth fallback。
             const markedMessage = deltaRunStartedAt != null
-              && (nextMessage as unknown as Record<string, unknown>)._myyodaLiveRunStartedAt !== deltaRunStartedAt
-              ? { ...nextMessage, _myyodaLiveRunStartedAt: deltaRunStartedAt } as SDKAssistantMessage
+              && (nextMessage as unknown as Record<string, unknown>)._guruLiveRunStartedAt !== deltaRunStartedAt
+              ? { ...nextMessage, _guruLiveRunStartedAt: deltaRunStartedAt } as SDKAssistantMessage
               : nextMessage
             if (existingIndex >= 0) {
               const next = [...current]
@@ -1026,7 +1026,7 @@ export function useGlobalAgentListeners(): void {
             // 队列自动派发会在上一轮实时消息尚未落盘刷新时开始下一轮。
             // 标记每条实时消息所属 run，渲染层即可把上一轮立即视为完成并自动收起过程块。
             if (activeRunStartedAt != null) {
-              msgRecord._myyodaLiveRunStartedAt = activeRunStartedAt
+              msgRecord._guruLiveRunStartedAt = activeRunStartedAt
             }
 
             // 为 assistant 消息注入渠道信息，确保流式期间就绑定正确模型与 Agent SDK 窗口
@@ -1408,7 +1408,7 @@ export function useGlobalAgentListeners(): void {
           } else if (event.type === 'permission_mode_changed') {
             // 权限模式变更（如 Plan 模式退出后切换到完全自动）
             console.log(`[GlobalAgentListeners] 权限模式变更: ${event.mode}`)
-            store.set(agentPermissionModeMapAtom, (prev: Map<string, import('@myyoda/shared').MyYodaPermissionMode>) => {
+            store.set(agentPermissionModeMapAtom, (prev: Map<string, import('@guru/shared').GuruPermissionMode>) => {
               const next = new Map(prev)
               next.set(sessionId, event.mode)
               return next

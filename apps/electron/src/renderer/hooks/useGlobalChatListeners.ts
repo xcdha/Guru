@@ -25,7 +25,7 @@ import type {
   StreamErrorEvent,
   StreamToolActivityEvent,
   GenerateTitleInput,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 待生成标题的队列（按 conversationId 跟踪） */
 const pendingTitles = new Map<string, GenerateTitleInput>()

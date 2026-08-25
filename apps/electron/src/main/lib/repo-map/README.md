@@ -17,7 +17,7 @@ Aider repo map 的 TypeScript 实现）。**选择 vendor 化而非 npm 依赖**
 1. tree-renderer 用相对路径读文件 → ENOENT（加 root 基准）
 2. maxLines 预算在文件多时 maxContentLines=0 → 只剩省略号
 3. cache-manager 原用 node:sqlite → 改为 JSON 文件缓存（项目不采用本地数据库）
-4. WASM 运行时下载 → 内置优先 + `~/.myyoda/cache` 兜底（离线可用）
+4. WASM 运行时下载 → 内置优先 + `~/.guru/cache` 兜底（离线可用）
 5. web-tree-sitter ESM 入口在 esbuild cjs bundle 下 import.meta 失效 →
    build:main/watch:main 标为 `--external:web-tree-sitter`（运行时走 cjs 入口）
 6. 依赖图为空（纯定义/无跨文件引用）→ 退化按文件定义数排序
@@ -30,13 +30,13 @@ Aider repo map 的 TypeScript 实现）。**选择 vendor 化而非 npm 依赖**
 - **内置语言 wasm（10 种，2026-08-12）**：typescript/tsx/javascript/python/go/java/c/cpp/rust/php
   （≈7.1MB，离线可用；来源 npm registry tarball，已逐语言实测与内置 web-tree-sitter ABI 兼容）
   - **tree-sitter-dart 不内置**：npm 最新版（1.x）与内置 web-tree-sitter 0.26.12 ABI 不兼容
-    （Language.load 失败），dart 项目可手动放置兼容版 wasm 到 `~/.myyoda/cache/tree-sitter/`
+    （Language.load 失败），dart 项目可手动放置兼容版 wasm 到 `~/.guru/cache/tree-sitter/`
 - **CDN 回退链**：unpkg → jsdelivr → fastly.jsdelivr（24h 失败冷却 + 10s 超时 + 魔数校验）
-- **地图盘上缓存**（2026-08-12）：`~/.myyoda/cache/repo-map/maps/<sha1(HEAD)>.map`，
+- **地图盘上缓存**（2026-08-12）：`~/.guru/cache/repo-map/maps/<sha1(HEAD)>.map`，
   同 HEAD 的多 worktree 会话/多实例共享（key=HEAD 而非 cwd，避免每个 worktree 重复全量扫描）；
   LRU 200 个文件；唯一 tmp + 目录锁安全写
 
 ## 缓存
 
 - 目录级：cwd + git HEAD（同一 worktree 多会话共享）
-- 文件级：`~/.myyoda/cache/repo-map/file-cache.json`（mtime 键 + LRU 3000 条上限）
+- 文件级：`~/.guru/cache/repo-map/file-cache.json`（mtime 键 + LRU 3000 条上限）

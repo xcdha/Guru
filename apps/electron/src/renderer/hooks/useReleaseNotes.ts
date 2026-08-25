@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
-import type { ReleaseNote } from '@myyoda/shared'
+import type { ReleaseNote } from '@guru/shared'
 import { lastSeenReleaseVersionAtom } from '@/atoms/release-notes-atoms'
 
 /** 从 package.json 构建时由 Vite define 注入 */

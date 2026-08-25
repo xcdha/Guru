@@ -25,7 +25,7 @@ interface OnboardingViewProps {
   onComplete: (action?: OnboardingCompleteAction) => void
 }
 
-const TUTORIAL_ASSETS_BASE = 'https://github.com/GeoffBao/MyYoda/releases/download/tutorial-assets'
+const TUTORIAL_ASSETS_BASE = 'https://github.com/xcdha/Guru/releases/download/tutorial-assets'
 
 export function OnboardingView({ onComplete }: OnboardingViewProps) {
   const [step, setStep] = useState<'welcome' | 'workspace' | 'environment'>('welcome')
@@ -69,7 +69,7 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
       {step === 'welcome' && (
         <>
           <div className="mb-10 text-center">
-            <h1 className="text-4xl font-bold mb-3">欢迎使用 MyYoda</h1>
+            <h1 className="text-4xl font-bold mb-3">欢迎使用 Guru</h1>
             <p className="text-base text-muted-foreground max-w-md">
               面向研发组织的 AI Agent 工作台，整合 Chat、Code 两种工作模式
             </p>
@@ -84,7 +84,7 @@ export function OnboardingView({ onComplete }: OnboardingViewProps) {
               className="w-full rounded-xl border border-border/30 shadow-lg"
               style={{ aspectRatio: '16/9' }}
             >
-              <source src={`${TUTORIAL_ASSETS_BASE}/myyoda-promo-30s.mp4`} type="video/mp4" />
+              <source src={`${TUTORIAL_ASSETS_BASE}/guru-promo-30s.mp4`} type="video/mp4" />
             </video>
           </div>
 

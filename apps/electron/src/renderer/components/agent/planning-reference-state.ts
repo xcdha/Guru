@@ -1,4 +1,4 @@
-import type { CalendarEvent, Todo } from '@myyoda/shared'
+import type { CalendarEvent, Todo } from '@guru/shared'
 
 export type PlanningReferenceType = 'todo' | 'calendar_event'
 

@@ -5,7 +5,7 @@
  * Conductor 调度就绪节点、发射子 session、监听完成、驱动看板状态。
  *
  * 参照 OSS: packages/server-core/src/tasks/TaskRunner.ts
- * 适配: @craft-agent/ → @myyoda/；CreateSessionOptions/SessionCompletionEvent 本地类型
+ * 适配: @craft-agent/ → @guru/；CreateSessionOptions/SessionCompletionEvent 本地类型
  */
 import { randomUUID } from 'node:crypto'
 import {
@@ -14,9 +14,9 @@ import {
   MAX_REPAIR_ATTEMPTS_CAP,
   type TaskSpec,
   type TaskNode,
-} from '@myyoda/shared/tasks/schema'
-import { interpolateRefs, type NodeOutput } from '@myyoda/shared/tasks/refs'
-import { materializeDeps } from '@myyoda/shared/tasks/validate'
+} from '@guru/shared/tasks/schema'
+import { interpolateRefs, type NodeOutput } from '@guru/shared/tasks/refs'
+import { materializeDeps } from '@guru/shared/tasks/validate'
 import {
   appendRunLog,
   initializeRun,
@@ -32,15 +32,15 @@ import {
   loadTaskSpec,
   type RunLogEntry,
   type NodeRunState,
-} from '@myyoda/shared/tasks/storage'
-import type { ExpertPackage } from '@myyoda/shared/experts'
-import type { ExpertWorkspaceBinding } from '@myyoda/shared/experts/workspace-binding'
+} from '@guru/shared/tasks/storage'
+import type { ExpertPackage } from '@guru/shared/experts'
+import type { ExpertWorkspaceBinding } from '@guru/shared/experts/workspace-binding'
 import {
   formatExpertPreamble,
   mergeMcpIds,
   mergeSkillSlugs,
   resolveExpertId,
-} from '@myyoda/shared/experts'
+} from '@guru/shared/experts'
 import {
   describeTaskWorkingDirectoryBlock,
   type TaskWorkingDirectoryResult,

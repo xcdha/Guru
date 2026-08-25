@@ -1,9 +1,9 @@
 {
-  "name": "@myyoda/electron",
+  "name": "@guru/electron",
   "version": "0.11.0",
-  "description": "MyYoda next gen ai software with general agents - Electron App",
+  "description": "Guru next gen ai software with general agents - Electron App",
   "main": "dist/main.cjs",
-  "homepage": "https://github.com/GeoffBao/MyYoda",
+  "homepage": "https://github.com/xcdha/Guru",
   "author": {
     "name": "GeoffBao",
     "email": "erlichliu@gmail.com"
@@ -77,10 +77,10 @@
   "optionalDependencies": {},
   "devDependencies": {
     "@larksuiteoapi/node-sdk": "^1.65.0",
-    "@myyoda/core": "workspace:*",
-    "@myyoda/session-core": "workspace:*",
-    "@myyoda/shared": "workspace:*",
-    "@myyoda/ui": "workspace:*",
+    "@guru/core": "workspace:*",
+    "@guru/session-core": "workspace:*",
+    "@guru/shared": "workspace:*",
+    "@guru/ui": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-context-menu": "^2.2.16",
@@ -180,5 +180,5 @@
   "build": {
     "extends": "electron-builder.yml"
   },
-  "myyoda": {}
+  "guru": {}
 }

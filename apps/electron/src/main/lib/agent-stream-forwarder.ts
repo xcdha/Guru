@@ -1,4 +1,4 @@
-import type { AgentStreamEvent, AgentStreamPayload, SDKMessage } from '@myyoda/shared'
+import type { AgentStreamEvent, AgentStreamPayload, SDKMessage } from '@guru/shared'
 
 export const FOREGROUND_PARTIAL_INTERVAL_MS = 50
 export const BACKGROUND_PARTIAL_INTERVAL_MS = 250

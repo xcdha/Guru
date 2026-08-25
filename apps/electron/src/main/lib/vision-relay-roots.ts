@@ -6,7 +6,7 @@ import { homedir } from 'node:os'
  * 用户解读的图片往往就放在这里，或由 Agent 在工作目录内生成。
  *
  * 同时把会话专属 sandbox 目录纳入：用户拖拽/粘贴/上传到聊天的文件会被复制进
- * session sandbox（~/.myyoda/agent-workspaces/{slug}/{sessionId}/），它是本会话的
+ * session sandbox（~/.guru/agent-workspaces/{slug}/{sessionId}/），它是本会话的
  * 私有工作目录，自然应属于该会话 VisionRelay 的授权范围。不这样做时，project 模式
  * 下（agentCwd=项目目录）上传的图片会被 VISION_FILE_NOT_AUTHORIZED 拒绝。
  *

@@ -56,8 +56,8 @@ describe('agent-draft-persistence 删除清理', () => {
     store.set(agentSessionDraftsAtom, new Map([['s1', 'a'], ['s2', 'b']]))
     removeAgentDraft(store, 's1')
     expect(store.get(agentSessionDraftsAtom)).toEqual(new Map([['s2', 'b']]))
-    expect(localStorage.getItem('myyoda-agent-session-drafts')).toContain('s2')
-    expect(localStorage.getItem('myyoda-agent-session-drafts')).not.toContain('s1')
+    expect(localStorage.getItem('guru-agent-session-drafts')).toContain('s2')
+    expect(localStorage.getItem('guru-agent-session-drafts')).not.toContain('s1')
   })
 
   test('removeAgentDraft 不存在的会话不写盘', () => {
@@ -95,7 +95,7 @@ Expected: FAIL（模块不存在）。
 import type { Store } from 'jotai'
 import { agentSessionDraftsAtom } from '@/atoms/agent-atoms'
 
-const STORAGE_KEY = 'myyoda-agent-session-drafts'
+const STORAGE_KEY = 'guru-agent-session-drafts'
 /** 防抖窗口：停止输入多久后落盘 */
 const PERSIST_DEBOUNCE_MS = 1500
 
@@ -199,9 +199,9 @@ globalThis.localStorage = {
 **Step 5: Commit**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/lib/agent-draft-persistence.ts apps/electron/src/renderer/lib/__tests__/agent-draft-persistence.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): Agent 会话草稿持久化模块（防抖写盘 + 启动加载 + 清理）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): Agent 会话草稿持久化模块（防抖写盘 + 启动加载 + 清理）"
 ```
 
 ---
@@ -393,9 +393,9 @@ Expected: PASS（7 用例）。
 **Step 5: Commit**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/app-shell/draft-recall-model.ts apps/electron/src/renderer/components/app-shell/__tests__/draft-recall-model.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块扩展为未发送内容找回（去 draft 过滤 + visibleSessionIds 去重）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 未发送草稿区块扩展为未发送内容找回（去 draft 过滤 + visibleSessionIds 去重）"
 ```
 
 ---
@@ -503,9 +503,9 @@ const DraftSessionRecallSection = React.memo(function DraftSessionRecallSection(
 
 ```bash
 cd apps/electron && bun run typecheck
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 草稿区块可见集合去重 + 删除会话/工作区清理草稿"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 草稿区块可见集合去重 + 删除会话/工作区清理草稿"
 ```
 
 ---
@@ -544,9 +544,9 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 ```bash
 cd apps/electron && bun run typecheck
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/app-shell/AgentSessionItem.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 会话行未发送内容徽标（切片订阅，仅非当前会话显示）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 会话行未发送内容徽标（切片订阅，仅非当前会话显示）"
 ```
 
 ---
@@ -580,9 +580,9 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 ```bash
 cd apps/electron && bun run typecheck
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/tabs/TabBarItem.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(tabs): 未发送内容 Tab 圆点徽标（切片订阅）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(tabs): 未发送内容 Tab 圆点徽标（切片订阅）"
 ```
 
 ---
@@ -637,9 +637,9 @@ import { flushAgentDrafts, loadAgentSessionDrafts } from '@/lib/agent-draft-pers
 
 ```bash
 cd apps/electron && bun run typecheck
-cd /Users/admin/Workspace/ClaudeCode/MyYoda
+cd /Users/admin/Workspace/ClaudeCode/Guru
 git add apps/electron/src/renderer/components/agent/AgentView.tsx apps/electron/src/renderer/App.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 草稿防抖持久化接入输入框 + 启动加载与退出 flush"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 草稿防抖持久化接入输入框 + 启动加载与退出 flush"
 ```
 
 ---
@@ -665,7 +665,7 @@ Expected: 无错误。
 **Step 3: 复查提交与工作区**
 
 ```bash
-cd /Users/admin/Workspace/ClaudeCode/MyYoda && git log --oneline origin/fix/draft-recall-cross-project..HEAD && git status --short
+cd /Users/admin/Workspace/ClaudeCode/Guru && git log --oneline origin/fix/draft-recall-cross-project..HEAD && git status --short
 ```
 
 Expected: 6 个新 commit（Task 1-6），工作区干净。
@@ -683,4 +683,4 @@ Expected: 6 个新 commit（Task 1-6），工作区干净。
 
 **Step 5: 收尾**
 
-- 全部通过后：`git switch fix/draft-recall-cross-project`（等待 #103 合并）→ #103 合并后 `git rebase origin/main` 回 feat 分支，再开 PR（body 末尾加 `Made with [MyYoda](https://github.com/GeoffBao/MyYoda)`）。
+- 全部通过后：`git switch fix/draft-recall-cross-project`（等待 #103 合并）→ #103 合并后 `git rebase origin/main` 回 feat 分支，再开 PR（body 末尾加 `Made with [Guru](https://github.com/xcdha/Guru)`）。

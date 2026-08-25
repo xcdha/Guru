@@ -17,7 +17,7 @@
 - 企业级能力市场、组织审核、组织分发不进入本轮。
 - 连接器只收外部系统/工具接入；定时任务、协作子 Agent、创建任务、Planning Todo/Calendar 放总览“内置能力”。
 - 产品行为变化必须同步 README、Guide、FAQ。
-- 每个 commit 都带 MyYoda trailer。
+- 每个 commit 都带 Guru trailer。
 
 ## Recommended worktree setup
 
@@ -158,7 +158,7 @@ git add apps/electron/src/renderer/lib/plugin-center-model.ts \
   apps/electron/src/renderer/lib/plugin-center-model.test.ts \
   apps/electron/src/renderer/atoms/active-view.ts
 git commit -m "feat(plugins): define plugin center tab model" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -280,7 +280,7 @@ git add apps/electron/src/renderer/components/agent-skills/AgentSkillsView.tsx \
   apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx \
   apps/electron/src/renderer/components/app-shell/SidebarProjectsTab.tsx
 git commit -m "feat(plugins): update plugin center navigation" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -341,7 +341,7 @@ Expected: FAIL because model does not exist.
 Create `apps/electron/src/renderer/lib/plugin-overview-model.ts` with:
 
 ```ts
-import type { BuiltinMcpServerSummary, SkillMeta } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, SkillMeta } from '@guru/shared'
 
 export interface PluginOverviewInput {
   skills: SkillMeta[]
@@ -399,7 +399,7 @@ export function buildPluginOverviewModel(input: PluginOverviewInput): PluginOver
     ],
     builtinAbilities: [
       ...systemBuiltinServers.map((server) => ({ id: server.id, title: server.displayName, description: server.available ? '已启用' : (server.availabilityReason ?? '当前不可用') })),
-      { id: 'managed-browser', title: '受管浏览器', description: '由 MyYoda Runtime 托管，按需对 Agent 可用。' },
+      { id: 'managed-browser', title: '受管浏览器', description: '由 Guru Runtime 托管，按需对 Agent 可用。' },
       { id: 'planning', title: 'Todo / 日程', description: 'Pi Planning 工具，按任务场景对 Agent 可用。' },
     ],
   }
@@ -481,7 +481,7 @@ git add apps/electron/src/renderer/lib/plugin-overview-model.ts \
   apps/electron/src/renderer/components/agent-skills/PluginOverviewTab.tsx \
   apps/electron/src/renderer/components/agent-skills/AgentSkillsView.tsx
 git commit -m "feat(plugins): add plugin overview tab" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -499,14 +499,14 @@ Create `apps/electron/src/renderer/lib/connectors-model.test.ts`:
 ```ts
 import { describe, expect, test } from 'bun:test'
 import { buildConnectorItems, isSystemBuiltinAbility } from './connectors-model'
-import type { BuiltinMcpServerSummary, ChatToolMeta, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, ChatToolMeta, McpServerEntry } from '@guru/shared'
 
 function builtin(id: string, category: BuiltinMcpServerSummary['category'], enabled = true, available = true): BuiltinMcpServerSummary {
   return { id, name: id.replaceAll('-', '_'), displayName: id, description: `${id} desc`, category, enabled, available, tools: [] }
 }
 
 describe('connectors-model', () => {
-  test('excludes MyYoda runtime system abilities from connectors', () => {
+  test('excludes Guru runtime system abilities from connectors', () => {
     expect(isSystemBuiltinAbility('automation')).toBe(true)
     expect(isSystemBuiltinAbility('collaboration')).toBe(true)
     expect(isSystemBuiltinAbility('create-task')).toBe(true)
@@ -552,7 +552,7 @@ Expected: FAIL because model does not exist.
 Create `apps/electron/src/renderer/lib/connectors-model.ts`:
 
 ```ts
-import type { BuiltinMcpServerSummary, ChatToolMeta, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, ChatToolMeta, McpServerEntry } from '@guru/shared'
 
 export type ConnectorKind = 'builtin-mcp' | 'user-mcp' | 'api-tool' | 'custom-http'
 export type ConnectorStatus = 'enabled' | 'needs_config' | 'disabled'
@@ -675,7 +675,7 @@ bun test apps/electron/src/renderer/lib/connectors-model.test.ts
 git add apps/electron/src/renderer/lib/connectors-model.ts \
   apps/electron/src/renderer/lib/connectors-model.test.ts
 git commit -m "feat(connectors): add connector aggregation model" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -792,7 +792,7 @@ git add apps/electron/src/renderer/components/agent-skills/ConnectorCard.tsx \
   apps/electron/src/renderer/components/agent-skills/ConnectorDetailDialog.tsx \
   apps/electron/src/renderer/components/settings/ToolSettings.tsx
 git commit -m "feat(connectors): add connector card and detail dialog" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -814,7 +814,7 @@ import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { chatToolsAtom } from '@/atoms/chat-tool-atoms'
 import { buildConnectorItems, type ConnectorItem } from '@/lib/connectors-model'
-import type { BuiltinMcpServerSummary, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, McpServerEntry } from '@guru/shared'
 import { ConnectorCard } from './ConnectorCard'
 import { ConnectorDetailDialog } from './ConnectorDetailDialog'
 
@@ -894,7 +894,7 @@ bun run typecheck
 git add apps/electron/src/renderer/components/agent-skills/ConnectorsTab.tsx \
   apps/electron/src/renderer/components/agent-skills/AgentSkillsView.tsx
 git commit -m "feat(connectors): merge mcp and api into connectors tab" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -1025,7 +1025,7 @@ git add apps/electron/src/renderer/lib/plugin-scope-model.ts \
   apps/electron/src/renderer/components/agent-skills/PluginScopeSelector.tsx \
   apps/electron/src/renderer/components/agent-skills/AgentSkillsView.tsx
 git commit -m "feat(plugins): expose workspace and project plugin scopes" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -1143,7 +1143,7 @@ git add apps/electron/src/main/lib/agent-plugin-profile.ts \
   apps/electron/src/main/lib/agent-plugin-profile.test.ts \
   apps/electron/src/main/lib/agent-orchestrator.ts
 git commit -m "refactor(agent): extract effective plugin profile resolution" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -1239,7 +1239,7 @@ bun run typecheck
 git add README.md README.en.md apps/electron/resources/tutorial.md \
   apps/electron/src/renderer/components/faq/faq-content.ts
 git commit -m "docs(plugins): document plugin center v1" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 ---
@@ -1322,7 +1322,7 @@ Before claiming completion, cite exact command outputs from Steps 1–4.
 ```bash
 git add <fixed-files>
 git commit -m "fix(plugins): address plugin center verification issues" \
-  --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"
+  --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"
 ```
 
 If no fixes were needed, no final commit is required.

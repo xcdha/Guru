@@ -1,7 +1,7 @@
 /**
  * agent-cowork 纯函数（无 electron import 链，可独立单测）
  */
-import type { AgentMessage } from '@myyoda/shared'
+import type { AgentMessage } from '@guru/shared'
 
 /** 从 AgentMessage[] 提取最终文本（最后一条非空 assistant 消息） */
 export function extractFinalText(messages: AgentMessage[] | undefined): string {

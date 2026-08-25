@@ -6,7 +6,7 @@ import type {
   DiscoverContentState,
   DiscoverFeedItem,
   DiscoverManifest,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 export type ManifestValidation =
   | { ok: true; manifest: DiscoverManifest }

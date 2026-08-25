@@ -7,7 +7,7 @@
 import { execSync, spawnSync } from 'child_process'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
-import type { NodeRuntimeStatus } from '@myyoda/shared'
+import type { NodeRuntimeStatus } from '@guru/shared'
 import { getNodeInstallPathFromRegistry, getRegistryPathFromRegistry } from './windows-env'
 
 /**

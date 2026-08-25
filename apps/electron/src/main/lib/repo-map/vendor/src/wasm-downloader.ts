@@ -180,7 +180,7 @@ const wasmDownloadCooldown = new Map<string, number>()
 /**
  * 下载/加载语言 grammar WASM。
  *
- * 优先级：内置 WASM（resources/repo-map/wasm）→ 本地缓存（~/.myyoda/cache/tree-sitter）→ 网络下载（多源轮询）。
+ * 优先级：内置 WASM（resources/repo-map/wasm）→ 本地缓存（~/.guru/cache/tree-sitter）→ 网络下载（多源轮询）。
  */
 export async function downloadWasmForLanguage(language: string): Promise<Buffer | null> {
   const config = LANGUAGE_WASM_MAP[language]
@@ -200,7 +200,7 @@ export async function downloadWasmForLanguage(language: string): Promise<Buffer 
   }
 
   // 2. 本地缓存（之前下载过的）
-  const cacheDir = path.join(os.homedir(), '.myyoda', 'cache', 'tree-sitter')
+  const cacheDir = path.join(os.homedir(), '.guru', 'cache', 'tree-sitter')
   const wasmPath = path.join(cacheDir, config.file)
   try {
     const cached = await fs.readFile(wasmPath)

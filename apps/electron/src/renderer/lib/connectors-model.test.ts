@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { BuiltinMcpServerSummary, ChatToolInfo, ChatToolMeta, McpServerEntry } from '@myyoda/shared'
+import type { BuiltinMcpServerSummary, ChatToolInfo, ChatToolMeta, McpServerEntry } from '@guru/shared'
 import {
   buildConnectorItems,
   classifyConnectorBlocker,
@@ -120,7 +120,7 @@ describe('connectors-model', () => {
       description: '本地命令连接器，启动后向 Agent 暴露工具。',
     })
     expect(items.find((item) => item.id === 'builtin:nano-banana')).toMatchObject({
-      sourceLabel: 'MyYoda 内置',
+      sourceLabel: 'Guru 内置',
       typeLabel: 'MCP',
       nextActionLabel: '去配置',
     })

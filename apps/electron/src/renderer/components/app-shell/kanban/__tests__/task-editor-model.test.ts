@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { AgentSessionMeta, TaskGeneratedEventPayload } from '@myyoda/shared'
-import { TaskSpecSchema } from '@myyoda/shared/tasks/schema'
+import type { AgentSessionMeta, TaskGeneratedEventPayload } from '@guru/shared'
+import { TaskSpecSchema } from '@guru/shared/tasks/schema'
 import {
   buildTaskEditorSubmission,
   createTaskEditorDraft,

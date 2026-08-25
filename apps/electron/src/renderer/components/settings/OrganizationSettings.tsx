@@ -21,7 +21,7 @@ import type {
   OrganizationMember,
   OrganizationMembership,
   OrganizationSkill,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 interface OrganizationSettingsProps {
   /** 当前工作区 slug（Skills 导入目标） */
@@ -222,7 +222,7 @@ export function OrganizationSettings({ workspaceSlug }: OrganizationSettingsProp
 
               <SettingsInput
                 label="服务端地址"
-                description="部署的企业版 MyYoda Server 地址，如 http://your-org.example.com"
+                description="部署的企业版 Guru Server 地址，如 http://your-org.example.com"
                 value={serverUrl}
                 onChange={setServerUrl}
                 placeholder="http://localhost:8787"

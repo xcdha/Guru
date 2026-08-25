@@ -4,7 +4,7 @@ import { ArrowRight, Bot, FolderOpen, ListChecks, MessageSquare } from 'lucide-r
 import { agentSessionsAtom } from '@/atoms/agent-atoms'
 import { serverTaskSummariesAtom } from '@/atoms/kanban-atoms'
 import { Button } from '@/components/ui/button'
-import type { AgentWorkspace } from '@myyoda/shared'
+import type { AgentWorkspace } from '@guru/shared'
 import { LocalProjectBadge } from '@/components/agent-skills/LocalProjectBadge'
 
 interface ProjectOverviewTabProps {

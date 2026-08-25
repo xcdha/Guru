@@ -1,6 +1,6 @@
-import type { AgentSessionMeta } from '@myyoda/shared'
-import type { KanbanColumnDef } from '@myyoda/shared/projects'
-import type { TaskAggregateSummary, TaskWorkflow } from '@myyoda/shared/tasks'
+import type { AgentSessionMeta } from '@guru/shared'
+import type { KanbanColumnDef } from '@guru/shared/projects'
+import type { TaskAggregateSummary, TaskWorkflow } from '@guru/shared/tasks'
 
 /** 历史遗留的收件箱列 ID；列已下线，存量值由 board fallback 归入待办。 */
 export const INBOX_COLUMN_ID = 'inbox'
@@ -143,7 +143,7 @@ export interface KanbanModelOption {
 
 /**
  * 按渠道分组的可选模型（对应 craft 的 provider groups；
- * MyYoda 用 Channel 充当 connection，llmConnection = channelId）。
+ * Guru 用 Channel 充当 connection，llmConnection = channelId）。
  */
 export interface KanbanModelProviderGroup {
   provider: string

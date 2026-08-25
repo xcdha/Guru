@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { CalendarEvent, Todo } from '@myyoda/shared'
+import type { CalendarEvent, Todo } from '@guru/shared'
 import {
   buildPlanningReferenceItems,
   filterPlanningReferenceItems,

@@ -10,8 +10,8 @@ import type { Getter } from 'jotai'
 import type { Store } from 'jotai/vanilla/store'
 import { atomFamily } from 'jotai-family'
 import { atomWithStorage, selectAtom } from 'jotai/utils'
-import type { AgentSessionMeta, AgentEvent, AgentWorkspace, AgentPendingFile, RetryAttempt, MyYodaPermissionMode, PermissionRequest, AskUserRequest, ExitPlanModeRequest, ThinkingConfig, AgentEffort, SDKMessage, UnstagedChangesResult } from '@myyoda/shared'
-import { MYYODA_DEFAULT_PERMISSION_MODE } from '@myyoda/shared'
+import type { AgentSessionMeta, AgentEvent, AgentWorkspace, AgentPendingFile, RetryAttempt, GuruPermissionMode, PermissionRequest, AskUserRequest, ExitPlanModeRequest, ThinkingConfig, AgentEffort, SDKMessage, UnstagedChangesResult } from '@guru/shared'
+import { GURU_DEFAULT_PERMISSION_MODE } from '@guru/shared'
 import { calculateDockBadgeCount, countPendingRequests } from '@/lib/dock-badge-count'
 import type { AgentQueuedMessage } from '@/lib/agent-message-queue'
 import type { SessionFileChange } from '@/lib/session-file-changes'
@@ -511,7 +511,7 @@ export const workspaceGitDiffRefreshVersionAtom = atom(0)
 
 /** 侧面板是否打开：按 Agent 会话持久化，未存储的会话默认打开。 */
 export const agentSidePanelOpenMapAtom = atomWithStorage<Record<string, boolean>>(
-  'myyoda-agent-sidepanel-open-by-session',
+  'guru-agent-sidepanel-open-by-session',
   {},
   undefined,
   { getOnInit: true },
@@ -526,7 +526,7 @@ export const agentSidePanelOpenAtomFamily = atomFamily((sessionId: string) => at
 ))
 
 /** 侧面板宽度（全局共享，用户拖拽后持久化） */
-export const agentSidePanelWidthAtom = atomWithStorage<number>('myyoda-agent-sidepanel-width', 280)
+export const agentSidePanelWidthAtom = atomWithStorage<number>('guru-agent-sidepanel-width', 280)
 
 export type AgentSidePanelTab = 'files' | 'session' | 'workspace' | 'changes' | 'chat'
 
@@ -613,14 +613,14 @@ export const RECENTLY_MODIFIED_TTL_MS = 60_000
 // ===== 权限系统 Atoms =====
 
 /** 新会话默认权限模式 */
-export const agentDefaultPermissionModeAtom = atom<MyYodaPermissionMode>(MYYODA_DEFAULT_PERMISSION_MODE)
+export const agentDefaultPermissionModeAtom = atom<GuruPermissionMode>(GURU_DEFAULT_PERMISSION_MODE)
 
-/** Per-session 权限模式 Map — sessionId → MyYodaPermissionMode */
-export const agentPermissionModeMapAtom = atom<Map<string, MyYodaPermissionMode>>(new Map())
+/** Per-session 权限模式 Map — sessionId → GuruPermissionMode */
+export const agentPermissionModeMapAtom = atom<Map<string, GuruPermissionMode>>(new Map())
 
 /**
  * 按 sessionId 派生该 session 的持久化权限模式。
- * 返回 `undefined`（session 不存在或未设置）或具体的 MyYodaPermissionMode 字符串，
+ * 返回 `undefined`（session 不存在或未设置）或具体的 GuruPermissionMode 字符串，
  * jotai 用 === 比较，只有值真正变化时才通知下游——避免流式中无关字段更新引发 re-render。
  */
 export const sessionPersistedPermissionModeAtom = atomFamily((sessionId: string) =>

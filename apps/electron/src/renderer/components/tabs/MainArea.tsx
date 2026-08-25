@@ -7,7 +7,7 @@
  */
 
 import * as React from 'react'
-import type { BrowserViewState } from '@myyoda/shared'
+import type { BrowserViewState } from '@guru/shared'
 import { useAtomValue, useSetAtom, useAtom, useStore } from 'jotai'
 import {
   tabsAtom,
@@ -155,7 +155,7 @@ export function MainArea(): React.ReactElement {
   }, [browserSessionId, clearBrowserSessionState, publishBrowserState])
 
   // 终端状态推送（主进程 → 渲染）：打开/退出时更新 state map（key = terminalId）。
-  const publishTerminalState = React.useCallback((event: { state: import('@myyoda/shared').TerminalViewState }) => {
+  const publishTerminalState = React.useCallback((event: { state: import('@guru/shared').TerminalViewState }) => {
     setTerminalStateMap((previous) => { const next = new Map(previous); next.set(event.state.terminalId, event.state); return next })
     setTerminalOpenMap((previous) => { const next = new Map(previous); next.set(event.state.sessionId, true); return next })
   }, [setTerminalOpenMap, setTerminalStateMap])

@@ -2,7 +2,7 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
 import {
   isCodexFastModeSupportedModel,
   type AgentThinkingLevel,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 type ProviderPayload = Record<string, unknown>
 
@@ -71,7 +71,7 @@ export function createCodexFastModeExtension(settings: { fastMode?: boolean }): 
   }
 }
 
-/** Pi 内联扩展：MyYoda 不依赖用户安装第三方 Pi extension。 */
+/** Pi 内联扩展：Guru 不依赖用户安装第三方 Pi extension。 */
 export function createCodexRequestSettingsExtension(settings: CodexRequestSettings): (pi: ExtensionAPI) => void {
   return (pi) => {
     pi.on('before_provider_request', (event) => {

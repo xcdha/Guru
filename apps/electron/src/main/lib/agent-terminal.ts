@@ -23,7 +23,7 @@ import {
   type TerminalResizeInput,
   type TerminalViewState,
   type TerminalWriteInput,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { chmodSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { createRequire } from 'node:module'

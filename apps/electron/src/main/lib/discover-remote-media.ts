@@ -1,5 +1,5 @@
 /**
- * myyoda-remote:// 远程媒体转发协议（图片/头像）
+ * guru-remote:// 远程媒体转发协议（图片/头像）
  *
  * 讨论/教程里的 GitHub 图片（user-images / private-user-images / avatars 等）在渲染层
  * 由 <img> 直连加载，会绕过主进程的代理配置（本项目代理是 per-request 的 getFetchFn，
@@ -47,7 +47,7 @@ function pruneRegistry(): void {
   }
 }
 
-/** 校验并注册远程媒体 URL，返回 opaque 的 myyoda-remote:// URL；不允许则返回 null */
+/** 校验并注册远程媒体 URL，返回 opaque 的 guru-remote:// URL；不允许则返回 null */
 export function registerRemoteMediaUrl(remoteUrl: string): string | null {
   let parsed: URL
   try {
@@ -60,10 +60,10 @@ export function registerRemoteMediaUrl(remoteUrl: string): string | null {
   pruneRegistry()
   const token = randomUUID().replaceAll('-', '')
   mediaRegistry.set(token, { url: remoteUrl, createdAt: Date.now() })
-  return `myyoda-remote://${token}`
+  return `guru-remote://${token}`
 }
 
-/** myyoda-remote:// 协议处理器：代理感知拉取 + 响应头透传 */
+/** guru-remote:// 协议处理器：代理感知拉取 + 响应头透传 */
 export async function handleRemoteMediaRequest(request: Request): Promise<Response> {
   let url: URL
   try {

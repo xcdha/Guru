@@ -6,14 +6,14 @@ import {
   BUILTIN_EXPERT_TEAM_SQUADS,
   parseExpertJson,
   parseTeamJson,
-} from '@myyoda/shared/experts'
+} from '@guru/shared/experts'
 import type {
   ExpertAvatar,
   ExpertDefinition,
   ExpertManifest,
   ExpertPackage,
   TeamSquad,
-} from '@myyoda/shared/experts'
+} from '@guru/shared/experts'
 
 const EXPERT_JSON = 'expert.json'
 const TEAM_JSON = 'team.json'

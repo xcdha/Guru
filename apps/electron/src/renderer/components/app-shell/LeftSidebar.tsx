@@ -93,7 +93,7 @@ import { sessionListPreferenceAtom } from '@/atoms/session-list-preference-atoms
 import { WorkspaceLabelManagerDialog } from '@/components/labels/WorkspaceLabelManagerDialog'
 import { labelManagerOpenAtom, labelManagerWorkspaceRootAtom } from '@/atoms/label-manager-atoms'
 import { workspaceLabelsAtom, loadWorkspaceLabels } from '@/atoms/workspace-labels-atoms'
-import type { WorkspaceLabel } from '@myyoda/shared/labels'
+import type { WorkspaceLabel } from '@guru/shared/labels'
 import { buildRecentSessionList } from './sidebar-session-views'
 import { selectDraftSessionsWithContent } from './draft-recall-model'
 import { removeAgentDraft } from '@/lib/agent-draft-persistence'
@@ -166,7 +166,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import type { ConversationMeta, AgentSessionMeta, AgentWorkspace, WorkspaceCapabilities, SessionGroup } from '@myyoda/shared'
+import type { ConversationMeta, AgentSessionMeta, AgentWorkspace, WorkspaceCapabilities, SessionGroup } from '@guru/shared'
 import type { KanbanProject } from './kanban/types'
 import { SidebarModule } from './SidebarModule'
 import { SidebarProjectsTab, type ProjectSessionHandlers } from './SidebarProjectsTab'
@@ -293,8 +293,8 @@ const PROJECT_SESSION_EXPAND_STEP = 20
 /** 非当前工作区组的空项目列表；模块级常量保证引用稳定，不破坏 React.memo */
 const SESSION_QUICK_SWITCH_HINT_DELAY_MS = 1000
 const SESSION_QUICK_SWITCH_LIMIT = 9
-const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'myyoda:session-quick-switch-keydown'
-const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'myyoda:session-quick-switch-keyup'
+const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'guru:session-quick-switch-keydown'
+const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'guru:session-quick-switch-keyup'
 
 const ACTIVE_SESSION_STATUSES: ReadonlySet<SessionIndicatorStatus> = new Set([
   'blocked',
@@ -715,7 +715,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
   const [activeTabId, setActiveTabId] = useAtom(activeTabIdAtom)
 
   const handleOpenGuide = React.useCallback((): void => {
-    const result = openTab(tabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'MyYoda 使用指南' })
+    const result = openTab(tabs, { type: 'tutorial', sessionId: TUTORIAL_TAB_ID, title: 'Guru 使用指南' })
     setTabs(result.tabs)
     setActiveTabId(result.activeTabId)
     setAutomationForm({ open: false, draft: null })
@@ -2746,7 +2746,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除工作区</AlertDialogTitle>
           <AlertDialogDescription>
-            将删除「{pendingDeleteWorkspace?.name ?? '该工作区'}」及其绑定的所有会话、自动任务、MCP、Skills、工作区文件和 MyYoda 托管目录。附加目录、附加文件和项目绑定的外部工作目录只会移除引用，不会删除原始文件。Todo 与日程记录不会被删除，但之后可能需要重新归类。删除后无法恢复。
+            将删除「{pendingDeleteWorkspace?.name ?? '该工作区'}」及其绑定的所有会话、自动任务、MCP、Skills、工作区文件和 Guru 托管目录。附加目录、附加文件和项目绑定的外部工作目录只会移除引用，不会删除原始文件。Todo 与日程记录不会被删除，但之后可能需要重新归类。删除后无法恢复。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
-import type { BrowserViewState } from '@myyoda/shared'
+import type { BrowserViewState } from '@guru/shared'
 import { ArrowLeft, ArrowRight, ExternalLink, Globe2, LoaderCircle, Minus, Plus, RefreshCw, ShieldAlert, Square, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -234,9 +234,9 @@ export function BrowserPanel({ sessionId, state, onMinimize, onClose, isClosing 
             <AlertDialogTitle className="text-balance">首次使用受管浏览器</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left leading-6">
-                <p>MyYoda 可让 Agent 在浏览器中读取、搜索、点击和输入。部分平台可能将这些行为或高频操作识别为自动化活动。</p>
+                <p>Guru 可让 Agent 在浏览器中读取、搜索、点击和输入。部分平台可能将这些行为或高频操作识别为自动化活动。</p>
                 <p>这可能导致验证码、限流、功能限制、账号风控，严重时可能造成账号处罚或封禁。请自行了解并遵守目标平台规则，并自行承担相应风险。</p>
-                <p className="text-xs">MyYoda 不会保证第三方平台接受这些操作；请避免不必要的高频互动，并在重要操作前核对页面状态。</p>
+                <p className="text-xs">Guru 不会保证第三方平台接受这些操作；请避免不必要的高频互动，并在重要操作前核对页面状态。</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

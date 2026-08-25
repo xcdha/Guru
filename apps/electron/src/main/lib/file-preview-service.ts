@@ -12,7 +12,7 @@ import { createRequire } from 'node:module'
 import { createHash } from 'node:crypto'
 import AdmZip from 'adm-zip'
 import { DOMParser } from '@xmldom/xmldom'
-import type { OfficePreviewResult } from '@myyoda/shared'
+import type { OfficePreviewResult } from '@guru/shared'
 
 const require = createRequire(__filename)
 const PDFJS_PACKAGE = 'pdfjs-dist'
@@ -29,7 +29,7 @@ const MAX_PPTX_SLIDES = 80
 // ─── 临时文件 ───
 
 function getPreviewTmpDir(): string {
-  const dir = join(tmpdir(), 'myyoda-preview')
+  const dir = join(tmpdir(), 'guru-preview')
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
@@ -48,7 +48,7 @@ function writeTempHtml(html: string): string {
 
 /** 清理所有临时预览文件 */
 export function cleanPreviewTmpDir(): number {
-  const dir = join(tmpdir(), 'myyoda-preview')
+  const dir = join(tmpdir(), 'guru-preview')
   if (!existsSync(dir)) return 0
   let count = 0
   try {
@@ -589,13 +589,13 @@ export function resolveAndReadFile(filePath: string, basePaths?: string[]): { re
   }
 }
 
-/** 仅解析文件路径（不读取内容），供图片等用 myyoda-file:// 协议加载的场景使用 */
+/** 仅解析文件路径（不读取内容），供图片等用 guru-file:// 协议加载的场景使用 */
 export function resolveFilePath(filePath: string, basePaths?: string[]): string | null {
   const safePath = resolveTargetPath(filePath, basePaths)
   return existsSync(safePath) ? safePath : null
 }
 
-/** 为内联 PDF 预览生成临时 HTML 文件（使用 myyoda-file:// 加载 PDF，无体积膨胀） */
+/** 为内联 PDF 预览生成临时 HTML 文件（使用 guru-file:// 加载 PDF，无体积膨胀） */
 export async function preparePdfPreview(filePath: string, basePaths?: string[]): Promise<{ resolvedPath: string; tmpHtmlUrl: string } | null> {
   const safePath = resolveTargetPath(filePath, basePaths)
   if (!existsSync(safePath)) return null
@@ -608,13 +608,13 @@ export async function preparePdfPreview(filePath: string, basePaths?: string[]):
   let standardFontDataUrl: string
   let registerFilePath: (path: string) => string
   try {
-    const { registerMyYodaDirectoryPath, registerMyYodaFilePath } = await import('./local-file-protocol')
-    registerFilePath = registerMyYodaFilePath
-    fileUrl = registerMyYodaFilePath(safePath)
-    pdfScriptUrl = registerMyYodaFilePath(require.resolve(`${PDFJS_PACKAGE}/build/pdf.min.mjs`))
-    pdfWorkerUrl = registerMyYodaFilePath(require.resolve(`${PDFJS_PACKAGE}/build/pdf.worker.min.mjs`))
+    const { registerGuruDirectoryPath, registerGuruFilePath } = await import('./local-file-protocol')
+    registerFilePath = registerGuruFilePath
+    fileUrl = registerGuruFilePath(safePath)
+    pdfScriptUrl = registerGuruFilePath(require.resolve(`${PDFJS_PACKAGE}/build/pdf.min.mjs`))
+    pdfWorkerUrl = registerGuruFilePath(require.resolve(`${PDFJS_PACKAGE}/build/pdf.worker.min.mjs`))
     const pdfPackageDir = dirname(require.resolve(`${PDFJS_PACKAGE}/package.json`))
-    standardFontDataUrl = `${registerMyYodaDirectoryPath(join(pdfPackageDir, 'standard_fonts'))}/`
+    standardFontDataUrl = `${registerGuruDirectoryPath(join(pdfPackageDir, 'standard_fonts'))}/`
   } catch (err) {
     console.error('[file-preview] preparePdfPreview asset resolution failed:', err)
     return null
@@ -738,7 +738,7 @@ function collectHtmlPreviewResources(safePath: string): string[] {
   return [...resources]
 }
 
-/** 为内联 HTML 预览注册文件所在目录的 myyoda-file:// URL，并仅授权文档引用的资源。 */
+/** 为内联 HTML 预览注册文件所在目录的 guru-file:// URL，并仅授权文档引用的资源。 */
 export async function prepareHtmlPreview(filePath: string, basePaths?: string[]): Promise<{ resolvedPath: string; tmpUrl: string } | null> {
   const safePath = resolveTargetPath(filePath, basePaths)
   if (!existsSync(safePath)) return null
@@ -746,9 +746,9 @@ export async function prepareHtmlPreview(filePath: string, basePaths?: string[])
   if (st.size > MAX_FILE_SIZE) return null
 
   try {
-    const { registerMyYodaDirectoryPath } = await import('./local-file-protocol')
-    const dirUrl = registerMyYodaDirectoryPath(dirname(safePath), collectHtmlPreviewResources(safePath))
-    // 目录 URL 形如 myyoda-file://{token}，拼接文件名后 iframe 可直接加载；
+    const { registerGuruDirectoryPath } = await import('./local-file-protocol')
+    const dirUrl = registerGuruDirectoryPath(dirname(safePath), collectHtmlPreviewResources(safePath))
+    // 目录 URL 形如 guru-file://{token}，拼接文件名后 iframe 可直接加载；
     // 页面内明确引用的 css/img 等资源可加载，未引用的 sibling 文件被拒绝。
     const tmpUrl = `${dirUrl}/${encodeURIComponent(basename(safePath))}`
     return { resolvedPath: safePath, tmpUrl }

@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-16-sidebar-features-auto-collapse-design.md`
 
-**执行环境说明:** 直接在 `main` 分支主工作区执行（小改动，无 worktree 需求）；所有 commit 追加 `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>` trailer。
+**执行环境说明:** 直接在 `main` 分支主工作区执行（小改动，无 worktree 需求）；所有 commit 追加 `Co-Authored-By: Guru <Guru@noreply.github.com>` trailer。
 
 ---
 
@@ -180,7 +180,7 @@ Expected: PASS（全部用例通过）
 
 ```bash
 git add apps/electron/src/renderer/components/app-shell/sidebar-features-model.ts apps/electron/src/renderer/components/app-shell/__tests__/sidebar-features-model.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 抽出功能组激活判定与显示过滤纯函数（含单测）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 抽出功能组激活判定与显示过滤纯函数（含单测）"
 ```
 
 ---
@@ -266,7 +266,7 @@ Expected: 无错误（`anyFeatureActiveValue` 已消费；`FEATURE_ITEM_KINDS` /
 
 ```bash
 git add apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 功能组双模式状态与抑制自动展开逻辑"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 功能组双模式状态与抑制自动展开逻辑"
 ```
 
 ---
@@ -344,7 +344,7 @@ Expected: 无错误（Task 2 遗留的未使用 import 此时全部被消费）
 
 ```bash
 git add apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 功能组菜单/指示模式渲染过滤与点击后自动收起"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 功能组菜单/指示模式渲染过滤与点击后自动收起"
 ```
 
 ---
@@ -382,7 +382,7 @@ Expected: 无错误
 
 ```bash
 git add apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(sidebar): 功能组展开时点击外部自动收起"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(sidebar): 功能组展开时点击外部自动收起"
 ```
 
 ---
@@ -418,5 +418,5 @@ Run: `bun run dev`（若需要构建主进程再启动，按 README dev 流程�
 
 ```bash
 git add <files>
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fix(sidebar): 功能组自动折叠手动验证修复"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "fix(sidebar): 功能组自动折叠手动验证修复"
 ```

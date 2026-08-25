@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import * as os from 'node:os'
 import { join } from 'node:path'
-import { serializeCodexCredentials, serializeClaudeOAuthCredentials } from '@myyoda/shared'
+import { serializeCodexCredentials, serializeClaudeOAuthCredentials } from '@guru/shared'
 import { mockElectronModule } from './__tests__/electron-mock'
 
 type ChannelManagerModule = typeof import('./channel-manager')
@@ -10,7 +10,7 @@ type ChannelManagerModule = typeof import('./channel-manager')
 let channelManager: ChannelManagerModule
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 
 mockElectronModule({
   app: {
@@ -25,7 +25,7 @@ mock.module('node:os', () => ({
 }))
 
 function writeChannels(channels: unknown[]): void {
-  const configDir = join(tempHome, '.myyoda')
+  const configDir = join(tempHome, '.guru')
   mkdirSync(configDir, { recursive: true })
   writeFileSync(
     join(configDir, 'channels.json'),
@@ -35,15 +35,15 @@ function writeChannels(channels: unknown[]): void {
 }
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-channel-runtime-key-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-channel-runtime-key-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
-  process.env.MYYODA_DEV = '0'
+  delete process.env.GURU_DEV
+  process.env.GURU_DEV = '0'
   channelManager = await import('./channel-manager')
 })
 
 beforeEach(() => {
-  rmSync(join(tempHome, '.myyoda'), { recursive: true, force: true })
+  rmSync(join(tempHome, '.guru'), { recursive: true, force: true })
 })
 
 afterAll(() => {
@@ -53,9 +53,9 @@ afterAll(() => {
     process.env.HOME = originalHome
   }
   if (originalMyyodaDev === undefined) {
-    delete process.env.MYYODA_DEV
+    delete process.env.GURU_DEV
   } else {
-    process.env.MYYODA_DEV = originalMyyodaDev
+    process.env.GURU_DEV = originalMyyodaDev
   }
   rmSync(tempHome, { recursive: true, force: true })
 })

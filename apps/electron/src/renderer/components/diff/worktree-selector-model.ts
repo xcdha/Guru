@@ -2,7 +2,7 @@
  * WorktreeSelector 的纯模型函数：detached 判定、展示名、排序、折叠判定。
  * 与组件分离以便单测；UI 展示逻辑都集中在这里。
  */
-import type { WorktreeInfo } from '@myyoda/shared'
+import type { WorktreeInfo } from '@guru/shared'
 
 /** detached HEAD 的 worktree 通常由外部工具（Claude Code 等）自动生成，对"文件改动"面板是噪音 */
 export function isDetached(wt: WorktreeInfo): boolean {

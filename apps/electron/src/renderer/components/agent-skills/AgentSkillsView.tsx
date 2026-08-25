@@ -10,7 +10,7 @@
  * - 内容：各插件能力卡片/列表，点击打开详情抽屉；记忆复用 WorkspaceMemoryTab
  *
  * 作用域真实规则（不要写成「Workspace 默认 MCP + Project 覆盖」）：
- * - MCP：全局 ~/.myyoda/mcp.json（所有工作区共享）；仅当项目 hasProjectMcpServers 时整份替换。
+ * - MCP：全局 ~/.guru/mcp.json（所有工作区共享）；仅当项目 hasProjectMcpServers 时整份替换。
  * - Skills：全局 + 工作区 + 项目三层 overlay；项目层只在 hasProjectSkills 时出现。
  * - Chat tools / builtin MCP / 专家 / 专家团：全局，与选择器无关。
  * - Memory：工作区级，选择器不改变记忆页。
@@ -48,7 +48,7 @@ import {
   type PluginScope,
   type PluginScopeFlags,
 } from '@/lib/plugin-scope-model'
-import type { GlobalScopeReviewHints, McpServerEntry, SkillMeta } from '@myyoda/shared'
+import type { GlobalScopeReviewHints, McpServerEntry, SkillMeta } from '@guru/shared'
 import { useAgentSkillsData, getSkillKey } from './useAgentSkillsData'
 import { PluginOverviewTab } from './PluginOverviewTab'
 import { PluginScopeSelector } from './PluginScopeSelector'
@@ -814,7 +814,7 @@ function SkillsTab({
       <EmptyState
         icon={<Blocks className="size-8 text-foreground/30" />}
         title="暂无 Skill"
-        hint={isProjectScope ? '可以让 MyYoda 帮你联网查找并安装 Skill，或点击下方按钮从工作区共享配置/其他项目导入。' : '可以在 Project 模式下让 MyYoda 帮你联网查找并安装 Skill，或点击下方按钮从其他工作区导入。'}
+        hint={isProjectScope ? '可以让 Guru 帮你联网查找并安装 Skill，或点击下方按钮从工作区共享配置/其他项目导入。' : '可以在 Project 模式下让 Guru 帮你联网查找并安装 Skill，或点击下方按钮从其他工作区导入。'}
         action={
           <button
             type="button"

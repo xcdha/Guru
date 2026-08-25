@@ -1,5 +1,5 @@
 /**
- * @myyoda/shared - Shared types, configs and utilities
+ * @guru/shared - Shared types, configs and utilities
  */
 
 export * from './types/index'

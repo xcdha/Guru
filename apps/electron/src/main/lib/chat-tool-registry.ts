@@ -8,8 +8,8 @@
  * 提供统一接口获取启用的工具定义和系统提示词。
  */
 
-import type { ToolDefinition, ToolParameterProperty } from '@myyoda/core'
-import type { ChatToolInfo, ChatToolMeta } from '@myyoda/shared'
+import type { ToolDefinition, ToolParameterProperty } from '@guru/core'
+import type { ChatToolInfo, ChatToolMeta } from '@guru/shared'
 import { getChatToolsConfig } from './chat-tool-config'
 import {
   WEB_SEARCH_TOOL_META,

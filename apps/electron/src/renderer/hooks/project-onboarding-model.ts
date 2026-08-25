@@ -7,7 +7,7 @@
  */
 
 export function getProjectOnboardingStorageKey(workspaceId: string): string {
-  return `myyoda:workspace:${workspaceId}:projectOnboardingSeen`
+  return `guru:workspace:${workspaceId}:projectOnboardingSeen`
 }
 
 /**

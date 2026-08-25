@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useAtom, useSetAtom } from 'jotai'
 import { CloudOff, ArrowLeft, ExternalLink, Loader2, MessageSquare, Plus, RefreshCw, Sparkles } from 'lucide-react'
-import { DISCUSSION_CATEGORIES, type DiscussionComment, type DiscussionDetail, type DiscussionSummary } from '@myyoda/shared'
+import { DISCUSSION_CATEGORIES, type DiscussionComment, type DiscussionDetail, type DiscussionSummary } from '@guru/shared'
 import { cn } from '@/lib/utils'
 import {
   discoverCommunityUnreadAtom,
@@ -27,11 +27,11 @@ function formatDate(iso: string): string {
 }
 
 function buildDiscussionUrl(number: number): string {
-  return `https://github.com/GeoffBao/MyYoda/discussions/${number}`
+  return `https://github.com/xcdha/Guru/discussions/${number}`
 }
 
 function buildNewDiscussionUrl(categorySlug: string): string {
-  return `https://github.com/GeoffBao/MyYoda/discussions/new?category=${encodeURIComponent(categorySlug)}`
+  return `https://github.com/xcdha/Guru/discussions/new?category=${encodeURIComponent(categorySlug)}`
 }
 
 /** 讨论列表卡片 */

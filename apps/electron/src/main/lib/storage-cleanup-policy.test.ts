@@ -10,7 +10,7 @@ function createFixture(indexContent?: string, backupContent?: string, dataEntrie
   indexPath: string
   dataDir: string
 } {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-storage-cleanup-'))
+  const root = mkdtempSync(join(tmpdir(), 'guru-storage-cleanup-'))
   tempDirs.push(root)
   const indexPath = join(root, 'index.json')
   const dataDir = join(root, 'data')

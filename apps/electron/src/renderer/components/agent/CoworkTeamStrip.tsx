@@ -12,7 +12,7 @@ import { Bot, Crown, Loader2, Square, Users } from 'lucide-react'
 import { agentSessionsAtom, agentStreamingStatesAtom } from '@/atoms/agent-atoms'
 import { useOpenSession } from '@/hooks/useOpenSession'
 import { cn } from '@/lib/utils'
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 
 /** cowork 子会话的委派角色集合（区别于 collaboration explore/research 等） */
 const COWORK_ROLES = new Set(['expert-cowork', 'team-leader', 'team-member', 'team-summary'])

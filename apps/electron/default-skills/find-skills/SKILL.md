@@ -94,15 +94,15 @@ npx skills add <owner/repo@skill> -g -y
 
 The `-g` flag installs globally (user-level) and `-y` skips confirmation prompts.
 
-## MyYoda-Specific Installation Notes
+## Guru-Specific Installation Notes
 
 技能是插件的一类，在 **插件 → 技能** 管理。加载范围是 **全局 + 当前工作区 + 当前 Project** 三层叠加，不是「只读工作区 `skills/`」。
 
 优先让用户在应用内安装：打开 **插件 → 技能** 的社区市场。只有市场没有、必须从 skills.sh 拉的，才走 CLI。
 
-`npx skills add` 默认装到 `.agents/skills/` 等位置，**MyYoda 不会加载**。装完必须拷到叠加层之一：
+`npx skills add` 默认装到 `.agents/skills/` 等位置，**Guru 不会加载**。装完必须拷到叠加层之一：
 
-- 工作区：`~/.myyoda/agent-workspaces/<workspace>/skills/<skill-name>/`（开发模式 `~/.myyoda-dev/`）
+- 工作区：`~/.guru/agent-workspaces/<workspace>/skills/<skill-name>/`（开发模式 `~/.guru-dev/`）
 - 某个 Project 的技能目录（插件作用域选该 Project 后再导入）
 
 推荐流程：

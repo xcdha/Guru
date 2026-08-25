@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 /**
- * myyoda — MyYoda 命令行工具入口。
+ * guru — Guru 命令行工具入口。
  *
  * 用法：
- *   myyoda <command> [subcommand] [args] [--flags]
- *   myyoda session list|info|outline|search|export ...
+ *   guru <command> [subcommand] [args] [--flags]
+ *   guru session list|info|outline|search|export ...
  *
  * 全局 flag：
  *   --json            输出机器可读 JSON
- *   --config-dir DIR  指定 MyYoda 配置目录（默认 ~/.myyoda，MYYODA_DEV=1 → ~/.myyoda-dev）
- *   --dev             使用 ~/.myyoda-dev
+ *   --config-dir DIR  指定 Guru 配置目录（默认 ~/.guru，GURU_DEV=1 → ~/.guru-dev）
+ *   --dev             使用 ~/.guru-dev
  *
  * 设计：命令注册表驱动（registry.ts）。`session` 是一个命名空间，
  * 其下的 list/info/outline/search/export 各自在 commands/ 注册。扩面只加文件。
@@ -27,8 +27,8 @@ import './commands/search'
 import './commands/export'
 
 function printHelp(): void {
-  info('myyoda — MyYoda 会话渐进式读取 CLI\n')
-  info('用法: myyoda session <command> [args] [--flags]\n')
+  info('guru — Guru 会话渐进式读取 CLI\n')
+  info('用法: guru session <command> [args] [--flags]\n')
   info('命令:')
   for (const c of allCommands()) {
     info(`  ${c.usage.padEnd(64)} ${c.summary}`)
@@ -44,7 +44,7 @@ async function main(): Promise<number> {
     return EXIT_OK
   }
 
-  // 命名空间：当前只有 session，支持 `myyoda session <cmd>` 与直接 `myyoda <cmd>`
+  // 命名空间：当前只有 session，支持 `guru session <cmd>` 与直接 `guru <cmd>`
   let rest = argv
   if (argv[0] === 'session') rest = argv.slice(1)
 
@@ -73,7 +73,7 @@ async function main(): Promise<number> {
   } catch (err) {
     if (err instanceof UsageError) {
       errorLine(err.message)
-      info(`用法: myyoda ${command.usage}`)
+      info(`用法: guru ${command.usage}`)
       return EXIT_USAGE
     }
     errorLine(err instanceof Error ? err.message : String(err))

@@ -1,6 +1,6 @@
 ---
 name: knowledge-maintenance
-description: 维护 MyYoda 工作区项目地图与长期协作知识。当用户说”记住””以后这样做””你又忘了”、用户直接表达或重复出现的稳定偏好/决策/纠错，或当前任务发现工作区 AGENTS.md 已过时时使用。将事实路由到工作区 AGENTS.md、memory/、Skill 或 Context；历史会话仅在用户明确授权后分批作为补证据。不要将会话流水账或单次推断写入长期知识。
+description: 维护 Guru 工作区项目地图与长期协作知识。当用户说”记住””以后这样做””你又忘了”、用户直接表达或重复出现的稳定偏好/决策/纠错，或当前任务发现工作区 AGENTS.md 已过时时使用。将事实路由到工作区 AGENTS.md、memory/、Skill 或 Context；历史会话仅在用户明确授权后分批作为补证据。不要将会话流水账或单次推断写入长期知识。
 version: "1.0.4"
 ---
 
@@ -13,7 +13,7 @@ version: "1.0.4"
 | 信号 | 位置 |
 | --- | --- |
 | 当前工作区如何运行、架构/目录/命令/验证/边界 | 工作区根 `AGENTS.md` |
-| MyYoda 执行环境、工作区流程、项目入口指针（不列已安装 Skills） | 工作区 `AGENTS.md` |
+| Guru 执行环境、工作区流程、项目入口指针（不列已安装 Skills） | 工作区 `AGENTS.md` |
 | 当前项目专属的架构、命令、决策、踩坑与约定 | 当前项目 Project Knowledge / `<project_memory_path>` |
 | 用户画像、协作偏好、纠错、跨项目经验、决策理由 | 工作区 `memory/` 的主题 Markdown |
 | 重复的可执行步骤 | Skill |

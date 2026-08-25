@@ -1,10 +1,10 @@
-import { inferReasoningTransport, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningProfile, type AgentSessionMeta, type AgentThinkingLevel, type ProviderType, type ReasoningCapability } from '@myyoda/shared'
+import { inferReasoningTransport, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningProfile, type AgentSessionMeta, type AgentThinkingLevel, type ProviderType, type ReasoningCapability } from '@guru/shared'
 import {
   DEFAULT_AGENT_THINKING_LEVEL,
   getSessionThinkingLevel,
   isAgentThinkingLevel,
   isOpenAIReasoningMaxSupportedModel,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import type { AppSettings } from '../../types'
 
 type ThinkingSettings = Pick<AppSettings, 'agentThinking' | 'agentEffort' | 'defaultThinkingLevel' | 'codingMode' | 'optimizedCoding'>

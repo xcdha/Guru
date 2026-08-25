@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(typeof __dirname !== 'undefined' ? __dirname : import.meta.url)
 
 /**
- * 解析 MyYoda 内置 repo-map 资源目录（queries / wasm）。
+ * 解析 Guru 内置 repo-map 资源目录（queries / wasm）。
  *
  * 优先级：
  * 1. 打包版：process.resourcesPath/repo-map（electron-builder extraResources）

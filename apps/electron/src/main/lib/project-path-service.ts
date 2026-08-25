@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
-import type { ProjectConfig } from '@myyoda/shared/projects'
+import type { ProjectConfig } from '@guru/shared/projects'
 import {
   createProject,
   ensureProjectWorkdir,
@@ -10,7 +10,7 @@ import {
 import {
   displayProjectPath,
   normalizeProjectPathForCompare,
-} from '@myyoda/shared/utils'
+} from '@guru/shared/utils'
 
 export type EffectiveCwdStatus = 'managed' | 'external' | 'unavailable'
 

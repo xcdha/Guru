@@ -1,8 +1,8 @@
-import { AGENT_IPC_CHANNELS } from '@myyoda/shared'
+import { AGENT_IPC_CHANNELS } from '@guru/shared'
 import type {
   AgentSendInput,
   AgentStreamCompletePayload,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 export type AgentStreamCompletionDetails = Omit<
   AgentStreamCompletePayload,

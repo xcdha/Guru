@@ -6,7 +6,7 @@
  */
 
 import * as React from 'react'
-import type { ReleaseNote } from '@myyoda/shared'
+import type { ReleaseNote } from '@guru/shared'
 import { RefreshCw, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { ReleaseNoteMarkdown } from './ReleaseNoteMarkdown'
 import { SettingsCard } from './primitives'

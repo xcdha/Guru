@@ -134,16 +134,16 @@ describe('社区市场服务 · 本地下载计数', () => {
   const { mkdtempSync, readFileSync, rmSync, existsSync } = require('node:fs')
 
   let tmpDir: string
-  const origPath = process.env.MYYODA_SKILL_STATS_LOCAL_PATH
+  const origPath = process.env.GURU_SKILL_STATS_LOCAL_PATH
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'cm-stats-test-'))
-    process.env.MYYODA_SKILL_STATS_LOCAL_PATH = join(tmpDir, 'community-market-stats.json')
+    process.env.GURU_SKILL_STATS_LOCAL_PATH = join(tmpDir, 'community-market-stats.json')
   })
 
   afterEach(() => {
-    if (origPath === undefined) delete process.env.MYYODA_SKILL_STATS_LOCAL_PATH
-    else process.env.MYYODA_SKILL_STATS_LOCAL_PATH = origPath
+    if (origPath === undefined) delete process.env.GURU_SKILL_STATS_LOCAL_PATH
+    else process.env.GURU_SKILL_STATS_LOCAL_PATH = origPath
     rmSync(tmpDir, { recursive: true, force: true })
   })
 

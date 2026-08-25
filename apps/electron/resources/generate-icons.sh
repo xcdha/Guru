@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MyYoda Icon Generation Script
+# Guru Icon Generation Script
 # Generates all required icon formats from icon-source.png / logos/mymind-menubar-icon.png
 # Requires: iconutil (macOS), magick (ImageMagick)
 # rsvg-convert 仅在缺少 icon-source.png、需要从 icon.svg 兜底生成时才用得到（可选）。
@@ -10,7 +10,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🎨 Generating MyYoda icons..."
+echo "🎨 Generating Guru icons..."
 
 # Check required tools
 if ! command -v magick &> /dev/null; then

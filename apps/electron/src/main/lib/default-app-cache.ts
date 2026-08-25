@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import type { DefaultAppInfo } from '@myyoda/shared'
+import type { DefaultAppInfo } from '@guru/shared'
 import { getDefaultAppsCachePath } from './config-paths'
 
 interface DefaultAppCacheEntry extends DefaultAppInfo {

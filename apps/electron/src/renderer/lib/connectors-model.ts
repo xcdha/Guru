@@ -4,7 +4,7 @@ import type {
   ChatToolInfo,
   ChatToolMeta,
   McpServerEntry,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 export type ConnectorKind = 'builtin-mcp' | 'user-mcp' | 'api-tool' | 'custom-http'
 export type ConnectorStatus =
@@ -244,7 +244,7 @@ export function buildConnectorItems(input: {
     name: server.displayName,
     description: server.description,
     categoryLabel: categoryLabelOfBuiltin(server.category),
-    sourceLabel: 'MyYoda 内置',
+    sourceLabel: 'Guru 内置',
     typeLabel: 'MCP' as const,
     enabled: server.enabled,
     available: server.available,
@@ -269,7 +269,7 @@ export function buildConnectorItems(input: {
       name: tool.meta.name,
       description: tool.meta.description,
       categoryLabel: categoryLabelOfTool(tool.meta),
-      sourceLabel: 'MyYoda 内置',
+      sourceLabel: 'Guru 内置',
       typeLabel: 'API' as const,
       enabled: tool.enabled,
       available: tool.available,

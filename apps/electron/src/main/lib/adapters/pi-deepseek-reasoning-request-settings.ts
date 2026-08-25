@@ -4,7 +4,7 @@ import {
   resolveReasoningProfile,
   type AgentThinkingLevel,
   type ReasoningProfile,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 type ProviderPayload = Record<string, unknown>
 

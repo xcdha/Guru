@@ -57,7 +57,7 @@ export function ReleaseNotesDialog({
     }
   }, [open, setLastSeen])
 
-  // 合并内容渲染完成后，滚动定位到指定版本标题（# MyYoda vX.Y.Z 更新 / # vX.Y.Z）
+  // 合并内容渲染完成后，滚动定位到指定版本标题（# Guru vX.Y.Z 更新 / # vX.Y.Z）
   React.useEffect(() => {
     if (!open || !content || !initialVersion || !contentRef.current) return
     const versionPattern = new RegExp(`v${escapeRegExp(initialVersion)}(?![\d.])`)
@@ -75,7 +75,7 @@ export function ReleaseNotesDialog({
       <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>更新日志</DialogTitle>
-          <DialogDescription>MyYoda 各版本更新内容</DialogDescription>
+          <DialogDescription>Guru 各版本更新内容</DialogDescription>
         </DialogHeader>
         {content === null && !error ? (
           <p className="text-sm text-muted-foreground flex items-center gap-2">

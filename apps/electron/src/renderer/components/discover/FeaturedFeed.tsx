@@ -10,7 +10,7 @@
 import * as React from 'react'
 import { useAtom, useAtomValue } from 'jotai'
 import { CloudOff, Download, ExternalLink, FileText, Link2, Loader2, Megaphone, Play, RefreshCw, Trash2, Video, WifiOff } from 'lucide-react'
-import type { DiscoverContentItem, DiscoverFeedItem, VideoDownloadState } from '@myyoda/shared'
+import type { DiscoverContentItem, DiscoverFeedItem, VideoDownloadState } from '@guru/shared'
 import { cn } from '@/lib/utils'
 import { discoverFeedAtom, videoDownloadStatesAtom } from '@/atoms/discover-atoms'
 import { useDiscoverFeed } from './use-discover-feed'

@@ -1,4 +1,4 @@
-import type { TaskWorkflow } from '@myyoda/shared/tasks'
+import type { TaskWorkflow } from '@guru/shared/tasks'
 import { INBOX_COLUMN_ID, type KanbanItem } from './types'
 
 export interface KanbanColumnDefinition {

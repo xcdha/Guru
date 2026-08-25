@@ -7,7 +7,7 @@ import { mockElectronModule } from './__tests__/electron-mock'
 // Windows 非开发者模式/非管理员下创建 symlink 会抛 EPERM，此时跳过 symlink 相关测试
 let symlinkSupported = true
 try {
-  const probeDir = mkdtempSync(join(os.tmpdir(), 'myyoda-symlink-probe-'))
+  const probeDir = mkdtempSync(join(os.tmpdir(), 'guru-symlink-probe-'))
   symlinkSync(join(probeDir, 'missing'), join(probeDir, 'link'), 'dir')
   rmSync(probeDir, { recursive: true, force: true })
 } catch {
@@ -23,7 +23,7 @@ let configPaths: ConfigPathsModule
 let projectRepositoryModule: ProjectRepositoryModule
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 
 mockElectronModule({
   app: {
@@ -38,10 +38,10 @@ mock.module('node:os', () => ({
 }))
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-agent-workspace-manager-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-agent-workspace-manager-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
-  process.env.MYYODA_DEV = '0'
+  delete process.env.GURU_DEV
+  process.env.GURU_DEV = '0'
   configPaths = await import('./config-paths')
   manager = await import('./agent-workspace-manager')
   projectRepositoryModule = await import('./project-repository')
@@ -60,9 +60,9 @@ afterAll(() => {
     process.env.HOME = originalHome
   }
   if (originalMyyodaDev === undefined) {
-    delete process.env.MYYODA_DEV
+    delete process.env.GURU_DEV
   } else {
-    process.env.MYYODA_DEV = originalMyyodaDev
+    process.env.GURU_DEV = originalMyyodaDev
   }
   rmSync(tempHome, { recursive: true, force: true })
 })
@@ -270,10 +270,10 @@ describe('默认工作区目录（应用设置）', () => {
 })
 
 describe('Agent 工作区删除边界', () => {
-  test('删除工作区只删除 MyYoda 托管目录，不删除项目绑定的外部工作目录', () => {
+  test('删除工作区只删除 Guru 托管目录，不删除项目绑定的外部工作目录', () => {
     manager.ensureDefaultWorkspace()
     const workspace = manager.createAgentWorkspace('客户项目')
-    const externalDir = mkdtempSync(join(os.tmpdir(), 'myyoda-external-project-'))
+    const externalDir = mkdtempSync(join(os.tmpdir(), 'guru-external-project-'))
     const marker = join(externalDir, 'KEEP.txt')
     writeFileSync(marker, 'keep', 'utf-8')
 
@@ -514,7 +514,7 @@ describe('项目级 Skills 目录解析（仅查看不创建）', () => {
   test('Given 本地目录绑定项目 When 仅调用 getProjectSkillsDir（未真正使用 Skills） Then 不在真实工作目录下创建 .context/skills/', () => {
     manager.ensureDefaultWorkspace()
     const workspace = manager.createAgentWorkspace('本地代码仓库项目')
-    const externalDir = mkdtempSync(join(os.tmpdir(), 'myyoda-project-view-only-'))
+    const externalDir = mkdtempSync(join(os.tmpdir(), 'guru-project-view-only-'))
     const project = projectRepositoryModule.projectRepository.createProject(workspace.id, {
       name: '外部仓库',
       workingDirectory: externalDir,

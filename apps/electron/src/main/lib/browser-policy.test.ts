@@ -32,8 +32,8 @@ describe('browser destination fallback', () => {
   })
 
   test('adds Bing fallback for search text but not explicit URLs', () => {
-    const query = encodeURIComponent('MyYoda release')
-    expect(resolveBrowserDestinationWithFallback('MyYoda release')).toEqual({
+    const query = encodeURIComponent('Guru release')
+    expect(resolveBrowserDestinationWithFallback('Guru release')).toEqual({
       url: `${GOOGLE_SEARCH_URL}?q=${query}`,
       fallbackUrl: `${BING_SEARCH_URL}?q=${query}`,
     })

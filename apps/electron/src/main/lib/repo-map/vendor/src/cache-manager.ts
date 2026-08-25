@@ -9,7 +9,7 @@ import logger from './logger';
 /**
  * 符号缓存（JSON 文件实现）。
  *
- * 遵循 MyYoda「不采用本地数据库方案」的项目原则，用单文件 JSON 存储
+ * 遵循 Guru「不采用本地数据库方案」的项目原则，用单文件 JSON 存储
  * file_path → { mtime, tags } 的映射；内存 Map 加速，变更后原子落盘。
  *
  * 防膨胀设计（2026-08-11 修复）：
@@ -28,8 +28,8 @@ interface FileCacheEntry {
 const MAX_CACHE_ENTRIES = 3_000
 
 function getCacheDbPath(): string {
-  // 统一放在 MyYoda 配置目录下，避免散落在系统缓存
-  return path.join(os.homedir(), '.myyoda', 'cache', 'repo-map', 'file-cache.json')
+  // 统一放在 Guru 配置目录下，避免散落在系统缓存
+  return path.join(os.homedir(), '.guru', 'cache', 'repo-map', 'file-cache.json')
 }
 
 export class CacheManager {

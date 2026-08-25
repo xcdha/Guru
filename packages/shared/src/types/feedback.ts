@@ -2,7 +2,7 @@
  * 用户反馈（→ GitHub Issues）相关类型定义
  *
  * 反馈入口在「发现」面板反馈 tab 与「更新日志与帮助」弹层（ReleaseNotesPopover），
- * 提交到 GeoffBao/MyYoda 公开仓库的 Issues（fine-grained PAT 认证）。
+ * 提交到 xcdha/Guru 公开仓库的 Issues（fine-grained PAT 认证）。
  * 截图经非官方 user-attachments 端点上传（与网页端拖拽等效），URL 嵌入 issue 正文。
  * 设计契约见 docs/superpowers/specs/2026-08-17-discover-feedback-github-issues-wiki-design.md。
  */
@@ -23,7 +23,7 @@ export const FEEDBACK_TYPE_TITLE_PREFIX: Record<FeedbackType, string> = {
 }
 
 /** 反馈承载仓库（公开，issue 可见） */
-export const FEEDBACK_REPO = { owner: 'GeoffBao', repo: 'MyYoda' } as const
+export const FEEDBACK_REPO = { owner: 'GeoffBao', repo: 'Guru' } as const
 
 /** 详细描述最大长度（对齐 newmax） */
 export const FEEDBACK_DESCRIPTION_MAX_LENGTH = 5000
@@ -67,7 +67,7 @@ export interface FeedbackSubmitResult {
 export interface FeedbackGithubConfig {
   /** fine-grained PAT（github_pat_...，加密存储） */
   token?: string
-  /** 承载仓库（默认 GeoffBao/MyYoda） */
+  /** 承载仓库（默认 xcdha/Guru） */
   repo?: { owner: string; repo: string }
 }
 

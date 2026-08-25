@@ -2,8 +2,8 @@ import * as React from 'react'
 import { GitBranch, ChevronDown, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import type { WorktreeInfo, WorkspaceWorktreeRepo } from '@myyoda/shared'
-import { normalizePathForCompare } from '@myyoda/shared'
+import type { WorktreeInfo, WorkspaceWorktreeRepo } from '@guru/shared'
+import { normalizePathForCompare } from '@guru/shared'
 import { isDetached, shouldCollapseDetached, sortWorktreesForSelector, worktreeDisplayName } from './worktree-selector-model'
 
 interface WorktreeSelectorProps {

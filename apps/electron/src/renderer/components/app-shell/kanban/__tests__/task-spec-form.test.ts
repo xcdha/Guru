@@ -3,8 +3,8 @@ import {
   MAX_REPAIR_ATTEMPTS_CAP,
   PERMISSION_MODES,
   TaskSpecSchema,
-} from '@myyoda/shared/tasks/schema'
-import type { PermissionMode } from '@myyoda/shared/tasks/schema'
+} from '@guru/shared/tasks/schema'
+import type { PermissionMode } from '@guru/shared/tasks/schema'
 import {
   buildSpec,
   specToSubtasks,

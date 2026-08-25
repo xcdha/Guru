@@ -33,7 +33,7 @@ let configPaths: typeof import('../config-paths')
 let service: typeof import('../feedback-service')
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-feedback-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-feedback-'))
   configPaths = await import('../config-paths')
   service = await import('../feedback-service')
 })
@@ -102,12 +102,12 @@ function writeFakeScreenshot(name = 'shot.png'): string {
 }
 
 describe('testFeedbackConnection', () => {
-  test('成功：GET /repos/GeoffBao/MyYoda 返回 200', async () => {
+  test('成功：GET /repos/xcdha/Guru 返回 200', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
-        respond: async () => jsonResponse({ id: 12345, full_name: 'GeoffBao/MyYoda' }),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
+        respond: async () => jsonResponse({ id: 12345, full_name: 'xcdha/Guru' }),
       },
     ]) as unknown as typeof fetch
     try {
@@ -123,7 +123,7 @@ describe('testFeedbackConnection', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ message: 'Bad credentials' }, 401),
       },
     ]) as unknown as typeof fetch
@@ -140,7 +140,7 @@ describe('testFeedbackConnection', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ message: 'Forbidden' }, 403),
       },
     ]) as unknown as typeof fetch
@@ -157,7 +157,7 @@ describe('testFeedbackConnection', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ message: 'Not Found' }, 404),
       },
     ]) as unknown as typeof fetch
@@ -195,7 +195,7 @@ describe('testFeedbackConnection', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch
@@ -243,18 +243,18 @@ describe('submitFeedback', () => {
         respond: async () => jsonResponse({ url: 'https://github.com/user-attachments/assets/abc-123' }),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/labels'),
+        match: (url) => url.includes('/repos/xcdha/Guru/labels'),
         respond: async () => jsonResponse([{ name: 'bug' }, { name: 'enhancement' }]),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/issues'),
+        match: (url) => url.includes('/repos/xcdha/Guru/issues'),
         respond: async (_url, init) => {
           createdIssueBody = JSON.parse(String(init?.body)) as { title: string; body: string; labels: string[] }
-          return jsonResponse({ html_url: 'https://github.com/GeoffBao/MyYoda/issues/42' }, 201)
+          return jsonResponse({ html_url: 'https://github.com/xcdha/Guru/issues/42' }, 201)
         },
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch
@@ -266,12 +266,12 @@ describe('submitFeedback', () => {
         'darwin',
       )
       expect(result.success).toBe(true)
-      expect(result.issueUrl).toBe('https://github.com/GeoffBao/MyYoda/issues/42')
+      expect(result.issueUrl).toBe('https://github.com/xcdha/Guru/issues/42')
 
       expect(createdIssueBody).not.toBeNull()
       const body = createdIssueBody!
       expect(body.title.startsWith('[Bug 报告] ')).toBe(true)
-      expect(body.body).toContain('<!-- 来自 MyYoda 应用内反馈 -->')
+      expect(body.body).toContain('<!-- 来自 Guru 应用内反馈 -->')
       expect(body.body).toContain('![截图 1](https://github.com/user-attachments/assets/abc-123)')
       expect(body.body).toContain('**环境信息**：')
       expect(body.labels).toEqual(['bug'])
@@ -292,19 +292,19 @@ describe('submitFeedback', () => {
         respond: async () => jsonResponse({ message: 'boom' }, 500),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/labels'),
+        match: (url) => url.includes('/repos/xcdha/Guru/labels'),
         respond: async () => jsonResponse([{ name: 'bug' }]),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/issues'),
+        match: (url) => url.includes('/repos/xcdha/Guru/issues'),
         respond: async (_url, init) => {
           const body = JSON.parse(String(init?.body)) as { body: string }
           issueBodyText = body.body
-          return jsonResponse({ html_url: 'https://github.com/GeoffBao/MyYoda/issues/43' })
+          return jsonResponse({ html_url: 'https://github.com/xcdha/Guru/issues/43' })
         },
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch
@@ -330,28 +330,28 @@ describe('submitFeedback', () => {
     const bodies: Array<{ title: string; body: string; labels?: string[] }> = []
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/labels'),
+        match: (url) => url.includes('/repos/xcdha/Guru/labels'),
         respond: async () => jsonResponse([{ name: 'bug' }, { name: 'enhancement' }]),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/issues'),
+        match: (url) => url.includes('/repos/xcdha/Guru/issues'),
         respond: async (_url, init) => {
           postCalls += 1
           const body = JSON.parse(String(init?.body)) as { title: string; body: string; labels?: string[] }
           bodies.push(body)
           if (postCalls === 1) return jsonResponse({ message: 'Validation Failed' }, 422)
-          return jsonResponse({ html_url: 'https://github.com/GeoffBao/MyYoda/issues/44' })
+          return jsonResponse({ html_url: 'https://github.com/xcdha/Guru/issues/44' })
         },
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch
     try {
       const result = await service.submitFeedback({ type: 'bug', description: 'label 重试', screenshots: [] }, '0.10.8', 'darwin')
       expect(result.success).toBe(true)
-      expect(result.issueUrl).toBe('https://github.com/GeoffBao/MyYoda/issues/44')
+      expect(result.issueUrl).toBe('https://github.com/xcdha/Guru/issues/44')
       expect(postCalls).toBe(2)
       expect(bodies[0]?.labels).toEqual(['bug'])
       expect(bodies[1]?.labels).toBeUndefined()
@@ -371,15 +371,15 @@ describe('submitFeedback', () => {
         respond: async () => jsonResponse({ url: 'https://github.com/user-attachments/assets/def-456' }),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/labels'),
+        match: (url) => url.includes('/repos/xcdha/Guru/labels'),
         respond: async () => jsonResponse([{ name: 'bug' }]),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/issues'),
+        match: (url) => url.includes('/repos/xcdha/Guru/issues'),
         respond: async () => jsonResponse({ message: 'Server Error' }, 500),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch
@@ -408,15 +408,15 @@ describe('submitFeedback', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = scriptedFetch([
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/labels'),
+        match: (url) => url.includes('/repos/xcdha/Guru/labels'),
         respond: async () => jsonResponse([{ name: 'bug' }]),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda/issues'),
-        respond: async () => jsonResponse({ html_url: 'https://github.com/GeoffBao/MyYoda/issues/45' }),
+        match: (url) => url.includes('/repos/xcdha/Guru/issues'),
+        respond: async () => jsonResponse({ html_url: 'https://github.com/xcdha/Guru/issues/45' }),
       },
       {
-        match: (url) => url.includes('/repos/GeoffBao/MyYoda'),
+        match: (url) => url.includes('/repos/xcdha/Guru'),
         respond: async () => jsonResponse({ id: 12345 }),
       },
     ]) as unknown as typeof fetch

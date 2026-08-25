@@ -47,7 +47,7 @@ import {
   parseClaudeOAuthCredentials,
   isClaudeOAuthCredentialStale,
   parseXaiCredentials,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import type {
   Channel,
   ChannelCreateInput,
@@ -57,8 +57,8 @@ import type {
   FetchModelsResult,
   ProviderType,
   XaiOAuthDeviceCode,
-} from '@myyoda/shared'
-import { normalizeBaseUrl, resolveAnthropicMessagesUrl, resolveOpenAIChatCompletionsUrl, resolveOpenAIResponsesUrl } from '@myyoda/core'
+} from '@guru/shared'
+import { normalizeBaseUrl, resolveAnthropicMessagesUrl, resolveOpenAIChatCompletionsUrl, resolveOpenAIResponsesUrl } from '@guru/core'
 import { getProviderLogo } from '@/lib/model-logo'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -1172,7 +1172,7 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
                     <CheckCircle2 size={12} className="shrink-0" />
                     <span>已登录 ChatGPT 订阅{codexCredentials?.accountId ? `（账号 ${codexCredentials.accountId.slice(0, 8)}…）` : ''}</span>
                   </div>
-                ) : <div className="text-xs text-muted-foreground">MyYoda 会代理 token 请求；系统浏览器授权页仍需使用可访问 OpenAI 的网络。可改用设备码并在另一台设备完成授权。</div>}
+                ) : <div className="text-xs text-muted-foreground">Guru 会代理 token 请求；系统浏览器授权页仍需使用可访问 OpenAI 的网络。可改用设备码并在另一台设备完成授权。</div>}
               </div>
             ) : isXaiProvider ? (
               <div className="space-y-2">
@@ -1206,7 +1206,7 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
                     <CheckCircle2 size={12} className="shrink-0" />
                     <span>已登录 xAI（Grok）订阅</span>
                   </div>
-                ) : <div className="text-xs text-muted-foreground">MyYoda 会代理设备码与 token 请求；授权页由系统浏览器打开。若浏览器无可用代理，可扫码在另一台设备完成授权。</div>}
+                ) : <div className="text-xs text-muted-foreground">Guru 会代理设备码与 token 请求；授权页由系统浏览器打开。若浏览器无可用代理，可扫码在另一台设备完成授权。</div>}
               </div>
             ) : isClaudeOAuthProvider ? (
               <div className="space-y-2">
@@ -1638,7 +1638,7 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
               <div className="space-y-2">
                 <p>该地址并非当前供应商的官方默认 Base URL。中转站可能存在篡改对话内容和模型响应，存在中间人攻击、凭据泄露与隐私风险。</p>
                 <p>其协议适配也可能导致上下文窗口、工具调用、多模态或流式内容显示异常。请仅使用你信赖的服务，并先用非敏感内容测试。</p>
-                <p>MyYoda 仅作为本地 Agent 执行环境：配置、会话等本地数据均存储在你的设备上，MyYoda 本身不会额外构成数据风险。</p>
+                <p>Guru 仅作为本地 Agent 执行环境：配置、会话等本地数据均存储在你的设备上，Guru 本身不会额外构成数据风险。</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

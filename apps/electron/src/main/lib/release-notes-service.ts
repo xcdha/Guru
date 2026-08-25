@@ -5,7 +5,7 @@
  * 开发模式读源码目录，打包模式读 process.resourcesPath/release-notes
  * （electron-builder extraResources 注入）。
  *
- * 同时将 bundle 内容同步到 ~/.myyoda/release-notes/，供其他场景复用。
+ * 同时将 bundle 内容同步到 ~/.guru/release-notes/，供其他场景复用。
  */
 
 import { join } from 'path'
@@ -14,7 +14,7 @@ import {
   parseReleaseVersion,
   compareReleaseSemver,
   type ReleaseNote,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 是否为语义化版本文件名（如 "0.7.1.md"），排除 next.md 等辅助文件 */
 const VERSION_FILE_RE = /^\d+\.\d+\.\d+\.md$/
@@ -104,7 +104,7 @@ export function getCombinedReleaseNotes(): string {
     .join('\n\n---\n\n')
 }
 
-/** 初始化：将 bundle 的 release notes 同步到 ~/.myyoda/release-notes/ */
+/** 初始化：将 bundle 的 release notes 同步到 ~/.guru/release-notes/ */
 export function initializeReleaseNotes(): void {
   const { app } = require('electron') as typeof import('electron')
   const targetDir = join(app.getPath('userData'), 'release-notes')

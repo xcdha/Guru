@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { FileEntry } from '@myyoda/shared'
+import type { FileEntry } from '@guru/shared'
 import { classifyOutboxFile, groupOutboxFilesByType } from './outbox-file-grouping'
 
 function file(name: string): FileEntry {

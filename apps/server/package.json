@@ -1,7 +1,7 @@
 {
-  "name": "@myyoda/server",
+  "name": "@guru/server",
   "version": "0.1.0",
-  "description": "MyYoda 企业版 Skills 分发与协作注册中心",
+  "description": "Guru 企业版 Skills 分发与协作注册中心",
   "private": true,
   "type": "module",
   "scripts": {

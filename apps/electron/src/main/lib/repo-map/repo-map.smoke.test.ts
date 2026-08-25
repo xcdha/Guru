@@ -1,7 +1,7 @@
 /**
  * Repo Map 冒烟测试
  *
- * 用 MyYoda 仓库自身的 packages/shared/src/types 作为解析对象，
+ * 用 Guru 仓库自身的 packages/shared/src/types 作为解析对象，
  * 验证：核心 WASM 定位、queries 资源加载、符号提取、PageRank、渲染整链路。
  */
 import { describe, expect, test } from 'bun:test'

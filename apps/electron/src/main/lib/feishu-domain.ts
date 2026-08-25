@@ -1,4 +1,4 @@
-import type { FeishuDomain } from '@myyoda/shared'
+import type { FeishuDomain } from '@guru/shared'
 
 export const DEFAULT_FEISHU_DOMAIN: FeishuDomain = 'feishu'
 

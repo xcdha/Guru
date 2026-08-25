@@ -4,24 +4,24 @@
  * 负责 Electron 特定的操作：
  * - 查找渠道、解密 API Key
  * - 管理 AbortController
- * - 调用 @myyoda/core 的 Provider 适配器系统
+ * - 调用 @guru/core 的 Provider 适配器系统
  * - 桥接 StreamEvent → webContents.send()
  * - 持久化消息到 JSONL + 更新索引
  * - 模块化工具的 function calling 循环（通过 ChatToolRegistry + ChatToolExecutor）
  *
- * 纯逻辑（消息转换、SSE 解析、请求构建）已抽象到 @myyoda/core/providers。
+ * 纯逻辑（消息转换、SSE 解析、请求构建）已抽象到 @guru/core/providers。
  */
 
 import { randomUUID } from 'node:crypto'
 import type { WebContents } from 'electron'
-import { CHAT_IPC_CHANNELS } from '@myyoda/shared'
-import type { ChatSendInput, ChatMessage, GenerateTitleInput, FileAttachment, ChatToolActivity } from '@myyoda/shared'
+import { CHAT_IPC_CHANNELS } from '@guru/shared'
+import type { ChatSendInput, ChatMessage, GenerateTitleInput, FileAttachment, ChatToolActivity } from '@guru/shared'
 import {
   getAdapter,
   streamSSE,
   fetchTitle,
-} from '@myyoda/core'
-import type { ImageAttachmentData, ContinuationMessage } from '@myyoda/core'
+} from '@guru/core'
+import type { ImageAttachmentData, ContinuationMessage } from '@guru/core'
 import { listChannels, resolveChannelRuntimeApiKey } from './channel-manager'
 import { resolveTitleChannel, resolveTitleModel } from './title-model-selection'
 import { getSettings } from './settings-service'

@@ -1,4 +1,4 @@
-# MyYoda 用户反馈 → Notion 方案设计（评审 + 设计）
+# Guru 用户反馈 → Notion 方案设计（评审 + 设计）
 
 > 日期：2026-08-14
 > 状态：设计定稿，待实现
@@ -40,15 +40,15 @@
 
 | 资源 | 值 | 状态 |
 |---|---|---|
-| Connection（内部集成） | `MyYoda Feedback`，Access token 认证，workspace `Eason`（付费版，单文件上传上限 5GiB） | ✅ |
-| 授权页面 | 「MyYoda 用户反馈」page id `3bcc5abc-f5be-8001-9cb0-ce1dfb93e459` | ✅ 已授权连接 |
+| Connection（内部集成） | `Guru Feedback`，Access token 认证，workspace `Eason`（付费版，单文件上传上限 5GiB） | ✅ |
+| 授权页面 | 「Guru 用户反馈」page id `3bcc5abc-f5be-8001-9cb0-ce1dfb93e459` | ✅ 已授权连接 |
 | 反馈数据库 | **「用户反馈」DB id `4bdde411-b205-42a7-9be5-a9f51fa02698`**，data source id `20e6c86d-3e28-42f9-bb3f-12e4426cca40` | ✅ 已创建（7 属性） |
 | 全链路实测 | 已写入一条测试条目 + 图片 file_upload + image block（2026-03-11 API 实测通过） | ✅ |
 | 集成 token | `ntn_...`（用户提供，后续配置到应用设置） | ✅ 已验证可用 |
 
 ## 4. 反馈数据库 schema（API 创建）
 
-数据库名：`用户反馈`，父页面 = 「MyYoda 用户反馈」page。
+数据库名：`用户反馈`，父页面 = 「Guru 用户反馈」page。
 
 | 属性 | 类型 | 说明 |
 |---|---|---|
@@ -72,7 +72,7 @@
 
 **入口**：`ReleaseNotesPopover` 底部快捷区新增「意见反馈」项（`MessageSquare` 图标），点击打开 `FeedbackDialog`。该入口与「使用指南 / FAQ / 快捷键」同一视觉体系，不动现有布局。
 
-**FeedbackDialog**（参考 newmax，结合 MyYoda 设计语言——用 `primary` 主色而非 newmax 的绿色）：
+**FeedbackDialog**（参考 newmax，结合 Guru 设计语言——用 `primary` 主色而非 newmax 的绿色）：
 - 标题「反馈」+ 关闭按钮
 - 类型 tab：`Bug 报告`（`Bug` 图标 + 副文案）/ `功能建议`（`Lightbulb` 图标 + 副文案），默认 Bug 报告
 - 「详细描述」textarea：5000 字上限 + 实时计数 `n/5000`，超限截断或禁输；占位符随类型切换（"请描述您遇到的问题，包括复现步骤..." / "请描述您希望添加的功能..."）
@@ -116,13 +116,13 @@ FeedbackDialog (renderer)
 
 ### 5.4 失败降级与离线草稿
 
-- 提交失败时：草稿（含截图路径）写入 `~/.myyoda/feedback-drafts/<timestamp>.json`，toast 提示「已保存草稿」；设置页提供「查看草稿 / 重试 / 清除」。
+- 提交失败时：草稿（含截图路径）写入 `~/.guru/feedback-drafts/<timestamp>.json`，toast 提示「已保存草稿」；设置页提供「查看草稿 / 重试 / 清除」。
 - v1 不建自动重试定时任务（用户可点击重试即可）；若后续反馈量大再考虑 Automation 周期重扫。
 
 ### 5.5 隐私边界
 
 - 只提交用户**显式填写**的描述 + 选择的截图 + 自动附带的版本/平台。不收集日志、会话内容、代码片段（避免隐私事故）。
-- 截图是「当前应用窗口」而不是整屏，降低误截到其他应用敏感内容的概率（截屏按钮的语义明确为「截 MyYoda 窗口」）。
+- 截图是「当前应用窗口」而不是整屏，降低误截到其他应用敏感内容的概率（截屏按钮的语义明确为「截 Guru 窗口」）。
 
 ---
 
@@ -134,12 +134,12 @@ FeedbackDialog (renderer)
 - 截图 ≤5：对 bug 报告足够，避免上传滥用。
 - **不设星级评分**：认同。修复型反馈评分意义小（对「提交渠道」评分≠对产品评分），且会让 bug 报告者困惑。
 
-**评审改进（结合 MyYoda 场景）**：
+**评审改进（结合 Guru 场景）**：
 1. **加「联系方式」可选 email**：newmax 没有。但对独立开发者收集反馈，「无法回复提问」是最大痛点（bug 复现经常需要追问）。默认折叠为可选项，不增加填表负担。
 2. **自动附带版本号 + 平台**：桌面应用定位 bug 的第一要素，且零用户成本。
 3. **「截屏」语义升级**：直接截当前应用窗口（Electron `capturePage`），而非唤起系统截屏工具；一步完成、且天然只含本应用内容。
 4. **空描述禁用提交 + loading 态**：newmax 截图无法看出，这里明确补上。
-5. 视觉主色改用 MyYoda 的 `primary`（newmax 是绿色，不套用品牌色）。
+5. 视觉主色改用 Guru 的 `primary`（newmax 是绿色，不套用品牌色）。
 
 ---
 
@@ -147,7 +147,7 @@ FeedbackDialog (renderer)
 
 - **个人/小范围阶段**：Notion token 存在用户本地设置，直接由客户端调 Notion API，可接受。token 随时可在 Connections 页 revoke/refresh。
 - **大范围分发后**：客户端内嵌 token 可被提取，滥用上限 = 往该数据库写垃圾数据（token 只授权了这一个页面，爆炸半径已被 Content access 收窄到最小）。届时升级为 Cloudflare Worker 代理（token 上移服务端 + 可选 rate limit），客户端协议不变。
-- 数据库建议保持仅「MyYoda Feedback」连接 + 用户本人可见，不公开分享链接。
+- 数据库建议保持仅「Guru Feedback」连接 + 用户本人可见，不公开分享链接。
 
 ## 8. 实施计划（分阶段）
 

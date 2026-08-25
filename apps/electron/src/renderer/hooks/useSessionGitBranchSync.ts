@@ -18,7 +18,7 @@
 
 import * as React from 'react'
 import { useSetAtom } from 'jotai'
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 import { agentSessionsAtom } from '@/atoms/agent-atoms'
 
 export function useSessionGitBranchSync(session: AgentSessionMeta | null | undefined): void {

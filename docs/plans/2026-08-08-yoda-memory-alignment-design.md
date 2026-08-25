@@ -8,7 +8,7 @@
 「工作区升级为空间」+「项目 = 真实文件夹」（方案 B）的文件组织升级正在设计中。这次升级改变了两个前提：
 
 1. **空间（Space）不再等同于单一项目**，而是"逻辑聚合 + 隔离边界"（MCP/Skills/记忆的隔离单位），程序员场景下通常一个默认空间即可，一个空间下可挂多个项目。
-2. **项目（Project）= 真实文件夹**，即项目的工作目录直接是用户在磁盘上的真实目录（如某个 git 仓库），而不是 MyYoda 托管目录里的一个 slug 子文件夹。
+2. **项目（Project）= 真实文件夹**，即项目的工作目录直接是用户在磁盘上的真实目录（如某个 git 仓库），而不是 Guru 托管目录里的一个 slug 子文件夹。
 
 这两个前提升级后，**Yoda 记忆模块的现有存储结构会产生水土不服**——这正是本次设计要解决的问题。
 
@@ -23,7 +23,7 @@ agent-workspaces/{slug}/
         └── MEMORY.md              ← 项目级记忆（当前，托管目录）
 ```
 
-**核心问题**：项目记忆挂在 `workspace-files/projects/{slug}/MEMORY.md`（MyYoda 托管目录），而项目工作目录（`workingDirectory`）已经指向用户真实文件夹（如 `~/code/repo`）。二者物理分离——用户改代码时看不到项目记忆，记忆和项目内容脱节。升级到"项目 = 真实文件夹"后，这个分离会更加刺眼。
+**核心问题**：项目记忆挂在 `workspace-files/projects/{slug}/MEMORY.md`（Guru 托管目录），而项目工作目录（`workingDirectory`）已经指向用户真实文件夹（如 `~/code/repo`）。二者物理分离——用户改代码时看不到项目记忆，记忆和项目内容脱节。升级到"项目 = 真实文件夹"后，这个分离会更加刺眼。
 
 ## 目标
 
@@ -37,7 +37,7 @@ agent-workspaces/{slug}/
 
 ## 参考对齐对象：proma
 
-proma 是本次设计的主要参考。核心差异要先挑明：**proma 的"工作区"和"项目"是 1:1**（`AgentWorkspace` 自带 `projectRootPath` 字段），没有 MyYoda 这种"一个空间下挂多个项目"的嵌套结构。**本设计不改 MyYoda 的嵌套结构**——只是把 proma 对"项目文件归属"的处理方式，套到 MyYoda 项目这一层。
+proma 是本次设计的主要参考。核心差异要先挑明：**proma 的"工作区"和"项目"是 1:1**（`AgentWorkspace` 自带 `projectRootPath` 字段），没有 Guru 这种"一个空间下挂多个项目"的嵌套结构。**本设计不改 Guru 的嵌套结构**——只是把 proma 对"项目文件归属"的处理方式，套到 Guru 项目这一层。
 
 proma 的关键代码事实（均已核实）：
 
@@ -87,13 +87,13 @@ proma 的关键代码事实（均已核实）：
 
 磁盘管理页面（对齐 proma `storage-service.ts` / `StorageSettings.tsx`）：
 
-- **扫描范围不变**：只统计 `~/.myyoda/` 托管目录，不扫描任何外部 `workingDirectory`。这一点 MyYoda 现状已经如此（项目代码文件本来就在外部、从未被磁盘管理统计过），本次只是把项目记忆也纳入这个既有边界，不是新增能力。
+- **扫描范围不变**：只统计 `~/.guru/` 托管目录，不扫描任何外部 `workingDirectory`。这一点 Guru 现状已经如此（项目代码文件本来就在外部、从未被磁盘管理统计过），本次只是把项目记忆也纳入这个既有边界，不是新增能力。
 - **清理护栏显式化**：新增硬约束——任何自动清理逻辑绝不允许触碰 `workingDirectory` 指向的外部真实目录。这是现状代码的隐含行为，这次要写成显式契约（代码注释 + 测试用例），防止后续有人不小心把清理范围扩大过去。
 - **孤儿清理保留 `.context/`**：抄 proma 的 `PRESERVED_ORPHAN_SESSION_DIRS` 模式，`.context` 目录在孤儿 session/workspace 清理时被跳过，不随会话失活被删除。
 
 ### 4. Git / 隐私边界
 
-对齐 proma：**不做自动 `.gitignore`**。`.context/`（含 `MEMORY.md`）要不要提交进项目的 git 仓库，完全由用户自己的项目 `.gitignore` 决定，MyYoda 不介入、不提示、不强制。
+对齐 proma：**不做自动 `.gitignore`**。`.context/`（含 `MEMORY.md`）要不要提交进项目的 git 仓库，完全由用户自己的项目 `.gitignore` 决定，Guru 不介入、不提示、不强制。
 
 ## 方案选型
 

@@ -6,7 +6,7 @@
  */
 
 import * as React from 'react'
-import type { DefaultAppInfo, FileAccessOptions } from '@myyoda/shared'
+import type { DefaultAppInfo, FileAccessOptions } from '@guru/shared'
 
 const rendererCache = new Map<string, DefaultAppInfo>()
 

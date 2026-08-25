@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { FileAccessOptions } from '@myyoda/shared'
+import type { FileAccessOptions } from '@guru/shared'
 import { normalizeFileAccessOptions } from './file-access-policy'
 
 describe('file access options policy', () => {

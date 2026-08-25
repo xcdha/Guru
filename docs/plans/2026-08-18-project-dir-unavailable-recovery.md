@@ -14,7 +14,7 @@
 - 单测: `bun test apps/electron/src/main/lib/<file>.test.ts`
 - 全量: `bun test`
 - 类型: `bun run typecheck`
-- 提交（每个 Task 末尾）: 附加 trailer `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>`
+- 提交（每个 Task 末尾）: 附加 trailer `Co-Authored-By: Guru <Guru@noreply.github.com>`
 
 ---
 
@@ -107,7 +107,7 @@ Expected: 全部 PASS（含原有用例）
 
 ```bash
 git add apps/electron/src/main/lib/agent-cwd-resolver.ts apps/electron/src/main/lib/agent-cwd-resolver.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(agent): cwd 决策支持默认工作区目录 (source: default-workspace)"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(agent): cwd 决策支持默认工作区目录 (source: default-workspace)"
 ```
 
 ---
@@ -173,7 +173,7 @@ Expected: 无错误（agent-cwd-resolver 单测已覆盖决策分支）
 
 ```bash
 git add apps/electron/src/main/lib/agent-orchestrator.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(agent): 未绑定项目会话 cwd 使用默认工作区目录，失效降级沙箱"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(agent): 未绑定项目会话 cwd 使用默认工作区目录，失效降级沙箱"
 ```
 
 ---
@@ -215,7 +215,7 @@ describe('isRelocationCandidate', () => {
     expect(isRelocationCandidate('LuxAgentX', 'LuxAgents')).toBe(true)
   })
   test('明显无关不匹配', () => {
-    expect(isRelocationCandidate('MyYoda', 'LuxAgents')).toBe(false)
+    expect(isRelocationCandidate('Guru', 'LuxAgents')).toBe(false)
     expect(isRelocationCandidate('CoderHub', 'LuxAgents')).toBe(false)
   })
   test('过短名称不参与复数/前缀规则（防误报）', () => {
@@ -227,7 +227,7 @@ describe('findRelocationCandidates', () => {
   test('命中父目录下的候选并返回绝对路径', () => {
     const parent = makeTempParent()
     mkdirSync(join(parent, 'LuxAgent'), { recursive: true })
-    mkdirSync(join(parent, 'MyYoda'), { recursive: true })
+    mkdirSync(join(parent, 'Guru'), { recursive: true })
     writeFileSync(join(parent, 'not-a-dir'), 'x')
 
     const result = findRelocationCandidates(join(parent, 'LuxAgents'), 'LuxAgents')
@@ -343,7 +343,7 @@ Expected: 全部 PASS（含原有用例）
 
 ```bash
 git add apps/electron/src/main/lib/project-path-service.ts apps/electron/src/main/lib/project-path-service.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(project): findRelocationCandidates 探测失效目录的重命名候选"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(project): findRelocationCandidates 探测失效目录的重命名候选"
 ```
 
 ---
@@ -357,7 +357,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 - 确认已 import `loadProjectById`（来自 `packages/shared/src/projects/storage.ts`；若无则从 `../../../../packages/shared/src/projects/storage` 相对路径引入——按文件顶部既有 import 风格）
 - 确认已 import `findRelocationCandidates`（来自 `./project-path-service`）
-- 确认已 import `RecoveryAction` 类型（来自 `@myyoda/shared` 或相对路径，按顶部既有风格）
+- 确认已 import `RecoveryAction` 类型（来自 `@guru/shared` 或相对路径，按顶部既有风格）
 
 **Step 2: 修改 project_directory_unavailable 分支（约 1292 行）**
 
@@ -426,7 +426,7 @@ Expected: 无错误
 
 ```bash
 git add apps/electron/src/main/lib/agent-orchestrator.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(agent): 项目目录失效报错提供恢复 actions + 重命名候选探测"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(agent): 项目目录失效报错提供恢复 actions + 重命名候选探测"
 ```
 
 ---
@@ -536,7 +536,7 @@ Expected: 无错误
 
 ```bash
 git add apps/electron/src/renderer/components/agent/SDKMessageRenderer.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(agent): 报错卡片支持项目目录恢复 actions（重新关联/默认目录/候选关联）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(agent): 报错卡片支持项目目录恢复 actions（重新关联/默认目录/候选关联）"
 ```
 
 ---
@@ -656,7 +656,7 @@ Expected: 无错误
 **Step 5: 手动冒烟**
 
 - 清空 `onboardingCompleted` 设置后启动 → 欢迎 → 「直接开始使用」进入默认目录步骤
-- 选择目录 → 继续 → 完成；验证 `~/.myyoda` 设置中 `agentDefaultWorkingDirectory` 已写入
+- 选择目录 → 继续 → 完成；验证 `~/.guru` 设置中 `agentDefaultWorkingDirectory` 已写入
 - 再走一次跳过路径 → 设置未写入
 - Windows 流程：workspace → environment → finish
 
@@ -664,7 +664,7 @@ Expected: 无错误
 
 ```bash
 git add apps/electron/src/renderer/components/onboarding/OnboardingView.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(onboarding): 首次启动增加可选的默认工程目录设置步骤"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(onboarding): 首次启动增加可选的默认工程目录设置步骤"
 ```
 
 ---
@@ -675,7 +675,7 @@ Run: `bun test && bun run typecheck`
 Expected: 全绿
 
 复查：
-1. `git log --oneline -6` 确认 6 个 commit 均带 MyYoda trailer
+1. `git log --oneline -6` 确认 6 个 commit 均带 Guru trailer
 2. `git status --short` 干净
 
 ## 已知风险与备注

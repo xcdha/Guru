@@ -9,7 +9,7 @@ import type {
   EnvironmentCheckResult,
   RuntimeStatus,
   InstallerManifest,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /**
  * 单个安装包的下载状态

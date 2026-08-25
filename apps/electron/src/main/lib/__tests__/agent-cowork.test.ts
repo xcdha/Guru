@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { extractFinalText } from '../agent-cowork-utils'
-import type { AgentMessage } from '@myyoda/shared'
+import type { AgentMessage } from '@guru/shared'
 
 function message(role: AgentMessage['role'], content: string, createdAt = 1): AgentMessage {
   return { id: `${role}-${createdAt}`, role, content, createdAt }

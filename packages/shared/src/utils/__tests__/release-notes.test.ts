@@ -40,7 +40,7 @@ describe('isOlderThan', () => {
 
 describe('extractReleaseHeadline', () => {
   test('取第一个二级标题作为摘要', () => {
-    const content = '# MyYoda v0.7.1 更新\n\n## 品牌视觉：应用图标全面替换为最新素材\n\n- 详情...\n\n## 修复\n\n- 其他'
+    const content = '# Guru v0.7.1 更新\n\n## 品牌视觉：应用图标全面替换为最新素材\n\n- 详情...\n\n## 修复\n\n- 其他'
     expect(extractReleaseHeadline(content)).toBe('品牌视觉：应用图标全面替换为最新素材')
   })
 
@@ -57,19 +57,19 @@ describe('extractReleaseHeadline', () => {
   })
 
   test('没有二级标题时回退到首个正文行', () => {
-    const content = '# MyYoda v0.4.0 更新\n\n- 首个要点\n- 第二条'
+    const content = '# Guru v0.4.0 更新\n\n- 首个要点\n- 第二条'
     expect(extractReleaseHeadline(content)).toBe('首个要点')
   })
 
   test('跳过固定章节标题（新功能/修复/下载），取第一个具体功能标题', () => {
     const content =
-      '# MyYoda v0.7.3 更新\n\n## 新功能\n\n### Yoda 插件 / Yoda 记忆迁回左侧栏独立视图\n\n- 详情\n\n## 修复\n\n- 修复内容\n\n## 下载\n\n- 下载列表'
+      '# Guru v0.7.3 更新\n\n## 新功能\n\n### Yoda 插件 / Yoda 记忆迁回左侧栏独立视图\n\n- 详情\n\n## 修复\n\n- 修复内容\n\n## 下载\n\n- 下载列表'
     expect(extractReleaseHeadline(content)).toBe('Yoda 插件 / Yoda 记忆迁回左侧栏独立视图')
   })
 
   test('非固定章节的二级标题优先于三级标题', () => {
     const content =
-      '# MyYoda v0.7.1 更新\n\n## 品牌视觉：应用图标全面替换为最新素材\n\n### 更细的点\n\n## 修复\n\n- 其他'
+      '# Guru v0.7.1 更新\n\n## 品牌视觉：应用图标全面替换为最新素材\n\n### 更细的点\n\n## 修复\n\n- 其他'
     expect(extractReleaseHeadline(content)).toBe('品牌视觉：应用图标全面替换为最新素材')
   })
 
@@ -86,7 +86,7 @@ describe('extractReleaseHeadline', () => {
 
   test('无三级标题时回退到列表项加粗文本', () => {
     const content =
-      '# MyYoda v0.6.5 更新\n\n## 新功能\n\n- **项目看板自定义列**：Project 支持自定义看板列\n- **Claude 订阅登录修复**：...\n\n## 界面与体验\n\n- **新会话空状态**：...'
+      '# Guru v0.6.5 更新\n\n## 新功能\n\n- **项目看板自定义列**：Project 支持自定义看板列\n- **Claude 订阅登录修复**：...\n\n## 界面与体验\n\n- **新会话空状态**：...'
     expect(extractReleaseHeadline(content)).toBe('项目看板自定义列')
   })
 

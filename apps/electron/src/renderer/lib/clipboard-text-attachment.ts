@@ -1,4 +1,4 @@
-import type { AgentPendingFile } from '@myyoda/shared'
+import type { AgentPendingFile } from '@guru/shared'
 
 export interface ClipboardTextDraft {
   filename: string

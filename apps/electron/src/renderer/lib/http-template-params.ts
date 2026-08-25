@@ -1,4 +1,4 @@
-import type { ChatToolParam } from '@myyoda/shared'
+import type { ChatToolParam } from '@guru/shared'
 
 export function extractHttpTemplateParams(template: string): ChatToolParam[] {
   const names = new Set<string>()

@@ -27,8 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import type { Channel } from '@myyoda/shared'
-import type { ExpertTemplate } from '@myyoda/shared/experts'
+import type { Channel } from '@guru/shared'
+import type { ExpertTemplate } from '@guru/shared/experts'
 
 export interface CreateExpertDraft {
   id: string

@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https: myyoda-file: myyoda-remote:; font-src 'self' data: http: https:; media-src 'self' data: blob: http: https: myyoda-file: discover-video: myyoda-remote:; connect-src 'self' http://127.0.0.1:5173 ws://127.0.0.1:5173 wss://127.0.0.1:5173 https:; object-src 'none'; base-uri 'self'; frame-src 'self' https:;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https: guru-file: guru-remote:; font-src 'self' data: http: https:; media-src 'self' data: blob: http: https: guru-file: discover-video: guru-remote:; connect-src 'self' http://127.0.0.1:5173 ws://127.0.0.1:5173 wss://127.0.0.1:5173 https:; object-src 'none'; base-uri 'self'; frame-src 'self' https:;"
     />
-    <title>MyYoda</title>
+    <title>Guru</title>
     <script>
       // 主题初始化脚本（在 React 加载前执行，避免闪烁）
       // 从 localStorage 缓存读取主题模式和特殊风格，立即应用类名
       ;(function() {
-        // 默认跟随系统；缓存键需与 atoms/theme.ts 保持一致（myyoda-*）
-        var mode = localStorage.getItem('myyoda-theme-mode') || 'system'
-        var style = localStorage.getItem('myyoda-theme-style')
-        var cachedActiveVariant = localStorage.getItem('myyoda-theme-active-variant')
-        var cachedInterfaceVariant = localStorage.getItem('myyoda-interface-variant')
+        // 默认跟随系统；缓存键需与 atoms/theme.ts 保持一致（guru-*）
+        var mode = localStorage.getItem('guru-theme-mode') || 'system'
+        var style = localStorage.getItem('guru-theme-style')
+        var cachedActiveVariant = localStorage.getItem('guru-theme-active-variant')
+        var cachedInterfaceVariant = localStorage.getItem('guru-interface-variant')
         var html = document.documentElement
         // 先恢复界面布局类，避免 React 加载前沿用上一状态或默认落入现代工作台。
         html.classList.add(cachedInterfaceVariant === 'classic' ? 'ui-classic' : 'ui-modern')
@@ -48,7 +48,7 @@
           html.classList.add('theme-custom')
           if (customVariant === 'dark') html.classList.add('dark')
           try {
-            var cachedPacks = JSON.parse(localStorage.getItem('myyoda-theme-packs') || '{}')
+            var cachedPacks = JSON.parse(localStorage.getItem('guru-theme-packs') || '{}')
             var cachedPack = cachedPacks[customVariant]
             var cachedTheme = cachedPack && cachedPack.theme
             if (cachedTheme) {

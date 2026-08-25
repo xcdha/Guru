@@ -1,5 +1,5 @@
 import { atom } from 'jotai'
-import type { TerminalViewState } from '@myyoda/shared'
+import type { TerminalViewState } from '@guru/shared'
 import { currentAgentSessionIdAtom } from './agent-atoms'
 
 /** 每个 Agent 会话的终端面板开关。主进程仍是 pty 状态权威。 */

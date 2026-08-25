@@ -11,18 +11,18 @@
 「发现」面板与「意见反馈」目前与 GitHub 生态的关系是割裂的：
 
 - **反馈**：提交到维护者自己的 Notion 数据库（internal token + databaseId 配置，截图 ≤5 张，失败落本地草稿）。审阅面在 Notion，与代码仓库无关。
-- **官方内容**：来自独立内容仓库 `GeoffBao/myyoda-content`（content.json 清单）。
+- **官方内容**：来自独立内容仓库 `xcdha/Guru-content`（content.json 清单）。
 - **帮助**：应用内置的三个入口（使用指南/FAQ/快捷键），内容随应用版本发布。
 - GitHub 侧已有：Discussions（社区 tab 已接入）；**wiki 已启用但完全空白**；open issues 仅 1 个。
 
 本次重构把反馈与文档两块收拢到 GitHub 生态：
 
-1. **反馈提交到 GitHub Issues**（`GeoffBao/MyYoda`），完全替换 Notion 链路；
-2. **帮助/文档接入 GitHub Wiki**（`GeoffBao/MyYoda/wiki`），wiki 成为应用内帮助文档的内容源，维护者在网页上编辑即更新，无需发版。
+1. **反馈提交到 GitHub Issues**（`xcdha/Guru`），完全替换 Notion 链路；
+2. **帮助/文档接入 GitHub Wiki**（`xcdha/Guru/wiki`），wiki 成为应用内帮助文档的内容源，维护者在网页上编辑即更新，无需发版。
 
 **成功标准**：
 
-- 用户在应用内提交的反馈（含截图）以 issue 形式出现在 `GeoffBao/MyYoda` 仓库，环境信息自动附带，维护者可直接在 GitHub 上 triage；
+- 用户在应用内提交的反馈（含截图）以 issue 形式出现在 `xcdha/Guru` 仓库，环境信息自动附带，维护者可直接在 GitHub 上 triage；
 - 反馈提交链路与现有体验对齐：应用内提交、截图 ≤5 张、失败落本地草稿可重试、提交前有「公开可见」提示；
 - 「帮助」tab 内可浏览 wiki 全部页面并应用内渲染正文，离线可读缓存；维护者更新 wiki 后用户刷新即可见；
 - 官方精选、社区讨论、四 tab 结构不变；Notion 链路彻底移除。
@@ -30,7 +30,7 @@
 ## 2. 现状（重构前）
 
 - `DiscoverView` 四 tab：官方精选（FeaturedFeed）/ 社区讨论（CommunityView）/ 帮助（HelpSection）/ 反馈（FeedbackSection）。
-- 反馈链路：`FeedbackDialog` → IPC `feedback:submit` → 主进程 `feedback-service.ts` → Notion API（token 经 safeStorage 加密存 `~/.myyoda/feedback.json`，HTTP 走代理感知 fetch，失败落 `~/.myyoda/feedback-drafts/`）。
+- 反馈链路：`FeedbackDialog` → IPC `feedback:submit` → 主进程 `feedback-service.ts` → Notion API（token 经 safeStorage 加密存 `~/.guru/feedback.json`，HTTP 走代理感知 fetch，失败落 `~/.guru/feedback-drafts/`）。
 - 帮助 tab：三个内置入口（使用指南=主区 tutorial tab、FAQ=内置弹窗、快捷键=内置弹窗），无在线内容。
 - 社区 tab：GitHub Discussions 只读浏览 + 本地缓存 + 跳浏览器互动（`community-service.ts`），是本设计的模式范本。
 - git 是应用一等依赖（环境检查强制、git-session-context 等主进程服务已使用系统 git），wiki 走 git 方案无额外成本。
@@ -40,7 +40,7 @@
 | 议题 | 决策 |
 |---|---|
 | Notion 渠道 | **完全替换**为 GitHub Issues，Notion 代码与配置入口移除 |
-| Issue 认证 | 维护者配置 **fine-grained PAT**（Issues: Read and write，仅 `GeoffBao/MyYoda`），加密存储，与旧 Notion token 同模式 |
+| Issue 认证 | 维护者配置 **fine-grained PAT**（Issues: Read and write，仅 `xcdha/Guru`），加密存储，与旧 Notion token 同模式 |
 | 截图上传 | 非官方 `uploads.github.com/user-attachments/assets` 端点（Bearer token 可用，2026-08 实测社区普遍在用），URL 嵌入 issue 正文；失败降级纯文字提交 |
 | 公开可见性 | 弹窗与反馈分区加醒目「公开可见」提示 |
 | Wiki 角色 | 作为**「帮助/文档」源**接入帮助 tab；不替代官方精选内容源，不做独立文档 tab |
@@ -52,9 +52,9 @@
 
 ### 4.1 配置与凭证
 
-- 设置页「反馈渠道」改为 GitHub 配置：输入 fine-grained PAT，附生成指引（仓库权限仅 `Issues → Read and write` 于 `GeoffBao/MyYoda`）。
-- 配置文件 `~/.myyoda/feedback.json` 结构升级：`{ version: 2, github: { tokenEncrypted, repo } }`；token 继续用 safeStorage 加密（`safeStorage.isEncryptionAvailable()` 不可用时明文回退，与现状一致）。
-- 「测试连接」：`GET /repos/GeoffBao/MyYoda` —— 200 提示"凭证有效"；401 token 无效；403 权限不足；404 仓库不存在。**不使用 `GET /user`**（fine-grained token 无 user scope，会 403 误报）。
+- 设置页「反馈渠道」改为 GitHub 配置：输入 fine-grained PAT，附生成指引（仓库权限仅 `Issues → Read and write` 于 `xcdha/Guru`）。
+- 配置文件 `~/.guru/feedback.json` 结构升级：`{ version: 2, github: { tokenEncrypted, repo } }`；token 继续用 safeStorage 加密（`safeStorage.isEncryptionAvailable()` 不可用时明文回退，与现状一致）。
+- 「测试连接」：`GET /repos/xcdha/Guru` —— 200 提示"凭证有效"；401 token 无效；403 权限不足；404 仓库不存在。**不使用 `GET /user`**（fine-grained token 无 user scope，会 403 误报）。
 - 未配置凭证：反馈弹窗提交按钮置灰，提示"请先在设置中配置 GitHub 凭证" + 跳转设置按钮。
 
 ### 4.2 提交链路（重构 `feedback-service.ts`）
@@ -66,7 +66,7 @@ renderer（压缩截图 → IPC feedback:submit）
         ?name=<filename>&content_type=<mime>&repository_id=<id>
         （Bearer token；返回 JSON 含附件 URL）
   → 拼装 issue body（模板 + 截图 markdown 嵌入）
-  → POST api.github.com/repos/GeoffBao/MyYoda/issues（title/body/labels）
+  → POST api.github.com/repos/xcdha/Guru/issues（title/body/labels）
   → 返回 html_url → renderer 展示成功 + 打开链接
 ```
 
@@ -79,7 +79,7 @@ renderer（压缩截图 → IPC feedback:submit）
 - body：
 
 ```markdown
-<!-- 来自 MyYoda 应用内反馈 -->
+<!-- 来自 Guru 应用内反馈 -->
 
 **类型**：Bug 报告 | 功能建议
 
@@ -91,19 +91,19 @@ renderer（压缩截图 → IPC feedback:submit）
 ...
 
 **环境信息**（自动注入）：
-- MyYoda 版本：x.y.z
+- Guru 版本：x.y.z
 - 系统：macOS 15.x（arm64）| Windows ... | Linux ...
 - 渠道：<agent 渠道名>
 
 **提交时间**：<ISO 8601>
 ```
 
-- labels：`bug` / `enhancement`。创建前 `GET /repos/GeoffBao/MyYoda/labels/<name>` 探测；不存在则不带 label（避免 422），并在提交结果中说明。
+- labels：`bug` / `enhancement`。创建前 `GET /repos/xcdha/Guru/labels/<name>` 探测；不存在则不带 label（避免 422），并在提交结果中说明。
 - 联系方式（邮箱）如用户填写，附在描述区之后。
 
 ### 4.4 失败降级与去重
 
-- 任一环节失败 → 写本地草稿（`~/.myyoda/feedback-drafts/`，格式升级 v2：`{ version: 2, createdAt, input, appVersion, platform, uploadedAssetUrls? }`），UI 提示 + 草稿列表可重试。
+- 任一环节失败 → 写本地草稿（`~/.guru/feedback-drafts/`，格式升级 v2：`{ version: 2, createdAt, input, appVersion, platform, uploadedAssetUrls? }`），UI 提示 + 草稿列表可重试。
 - 截图已上传成功但 issue 创建失败 → 草稿记录 `uploadedAssetUrls`，重试时跳过重复上传。
 - 截图上传失败但其余成功 → 降级为纯文字 issue + 提示"截图上传失败，已按文字提交"。
 - 去重：本地记录「类型+描述 hash」；同 hash 再次提交 toast 提示"已提交过相同反馈"，不阻塞。
@@ -124,8 +124,8 @@ renderer（压缩截图 → IPC feedback:submit）
 
 ### 5.1 获取与缓存（新增主进程 `wiki-service.ts`）
 
-- 源：`https://github.com/GeoffBao/MyYoda.wiki.git`（wiki 已启用；wiki 首次创建页面后仓库才存在，实现时对"仓库不存在"错误做明确提示）。
-- 首次打开「帮助」tab 或手动刷新：浅克隆 `--depth 1` 到 `~/.myyoda/discover/wiki-cache/`；之后 `git fetch --depth 1 origin` + `git reset --hard FETCH_HEAD`；对比前后 HEAD hash 判断有无更新。
+- 源：`https://github.com/xcdha/Guru.wiki.git`（wiki 已启用；wiki 首次创建页面后仓库才存在，实现时对"仓库不存在"错误做明确提示）。
+- 首次打开「帮助」tab 或手动刷新：浅克隆 `--depth 1` 到 `~/.guru/discover/wiki-cache/`；之后 `git fetch --depth 1 origin` + `git reset --hard FETCH_HEAD`；对比前后 HEAD hash 判断有无更新。
 - clone/fetch 时按当前有效代理传入 `-c http.proxy=<proxyUrl>`（复用 `getEffectiveProxyUrl`）。
 - 更新策略：打开帮助 tab 时异步刷新；有旧缓存则先用缓存渲染，刷新完成后有新 commit 则 toast「帮助文档已更新」。不设定时拉取。
 - 失败降级：有缓存 → 显示缓存 + 离线提示（复用社区 tab CloudOff 模式）；无缓存 → 错误提示 + 重试按钮。不引入第二套 HTTP 拉取路径（YAGNI）。
@@ -139,7 +139,7 @@ renderer（压缩截图 → IPC feedback:submit）
 ### 5.3 正文渲染
 
 - 正文从本地克隆直读 `.md`（零额外 HTTP、离线可用）。
-- wiki 内相对路径媒体（`assets/...` 图片等）重写为 `https://raw.githubusercontent.com/wiki/GeoffBao/MyYoda/<branch>/<path>`，经代理感知拉取，复用现有 `media-rewrite.ts` 与远程媒体注册模式（与社区 tab 同机制）。
+- wiki 内相对路径媒体（`assets/...` 图片等）重写为 `https://raw.githubusercontent.com/wiki/xcdha/Guru/<branch>/<path>`，经代理感知拉取，复用现有 `media-rewrite.ts` 与远程媒体注册模式（与社区 tab 同机制）。
 - Markdown 渲染复用 `ReleaseNoteMarkdown` 组件。
 - 列表顶部标题过滤搜索框（前端本地过滤）。
 
@@ -156,7 +156,7 @@ renderer（压缩截图 → IPC feedback:submit）
 ## 6. 数据流
 
 ```
-维护者编辑 wiki 页面（github.com/GeoffBao/MyYoda/wiki）
+维护者编辑 wiki 页面（github.com/xcdha/Guru/wiki）
   → 用户打开帮助 tab → IPC GET_WIKI_PAGES
   → wiki-service: git fetch（代理）→ 解析 _Sidebar → 页面树（本地 .md 正文）
   → renderer WikiBrowser 渲染（媒体经 raw/wiki 代理拉取）
@@ -222,7 +222,7 @@ renderer（压缩截图 → IPC feedback:submit）
 - 私有镜像仓库收反馈
 - wiki 已读红点、正文全文搜索索引
 - 应用内 issue 列表浏览（社区 tab 已是 Discussions）
-- 官方精选内容源变更（`GeoffBao/myyoda-content` 保留）
+- 官方精选内容源变更（`xcdha/Guru-content` 保留）
 - 定时拉取 wiki（打开时异步刷新足够）
 
 ## 12. 后续演进（不在本次范围）

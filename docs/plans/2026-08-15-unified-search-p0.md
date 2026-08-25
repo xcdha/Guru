@@ -6,7 +6,7 @@
 
 **Architecture:** Provider 模式——每类数据源一个纯函数 provider（同步内存匹配，统一复用 `findBestSearchMatch` 评分），`unified-search-model.ts` 负责编排/排序/截断/chip 过滤；跳转副作用集中在 `search-navigation.ts` 的 `executeNavigation(target)`（可序列化 target 描述符，对齐 Kanban 已有 `TaskEditorTarget` 模式）；会话正文全文搜索保持现有异步 IPC 不变，作为标题结果的附加段。
 
-**Tech Stack:** React 18 + Jotai + TypeScript（strict）+ Bun test + Tailwind；匹配复用 `@myyoda/shared` 的 `findBestSearchMatch`。
+**Tech Stack:** React 18 + Jotai + TypeScript（strict）+ Bun test + Tailwind；匹配复用 `@guru/shared` 的 `findBestSearchMatch`。
 
 **设计文档（必读）**：`docs/superpowers/specs/2026-08-15-search-upgrade-design.md`
 
@@ -30,7 +30,7 @@
 6. **验证命令**（每次改动后跑）：
    - 类型检查：`cd /Users/admin/Workspace/ClaudeCode/LuxAgents/apps/electron && bun run typecheck`
    - 测试：`cd /Users/admin/Workspace/ClaudeCode/LuxAgents && bun test`（全量 ~1600 条，10s）
-   - 提交格式：中文 subject + `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>` trailer
+   - 提交格式：中文 subject + `Co-Authored-By: Guru <Guru@noreply.github.com>` trailer
 
 ---
 
@@ -211,7 +211,7 @@ Expected: FAIL（模块不存在）
 ```ts
 import { atomWithStorage } from 'jotai/utils'
 
-const SEARCH_HISTORY_KEY = 'myyoda-search-history'
+const SEARCH_HISTORY_KEY = 'guru-search-history'
 export const SEARCH_HISTORY_MAX = 8
 
 /** 纯函数：写入一条历史查询词（去重置顶 + 截断） */
@@ -522,7 +522,7 @@ describe('searchSessionTitles', () => {
 实现骨架（字段名以 Task 0 核查结论为准）：
 
 ```ts
-import { findBestSearchMatch } from '@myyoda/shared'
+import { findBestSearchMatch } from '@guru/shared'
 import type { UnifiedSearchResult } from '../unified-search-types'
 
 interface SessionSearchContext {
@@ -580,8 +580,8 @@ git add apps/electron/src/renderer/components/app-shell/search/providers/ && git
 **Step 2-5**: 同 Task 5 流程。实现骨架：
 
 ```ts
-import { findBestSearchMatch } from '@myyoda/shared'
-import type { Automation } from '@myyoda/shared'
+import { findBestSearchMatch } from '@guru/shared'
+import type { Automation } from '@guru/shared'
 import type { UnifiedSearchResult } from '../unified-search-types'
 
 export function searchAutomations(query: string, automations: Automation[]): UnifiedSearchResult[] {
@@ -722,7 +722,7 @@ Commit: `git add apps/electron/src/renderer/components/app-shell/search/provider
 **Files:**
 - Modify: `apps/electron/src/renderer/components/app-shell/YodaSearchView.tsx`（`handleAgentSearch` 内的 prompt 文案）
 
-**Step 1**: 把 prompt 的搜索范围从「Chat/Agent 会话文件」扩展为全部数据源：会话文件（`~/.myyoda/conversations/`、`~/.myyoda/agent-sessions/`）+ 定时任务（`automations` 配置）+ Todo/日程（planning 数据）+ 技能/MCP 配置（`~/.myyoda/agent-workspaces/{slug}/skills/`、`mcp.json`）+ 看板任务（`tasks/` 目录）+ 项目（`projects/`）。文案保持原有结构（要求给出标题/摘要/来源），把范围段替换为列举式。
+**Step 1**: 把 prompt 的搜索范围从「Chat/Agent 会话文件」扩展为全部数据源：会话文件（`~/.guru/conversations/`、`~/.guru/agent-sessions/`）+ 定时任务（`automations` 配置）+ Todo/日程（planning 数据）+ 技能/MCP 配置（`~/.guru/agent-workspaces/{slug}/skills/`、`mcp.json`）+ 看板任务（`tasks/` 目录）+ 项目（`projects/`）。文案保持原有结构（要求给出标题/摘要/来源），把范围段替换为列举式。
 
 **Step 2**: typecheck + 全量测试。
 

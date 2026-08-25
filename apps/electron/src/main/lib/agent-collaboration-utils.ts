@@ -5,13 +5,13 @@
  */
 
 import {
-  MYYODA_DEFAULT_PERMISSION_MODE,
+  GURU_DEFAULT_PERMISSION_MODE,
   type AgentDelegationRole,
   type AgentDelegationStatus,
   type AgentRuntime,
   type AgentSessionMeta,
-  type MyYodaPermissionMode,
-} from '@myyoda/shared'
+  type GuruPermissionMode,
+} from '@guru/shared'
 
 export const MAX_RUNNING_DELEGATIONS_PER_PARENT = 50
 /** 未显式指定时，父会话等待子会话完成的时长。 */
@@ -59,16 +59,16 @@ export interface RecoveredDelegationState {
   title: string
   role: AgentDelegationRole
   goal: string
-  permissionMode: MyYodaPermissionMode
+  permissionMode: GuruPermissionMode
   status: AgentDelegationStatus
   startedAt: number
   completedAt?: number
 }
 
 export function resolveDelegationPermissionMode(
-  parentMode: MyYodaPermissionMode | undefined,
-  requestedMode: MyYodaPermissionMode | undefined,
-): MyYodaPermissionMode {
+  parentMode: GuruPermissionMode | undefined,
+  requestedMode: GuruPermissionMode | undefined,
+): GuruPermissionMode {
   // Pi-only: 子会话固定直接执行（Claude runtime 已于 2026-08 退役）。
   return 'bypassPermissions'
 }
@@ -77,7 +77,7 @@ export function buildRecoveredDelegationState(input: {
   parentSessionId: string
   delegationId: string
   session: AgentSessionMeta
-  fallbackPermissionMode?: MyYodaPermissionMode
+  fallbackPermissionMode?: GuruPermissionMode
 }): RecoveredDelegationState {
   const persistedStatus = input.session.delegationStatus
   // 从持久化记录恢复但不在 live Map 中，说明当前进程并没有这个委派在跑。
@@ -93,7 +93,7 @@ export function buildRecoveredDelegationState(input: {
     title: input.session.title,
     role: input.session.delegationRole ?? 'custom',
     goal: input.session.delegationGoal ?? '',
-    permissionMode: input.session.permissionMode ?? input.fallbackPermissionMode ?? MYYODA_DEFAULT_PERMISSION_MODE,
+    permissionMode: input.session.permissionMode ?? input.fallbackPermissionMode ?? GURU_DEFAULT_PERMISSION_MODE,
     status,
     startedAt: input.session.createdAt,
     completedAt: persistedStatus ? input.session.updatedAt : undefined,
@@ -108,7 +108,7 @@ export function buildDelegationPrompt(input: {
   expectedOutput?: string
 }): string {
   const expectedOutput = input.expectedOutput?.trim()
-  return `你是 MyYoda 协作子 Agent。你由父 Agent 会话 ${input.parentSessionId} 委派创建，委派 ID 为 ${input.delegationId}。
+  return `你是 Guru 协作子 Agent。你由父 Agent 会话 ${input.parentSessionId} 委派创建，委派 ID 为 ${input.delegationId}。
 
 ## 工作边界
 

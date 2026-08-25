@@ -4,7 +4,7 @@
  * 主题模式、IPC 通道等设置相关定义。
  */
 
-import type { AgentRuntime, AgentThinkingLevel, EnvironmentCheckResult, ThinkingConfig, AgentEffort, FeishuSessionMirrorSettings, SessionListPreference, WindowsShellPreference, ProviderType, CodeClawThemeId, CodeClawSize } from '@myyoda/shared'
+import type { AgentRuntime, AgentThinkingLevel, EnvironmentCheckResult, ThinkingConfig, AgentEffort, FeishuSessionMirrorSettings, SessionListPreference, WindowsShellPreference, ProviderType, CodeClawThemeId, CodeClawSize } from '@guru/shared'
 
 /** 通知音场景类型 */
 export type NotificationSoundType = 'taskComplete' | 'permissionRequest' | 'exitPlanMode' | 'planningReminder'
@@ -34,7 +34,7 @@ export type VoiceDictationProvider = 'doubao'
 export type VoiceDictationEndpointMode = 'async' | 'duplex'
 
 /** 语音输入输出方式 */
-export type VoiceDictationOutputMode = 'auto' | 'clipboard' | 'myyoda-input'
+export type VoiceDictationOutputMode = 'auto' | 'clipboard' | 'guru-input'
 
 /** 语音输入浮窗位置 */
 export interface VoiceDictationWindowPosition {
@@ -112,15 +112,15 @@ export interface VoiceDictationToggleInput {
 
 /** 主进程冻结的一次听写输出上下文。 */
 export interface VoiceDictationOutputContext {
-  /** 本次听写是否写入 MyYoda 内部输入框。 */
-  routeToMyYodaInput: boolean
+  /** 本次听写是否写入 Guru 内部输入框。 */
+  routeToGuruInput: boolean
   /** 会话开始时选择的输出模式。 */
   outputMode: VoiceDictationOutputMode
 }
 
-/** 主进程确认开始听写时，告知渲染进程本次输出是否应路由到 MyYoda 输入框。 */
+/** 主进程确认开始听写时，告知渲染进程本次输出是否应路由到 Guru 输入框。 */
 export interface VoiceDictationShownEvent {
-  routeToMyYodaInput: boolean
+  routeToGuruInput: boolean
   /** 主进程生成的冻结输出上下文 ID，后续 preview / commit / cancel 必须原样带回。 */
   outputContextId: string
   sourceInputId?: string
@@ -146,11 +146,11 @@ export interface VoiceDictationAudioChunkInput {
   data: ArrayBuffer
 }
 
-/** 将当前识别结果作为 MyYoda 输入框中的临时组合文本预览。 */
+/** 将当前识别结果作为 Guru 输入框中的临时组合文本预览。 */
 export interface VoiceDictationPreviewInput {
   sessionId: string
   text: string
-  /** 本次听写会话冻结的 MyYoda 输入目标；null 表示不路由到内部输入框。 */
+  /** 本次听写会话冻结的 Guru 输入目标；null 表示不路由到内部输入框。 */
   targetInputId?: string | null
   /** 主进程生成的冻结输出上下文 ID。 */
   outputContextId?: string
@@ -162,7 +162,7 @@ export interface VoiceDictationStopInput {
   sessionId: string
   /** 跨 ASR 重连保持稳定的听写会话 ID */
   previewSessionId?: string
-  /** 取消预览时应清理的 MyYoda 输入目标。 */
+  /** 取消预览时应清理的 Guru 输入目标。 */
   targetInputId?: string | null
   /** 主进程生成的冻结输出上下文 ID。 */
   outputContextId?: string
@@ -172,7 +172,7 @@ export interface VoiceDictationStopInput {
 export interface VoiceDictationCommitInput {
   sessionId: string
   text: string
-  /** 本次听写会话冻结的 MyYoda 输入目标；null 表示不路由到内部输入框。 */
+  /** 本次听写会话冻结的 Guru 输入目标；null 表示不路由到内部输入框。 */
   targetInputId?: string | null
   /** 主进程生成的冻结输出上下文 ID。 */
   outputContextId?: string
@@ -182,7 +182,7 @@ export interface VoiceDictationCommitInput {
 export interface VoiceDictationTextEvent {
   sessionId: string
   text: string
-  /** 本次听写会话冻结的 MyYoda 输入目标；null 表示交给全局 fallback 处理。 */
+  /** 本次听写会话冻结的 Guru 输入目标；null 表示交给全局 fallback 处理。 */
   targetInputId?: string | null
 }
 
@@ -199,7 +199,7 @@ export interface VoiceDictationResizeInput {
 
 /** 输出语音输入文本结果 */
 export interface VoiceDictationCommitResult {
-  mode: 'myyoda-input' | 'cursor' | 'clipboard'
+  mode: 'guru-input' | 'cursor' | 'clipboard'
   success: boolean
   message: string
 }
@@ -450,7 +450,7 @@ export interface CodeClawSettings {
   x?: number
   /** 记忆的桌宠窗口左上角 Y 坐标。 */
   y?: number
-  /** 桌宠主题 ID；CodeClaw 为 MyYoda 原创，Clawd/Calico/Cloudling 来自 clawd-on-desk AGPL 主题。 */
+  /** 桌宠主题 ID；CodeClaw 为 Guru 原创，Clawd/Calico/Cloudling 来自 clawd-on-desk AGPL 主题。 */
   themeId?: CodeClawThemeId
   /** 桌宠窗口尺寸档位（S/M/L），默认 M。 */
   size?: CodeClawSize
@@ -561,24 +561,24 @@ export interface AppSettings {
   appIconVariant?: string
   /** 语音输入设置（Access Token 以加密态存储，由专用服务解密后返回渲染进程） */
   voiceDictation?: VoiceDictationPersistedSettings
-  /** 飞书 Session 镜像设置：每个 MyYoda Session 可创建一个仅包含用户与指定 Bot 的飞书群 */
+  /** 飞书 Session 镜像设置：每个 Guru Session 可创建一个仅包含用户与指定 Bot 的飞书群 */
   feishuSessionMirror?: FeishuSessionMirrorSettings
   /** 无视觉输入能力 Agent 的视觉助手路由 */
   visionRelay?: VisionRelaySettings
   /** 已确认的受管浏览器风险告知版本；低于当前版本时首次使用会再次要求确认。 */
   browserRiskDisclaimerVersion?: number
-  /** 用户手动关闭的 MyYoda 内置 MCP ID 列表（针对默认开启的内置 MCP） */
+  /** 用户手动关闭的 Guru 内置 MCP ID 列表（针对默认开启的内置 MCP） */
   builtinMcpDisabledIds?: string[]
-  /** 用户手动开启的 MyYoda 内置 MCP ID 列表（针对默认关闭的内置 MCP，如 nano-banana、mem） */
+  /** 用户手动开启的 Guru 内置 MCP ID 列表（针对默认关闭的内置 MCP，如 nano-banana、mem） */
   builtinMcpEnabledIds?: string[]
-  /** 启动时自动清理临时文件（myyoda-preview、myyoda-installers），默认 true */
+  /** 启动时自动清理临时文件（guru-preview、guru-installers），默认 true */
   autoCleanupTempOnStart?: boolean
   /** 自动清理 N 天前已归档会话的 SDK 数据（0 = 禁用，默认 0） */
   autoCleanupArchivedDays?: number
   /**
-   * Agent 代创建 git commit / PR 时是否附加 MyYoda 推广标识。
-   * 默认 true：commit trailer `Co-Authored-By: MyYoda <MyYoda@noreply.github.com>`，PR body 末尾含 https://github.com/GeoffBao/MyYoda。
-   * 关闭后不注入任何 MyYoda 归因，并覆盖 Claude SDK 默认 Co-Authored-By。
+   * Agent 代创建 git commit / PR 时是否附加 Guru 推广标识。
+   * 默认 true：commit trailer `Co-Authored-By: Guru <Guru@noreply.github.com>`，PR body 末尾含 https://github.com/xcdha/Guru。
+   * 关闭后不注入任何 Guru 归因，并覆盖 Claude SDK 默认 Co-Authored-By。
    */
   gitAttributionEnabled?: boolean
   /** CodeClaw 桌面助手偏好。 */
@@ -693,7 +693,7 @@ export const VOICE_DICTATION_IPC_CHANNELS = {
   STOP: 'voice-dictation:stop',
   /** 取消语音输入会话 */
   CANCEL: 'voice-dictation:cancel',
-  /** 同步 MyYoda 输入框中的临时识别文本 */
+  /** 同步 Guru 输入框中的临时识别文本 */
   PREVIEW: 'voice-dictation:preview',
   /** 输出最终文本 */
   COMMIT: 'voice-dictation:commit',

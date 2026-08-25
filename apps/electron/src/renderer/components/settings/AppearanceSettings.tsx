@@ -1,9 +1,9 @@
 /**
  * AppearanceSettings - 外观设置页。
  *
- * "主题模式"只有浅色/深色/跟随系统三个标签；浅色、深色标签下面各自挂着「MyYoda 精选」
+ * "主题模式"只有浅色/深色/跟随系统三个标签；浅色、深色标签下面各自挂着「Guru 精选」
  * （旧版具名主题）+「更多预设」（迁移自 Craft 的预设）两组卡片，只显示当前标签对应的那个
- * 变体。MyYoda 精选旁提供 classic/modern 选择，Craft 更多预设固定使用现代工作台。
+ * 变体。Guru 精选旁提供 classic/modern 选择，Craft 更多预设固定使用现代工作台。
  * 均为完整预设、一键切换，不提供逐字段手动编辑。
  */
 
@@ -209,7 +209,7 @@ export function AppearanceSettings(): React.ReactElement {
               <div className="space-y-1.5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs font-medium text-muted-foreground">MyYoda 精选</div>
+                    <div className="text-xs font-medium text-muted-foreground">Guru 精选</div>
                     <div className="mt-0.5 text-[11px] text-muted-foreground/70">经典布局与现代工作台均可使用</div>
                   </div>
                   <div className="shrink-0">
@@ -732,7 +732,7 @@ function AreaStyleEditor({
 }
 
 /**
- * 实时预览面板：模拟 MyYoda 主界面布局（侧边栏 + 对话正文 + 输入框 + 代码块），
+ * 实时预览面板：模拟 Guru 主界面布局（侧边栏 + 对话正文 + 输入框 + 代码块），
  * 全部通过 var() 读取当前设置的 CSS 变量，随上方设置即时更新。
  */
 function StylePreview(): React.ReactElement {
@@ -743,7 +743,7 @@ function StylePreview(): React.ReactElement {
         <span className="size-2.5 rounded-full bg-[#ff5f57]" />
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-2 text-[10px] text-muted-foreground">MyYoda · 预览</span>
+        <span className="ml-2 text-[10px] text-muted-foreground">Guru · 预览</span>
       </div>
 
       <div className="flex min-h-[260px] items-stretch">

@@ -1,5 +1,5 @@
-import type { TaskGeneratedEventPayload } from '@myyoda/shared'
-import type { TaskSpec } from '@myyoda/shared/tasks/schema'
+import type { TaskGeneratedEventPayload } from '@guru/shared'
+import type { TaskSpec } from '@guru/shared/tasks/schema'
 import { buildSpec, specToSubtasks, type SpecForm } from './task-spec-form'
 import type { KanbanItem, TaskEditorTarget } from './types'
 

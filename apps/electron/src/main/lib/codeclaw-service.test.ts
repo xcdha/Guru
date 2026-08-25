@@ -45,7 +45,7 @@ mockElectronModule()
 
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 const realNow = Date.now
 
 let fakeNow = 1_700_000_000_000
@@ -56,10 +56,10 @@ let service: CodeClawServiceModule
 let realEventBus: AgentServiceModule['agentEventBus']
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-codeclaw-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-codeclaw-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
-  process.env.MYYODA_DEV = '0'
+  delete process.env.GURU_DEV
+  process.env.GURU_DEV = '0'
   mock.module('node:os', () => ({ ...os, homedir: () => tempHome }))
   Date.now = mock(() => fakeNow)
   // 真实加载 agent-service：与 codeclaw-service 共享同一个 eventBus 实例
@@ -71,8 +71,8 @@ beforeAll(async () => {
 afterAll(() => {
   Date.now = realNow
   process.env.HOME = originalHome
-  if (originalMyyodaDev === undefined) delete process.env.MYYODA_DEV
-  else process.env.MYYODA_DEV = originalMyyodaDev
+  if (originalMyyodaDev === undefined) delete process.env.GURU_DEV
+  else process.env.GURU_DEV = originalMyyodaDev
   rmSync(tempHome, { recursive: true, force: true })
 })
 
@@ -102,7 +102,7 @@ let externalRunCounter = 0
 function externalRun(sessionId: string) {
   externalRunCounter += 1
   return {
-    kind: 'myyoda_event' as const,
+    kind: 'guru_event' as const,
     event: {
       type: 'external_run_started' as const,
       source: 'feishu' as const,
@@ -117,7 +117,7 @@ const activeTestRuns = new Map<string, string>()
 function emit(sessionId: string, payload: Parameters<AgentServiceModule['agentEventBus']['emit']>[1]): void {
   // EventBus 已不再追踪 run scope（随 v0.17.26 baseline 回滚移除）；此处仅保留本地
   // bookkeeping 供测试断言使用，无需再显式关闭上一轮 scope。
-  if (payload.kind === 'myyoda_event' && payload.event.type === 'external_run_started' && payload.event.runId) {
+  if (payload.kind === 'guru_event' && payload.event.type === 'external_run_started' && payload.event.runId) {
     activeTestRuns.set(sessionId, payload.event.runId)
   }
   realEventBus.emit(sessionId, payload)

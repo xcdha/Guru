@@ -14,7 +14,7 @@ function item(overrides: Partial<ConnectorItem> & Pick<ConnectorItem, 'kind' | '
     id: `${ID_PREFIX[overrides.kind]}:${overrides.sourceId}`,
     description: 'desc',
     categoryLabel: '浏览器',
-    sourceLabel: 'MyYoda 内置',
+    sourceLabel: 'Guru 内置',
     typeLabel: 'MCP',
     enabled: true,
     available: true,

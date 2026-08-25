@@ -1,4 +1,4 @@
-import type { Channel, ChannelModel, ProviderType } from '@myyoda/shared'
+import type { Channel, ChannelModel, ProviderType } from '@guru/shared'
 
 export type TitleProviderSetting = 'session' | ProviderType
 

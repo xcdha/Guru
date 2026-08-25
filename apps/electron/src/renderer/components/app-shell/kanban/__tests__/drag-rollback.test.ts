@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createStore } from 'jotai/vanilla'
-import type { AgentSessionMeta, TaskAggregateSummary } from '@myyoda/shared'
+import type { AgentSessionMeta, TaskAggregateSummary } from '@guru/shared'
 import {
   kanbanItemsAtom,
   kanbanNotificationsAtom,

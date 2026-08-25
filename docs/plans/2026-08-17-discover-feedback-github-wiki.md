@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 把「意见反馈」提交链路从 Notion 完全替换为 GitHub Issues（PAT 认证 + user-attachments 截图 + 草稿/去重），并让「帮助」tab 通过 git 浅克隆接入 `GeoffBao/MyYoda` wiki 作为在线文档源。
+**Goal:** 把「意见反馈」提交链路从 Notion 完全替换为 GitHub Issues（PAT 认证 + user-attachments 截图 + 草稿/去重），并让「帮助」tab 通过 git 浅克隆接入 `xcdha/Guru` wiki 作为在线文档源。
 
-**Architecture:** 沿用现有「发现」面板的内容管线模式（主进程服务 + 代理感知 fetch + 本地缓存 + 纯逻辑单测）。反馈链路重构 `feedback-service.ts`（issue 创建 API + 非官方 user-attachments 截图上传 + 草稿 v2 + 去重记录）；wiki 走系统 git 浅克隆到 `~/.myyoda/discover/wiki-cache/`，`_Sidebar.md` 解析页面树，正文本地直读 + 媒体代理重写。渲染层：FeedbackDialog 加公开提示与草稿列表，HelpSection 新增 WikiBrowser 在线文档区块。
+**Architecture:** 沿用现有「发现」面板的内容管线模式（主进程服务 + 代理感知 fetch + 本地缓存 + 纯逻辑单测）。反馈链路重构 `feedback-service.ts`（issue 创建 API + 非官方 user-attachments 截图上传 + 草稿 v2 + 去重记录）；wiki 走系统 git 浅克隆到 `~/.guru/discover/wiki-cache/`，`_Sidebar.md` 解析页面树，正文本地直读 + 媒体代理重写。渲染层：FeedbackDialog 加公开提示与草稿列表，HelpSection 新增 WikiBrowser 在线文档区块。
 
 **Tech Stack:** Electron 主/渲染进程、React 18、jotai、TypeScript、bun test（1586 pass 基线）、GitHub REST API（fine-grained PAT）、系统 git、代理感知 `getFetchFn`。
 
@@ -13,7 +13,7 @@
 **基线（已实测，worktree `feature/discover-feedback-github-wiki`）:** `bun test` 1586 pass / 0 fail；`bun run typecheck` 全部包通过。
 
 **约定：**
-- 每个 commit 追加 trailer：`--trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>"`
+- 每个 commit 追加 trailer：`--trailer "Co-Authored-By: Guru <Guru@noreply.github.com>"`
 - 任务 1/5/7/8/9 之间存在过渡期类型断裂（旧 Notion 类型被替换但渲染层尚未改完），**中间不要求全量 typecheck**，全量绿在 Task 11 收口
 - 纯逻辑（TDD 任务 2/3/6）必须先写测试再实现
 
@@ -34,7 +34,7 @@
  * 用户反馈（→ GitHub Issues）相关类型定义
  *
  * 反馈入口在「发现」面板反馈 tab 与「更新日志与帮助」弹层（ReleaseNotesPopover），
- * 提交到 GeoffBao/MyYoda 公开仓库的 Issues（fine-grained PAT 认证）。
+ * 提交到 xcdha/Guru 公开仓库的 Issues（fine-grained PAT 认证）。
  * 截图经非官方 user-attachments 端点上传（与网页端拖拽等效），URL 嵌入 issue 正文。
  * 设计契约见 docs/superpowers/specs/2026-08-17-discover-feedback-github-issues-wiki-design.md。
  */
@@ -55,7 +55,7 @@ export const FEEDBACK_TYPE_TITLE_PREFIX: Record<FeedbackType, string> = {
 }
 
 /** 反馈承载仓库（公开，issue 可见） */
-export const FEEDBACK_REPO = { owner: 'GeoffBao', repo: 'MyYoda' } as const
+export const FEEDBACK_REPO = { owner: 'GeoffBao', repo: 'Guru' } as const
 
 /** 详细描述最大长度（对齐 newmax） */
 export const FEEDBACK_DESCRIPTION_MAX_LENGTH = 5000
@@ -99,7 +99,7 @@ export interface FeedbackSubmitResult {
 export interface FeedbackGithubConfig {
   /** fine-grained PAT（github_pat_...，加密存储） */
   token?: string
-  /** 承载仓库（默认 GeoffBao/MyYoda） */
+  /** 承载仓库（默认 xcdha/Guru） */
   repo?: { owner: string; repo: string }
 }
 
@@ -225,7 +225,7 @@ Expected: 现有测试不受影响（feedback 类型暂无纯逻辑测试）。�
 
 ```bash
 git add packages/shared/src/types/feedback.ts packages/shared/src/types/discover.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(shared): 反馈类型切换到 GitHub Issues，新增 Wiki 类型与通道"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(shared): 反馈类型切换到 GitHub Issues，新增 Wiki 类型与通道"
 ```
 
 ---
@@ -302,11 +302,11 @@ describe('isWikiPageNameSafe', () => {
 
 describe('rewriteWikiMedia', () => {
   const register = (url: string): string | null =>
-    url.includes('raw.githubusercontent.com') ? `myyoda-remote://${encodeURIComponent(url)}` : null
+    url.includes('raw.githubusercontent.com') ? `guru-remote://${encodeURIComponent(url)}` : null
 
   test('相对路径图片解析为 raw wiki 地址并注册代理', () => {
     const out = rewriteWikiMedia('![a](assets/logo.png)\n![b](./img/x.jpg)', register)
-    expect(out).toContain('myyoda-remote://')
+    expect(out).toContain('guru-remote://')
     expect(out).toContain('raw.githubusercontent.com')
   })
 
@@ -337,10 +337,10 @@ Expected: FAIL — `Cannot find module './wiki-pages'`。
  * - fallback：文件列表构建平铺树（Home 置顶）
  * - 媒体重写：相对路径图片解析到 raw.githubusercontent.com/wiki 后交给远程媒体注册
  */
-import type { WikiPageNode, WikiPageTree } from '@myyoda/shared'
+import type { WikiPageNode, WikiPageTree } from '@guru/shared'
 
 /** raw 访问 wiki 文件的基础地址（wiki 默认分支 master） */
-export const WIKI_RAW_BASE = 'https://raw.githubusercontent.com/wiki/GeoffBao/MyYoda/master'
+export const WIKI_RAW_BASE = 'https://raw.githubusercontent.com/wiki/xcdha/Guru/master'
 
 interface SidebarItem {
   depth: number
@@ -432,7 +432,7 @@ Expected: 全部 pass（约 9 条断言）。
 
 ```bash
 git add apps/electron/src/main/lib/wiki-pages.ts apps/electron/src/main/lib/wiki-pages.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): Wiki 页面树与媒体重写纯逻辑"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): Wiki 页面树与媒体重写纯逻辑"
 ```
 
 ---
@@ -478,10 +478,10 @@ describe('buildIssueBody', () => {
 
   test('无截图无联系方式', () => {
     const body = buildIssueBody({ type: 'bug', description: '窗口闪退', screenshots: [] }, { ...base, screenshotUrls: [] })
-    expect(body).toContain('<!-- 来自 MyYoda 应用内反馈 -->')
+    expect(body).toContain('<!-- 来自 Guru 应用内反馈 -->')
     expect(body).toContain('**类型**：Bug 报告')
     expect(body).toContain('窗口闪退')
-    expect(body).toContain('- MyYoda 版本：0.10.8')
+    expect(body).toContain('- Guru 版本：0.10.8')
     expect(body).not.toContain('**截图**')
     expect(body).not.toContain('**联系方式**')
   })
@@ -545,7 +545,7 @@ import {
   FEEDBACK_TYPE_TITLE_PREFIX,
   type FeedbackSubmitInput,
   type FeedbackType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 
 /** 标题截断长度（描述前 N 字） */
 const TITLE_PREFIX_LIMIT = 40
@@ -567,7 +567,7 @@ export interface IssueBodyOptions {
 /** 生成 issue 正文（类型/描述/截图/联系方式/环境信息） */
 export function buildIssueBody(input: FeedbackSubmitInput, options: IssueBodyOptions): string {
   const lines: string[] = [
-    '<!-- 来自 MyYoda 应用内反馈 -->',
+    '<!-- 来自 Guru 应用内反馈 -->',
     '',
     `**类型**：${FEEDBACK_TYPE_TITLE_PREFIX[input.type]}`,
     '',
@@ -587,7 +587,7 @@ export function buildIssueBody(input: FeedbackSubmitInput, options: IssueBodyOpt
   lines.push(
     '',
     '**环境信息**：',
-    `- MyYoda 版本：${options.appVersion || '未知版本'}`,
+    `- Guru 版本：${options.appVersion || '未知版本'}`,
     `- 系统：${options.platform || 'unknown'}`,
     `- 提交时间：${options.submittedAt}`,
   )
@@ -640,7 +640,7 @@ Expected: 全部 pass（约 10 条断言）。
 
 ```bash
 git add apps/electron/src/main/lib/feedback-format.ts apps/electron/src/main/lib/feedback-format.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(feedback): issue 模板/标签决策/去重纯逻辑"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(feedback): issue 模板/标签决策/去重纯逻辑"
 ```
 
 ---
@@ -658,7 +658,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 /**
  * 获取反馈配置（GitHub PAT）文件路径
  *
- * @returns ~/.myyoda/feedback.json
+ * @returns ~/.guru/feedback.json
  */
 ```
 
@@ -668,7 +668,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 /**
  * 获取反馈去重记录文件路径
  *
- * @returns ~/.myyoda/feedback-submitted.json
+ * @returns ~/.guru/feedback-submitted.json
  */
 export function getFeedbackSubmittedPath(): string {
   return join(getConfigDir(), 'feedback-submitted.json')
@@ -681,7 +681,7 @@ export function getFeedbackSubmittedPath(): string {
 /**
  * 获取「发现」Wiki 缓存目录路径（git 浅克隆目标）
  *
- * @returns ~/.myyoda/discover/wiki-cache
+ * @returns ~/.guru/discover/wiki-cache
  */
 export function getDiscoverWikiCacheDir(): string {
   return join(getDiscoverDir(), 'wiki-cache')
@@ -700,7 +700,7 @@ Expected: 现有测试保持通过（新增函数暂无测试，Task 6 的 wiki-
 
 ```bash
 git add apps/electron/src/main/lib/config-paths.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(main): 反馈去重记录与 Wiki 缓存目录路径"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(main): 反馈去重记录与 Wiki 缓存目录路径"
 ```
 
 ---
@@ -718,11 +718,11 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 /**
  * 用户反馈服务（→ GitHub Issues）
  *
- * 反馈提交到 GeoffBao/MyYoda 公开仓库的 Issues（fine-grained PAT 认证）。
- * - 配置：~/.myyoda/feedback.json（token 用 Electron safeStorage 加密）
+ * 反馈提交到 xcdha/Guru 公开仓库的 Issues（fine-grained PAT 认证）。
+ * - 配置：~/.guru/feedback.json（token 用 Electron safeStorage 加密）
  * - 截图：非官方 user-attachments 端点上传（与网页端拖拽等效），URL 嵌入 issue 正文
- * - 草稿：~/.myyoda/feedback-drafts/（v2 格式，提交失败降级，可重试）
- * - 去重：~/.myyoda/feedback-submitted.json（类型+描述 hash，30 天窗口）
+ * - 草稿：~/.guru/feedback-drafts/（v2 格式，提交失败降级，可重试）
+ * - 去重：~/.guru/feedback-submitted.json（类型+描述 hash，30 天窗口）
  * - HTTP 统一走代理感知的 getFetchFn（国内网络环境刚需）
  *
  * 设计契约参考 docs/superpowers/specs/2026-08-17-discover-feedback-github-issues-wiki-design.md §4。
@@ -743,7 +743,7 @@ import {
   type FeedbackSubmitInput,
   type FeedbackSubmitResult,
   type FeedbackTestConnectionResult,
-} from '@myyoda/shared'
+} from '@guru/shared'
 import { getFeedbackConfigPath, getFeedbackDraftsDir, getFeedbackSubmittedPath } from './config-paths'
 import {
   buildDedupKey,
@@ -867,10 +867,10 @@ export async function testFeedbackConnection(config: FeedbackGithubConfig): Prom
       return { success: false, message: 'Token 无效或已失效，请到 GitHub 重新生成' }
     }
     if (response.status === 403) {
-      return { success: false, message: '权限不足：请确认 Token 已授权访问 GeoffBao/MyYoda 仓库' }
+      return { success: false, message: '权限不足：请确认 Token 已授权访问 xcdha/Guru 仓库' }
     }
     if (response.status === 404) {
-      return { success: false, message: '找不到目标仓库 GeoffBao/MyYoda' }
+      return { success: false, message: '找不到目标仓库 xcdha/Guru' }
     }
     return { success: false, message: `GitHub 返回错误（${response.status}）` }
   } catch {
@@ -1258,7 +1258,7 @@ Expected: 纯逻辑测试保持通过。`feedback-service.ts` 依赖 electron �
 
 ```bash
 git add apps/electron/src/main/lib/feedback-service.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(feedback): 反馈服务重构为 GitHub Issues 提交（PAT/user-attachments/草稿 v2/去重）"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(feedback): 反馈服务重构为 GitHub Issues 提交（PAT/user-attachments/草稿 v2/去重）"
 ```
 
 ---
@@ -1335,7 +1335,7 @@ describe('wiki-service（本地 fixture 仓库）', () => {
     const page = getWikiPage('Home', cacheDir)
     expect(page.markdown).toContain('raw.githubusercontent.com')
     expect(page.markdown).not.toContain('](assets/logo.png)')
-    expect(page.htmlUrl).toBe('https://github.com/GeoffBao/MyYoda/wiki/Home')
+    expect(page.htmlUrl).toBe('https://github.com/xcdha/Guru/wiki/Home')
   })
 
   test('非法页面名抛错', () => {
@@ -1361,8 +1361,8 @@ Expected: FAIL — `Cannot find module './wiki-service'`。
 /**
  * 「帮助」Wiki 服务：GitHub Wiki（git 仓库）浅克隆 + 本地缓存
  *
- * - 源：https://github.com/GeoffBao/MyYoda.wiki.git（wiki 首次建页后仓库才存在）
- * - 首次打开帮助 tab 浅克隆到 ~/.myyoda/discover/wiki-cache/；之后 git fetch --depth 1 + reset --hard
+ * - 源：https://github.com/xcdha/Guru.wiki.git（wiki 首次建页后仓库才存在）
+ * - 首次打开帮助 tab 浅克隆到 ~/.guru/discover/wiki-cache/；之后 git fetch --depth 1 + reset --hard
  * - 页面树：_Sidebar.md 解析（缺失时按文件列表构建）；正文本地 .md 直读，图片经远程媒体代理
  * - git 代理：clone/fetch 时注入 -c http.proxy=<有效代理>
  * - 更新推送：后台刷新发现 commit 变化时经 sender 推 WIKI_UPDATED
@@ -1374,7 +1374,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import type { WebContents } from 'electron'
-import { DISCOVER_IPC_CHANNELS, type WikiPageContent, type WikiPagesResult, type WikiPageTree } from '@myyoda/shared'
+import { DISCOVER_IPC_CHANNELS, type WikiPageContent, type WikiPagesResult, type WikiPageTree } from '@guru/shared'
 import { getDiscoverWikiCacheDir } from './config-paths'
 import { getEffectiveProxyUrl } from './proxy-settings-service'
 import { registerRemoteMediaUrl } from './discover-remote-media'
@@ -1388,7 +1388,7 @@ import {
 const execFileAsync = promisify(execFile)
 
 /** Wiki 承载仓库（与社区 Discussions 同仓库） */
-export const WIKI_REPO = { owner: 'GeoffBao', repo: 'MyYoda' }
+export const WIKI_REPO = { owner: 'GeoffBao', repo: 'Guru' }
 
 /** 默认远端 URL（测试可经参数注入本地 fixture） */
 export function getDefaultWikiRemoteUrl(): string {
@@ -1551,7 +1551,7 @@ Expected: 6 条测试全部 pass（真实调用系统 git 克隆本地 fixture�
 
 ```bash
 git add apps/electron/src/main/lib/wiki-service.ts apps/electron/src/main/lib/wiki-service.test.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): Wiki 服务——git 浅克隆、页面树与单页正文"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): Wiki 服务——git 浅克隆、页面树与单页正文"
 ```
 
 ---
@@ -1668,22 +1668,22 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 
 ```ts
   // ===== 用户反馈（→ GitHub Issues）=====
-  feedbackSubmit: (input: import('@myyoda/shared').FeedbackSubmitInput, appVersion?: string, platform?: string) => Promise<import('@myyoda/shared').FeedbackSubmitResult>
-  feedbackTestConnection: (config: import('@myyoda/shared').FeedbackGithubConfig) => Promise<import('@myyoda/shared').FeedbackTestConnectionResult>
+  feedbackSubmit: (input: import('@guru/shared').FeedbackSubmitInput, appVersion?: string, platform?: string) => Promise<import('@guru/shared').FeedbackSubmitResult>
+  feedbackTestConnection: (config: import('@guru/shared').FeedbackGithubConfig) => Promise<import('@guru/shared').FeedbackTestConnectionResult>
   feedbackGetConfig: () => Promise<{ configured: boolean; repo: string; legacyNotionDetected: boolean }>
-  feedbackSaveConfig: (config: import('@myyoda/shared').FeedbackGithubConfig) => Promise<void>
+  feedbackSaveConfig: (config: import('@guru/shared').FeedbackGithubConfig) => Promise<void>
   feedbackCaptureWindow: () => Promise<{ filePath: string; dataUrl: string } | null>
   feedbackPickImages: () => Promise<Array<{ filePath: string; dataUrl: string }>>
-  feedbackListDrafts: () => Promise<import('@myyoda/shared').FeedbackDraftItem[]>
+  feedbackListDrafts: () => Promise<import('@guru/shared').FeedbackDraftItem[]>
   feedbackDeleteDraft: (fileName: string) => Promise<boolean>
 ```
 
 在 discover 接口区（`onVideoDownloadDone` 行之后）追加：
 
 ```ts
-  discoverGetWikiPages: (force?: boolean) => Promise<import('@myyoda/shared').WikiPagesResult>
-  discoverGetWikiPage: (name: string) => Promise<import('@myyoda/shared').WikiPageContent>
-  discoverRefreshWiki: () => Promise<import('@myyoda/shared').WikiPagesResult>
+  discoverGetWikiPages: (force?: boolean) => Promise<import('@guru/shared').WikiPagesResult>
+  discoverGetWikiPage: (name: string) => Promise<import('@guru/shared').WikiPageContent>
+  discoverRefreshWiki: () => Promise<import('@guru/shared').WikiPagesResult>
   onWikiUpdated: (listener: (event: { commitHash: string }) => void) => () => void
 ```
 
@@ -1768,7 +1768,7 @@ Expected: 纯逻辑测试保持通过。
 
 ```bash
 git add apps/electron/src/main/ipc.ts apps/electron/src/preload/index.ts
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(ipc): 反馈通道切换到 GitHub，接线 Wiki 与草稿通道"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(ipc): 反馈通道切换到 GitHub，接线 Wiki 与草稿通道"
 ```
 
 ---
@@ -1786,7 +1786,7 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "fe
 /**
  * FeedbackSettings - 反馈渠道配置页
  *
- * 配置 GitHub fine-grained PAT（Issues 写权限，仅 GeoffBao/MyYoda 仓库），
+ * 配置 GitHub fine-grained PAT（Issues 写权限，仅 xcdha/Guru 仓库），
  * 支持「测试连接」即时验证。token 用 safeStorage 加密存储，不回显明文。
  * 反馈会公开提交到仓库 Issues，页面给出创建 PAT 的指引链接。
  */
@@ -1799,13 +1799,13 @@ import {
   SettingsSecretInput,
   SettingsInput,
 } from './primitives'
-import type { FeedbackTestConnectionResult } from '@myyoda/shared'
+import type { FeedbackTestConnectionResult } from '@guru/shared'
 
 const PAT_NEW_URL = 'https://github.com/settings/personal-access-tokens/new'
 
 export function FeedbackSettings(): React.ReactElement {
   const [token, setToken] = React.useState('')
-  const [repo, setRepo] = React.useState('GeoffBao/MyYoda')
+  const [repo, setRepo] = React.useState('xcdha/Guru')
   const [legacyNotionDetected, setLegacyNotionDetected] = React.useState(false)
   const [loaded, setLoaded] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
@@ -1853,12 +1853,12 @@ export function FeedbackSettings(): React.ReactElement {
     <div className="space-y-4">
       <SettingsSection
         title="意见反馈渠道"
-        description="应用内提交的反馈会作为 Issue 公开提交到 GeoffBao/MyYoda 仓库。需要配置一个 GitHub fine-grained Personal Access Token（Issues 写权限）。"
+        description="应用内提交的反馈会作为 Issue 公开提交到 xcdha/Guru 仓库。需要配置一个 GitHub fine-grained Personal Access Token（Issues 写权限）。"
       >
         <SettingsCard>
           <SettingsSecretInput
             label="GitHub Personal Access Token"
-            description="在 GitHub 生成 fine-grained PAT：Repository access 选「Only select repositories」→ GeoffBao/MyYoda，Permissions → Issues → Read and write。使用系统加密存储，仅保存在本机。"
+            description="在 GitHub 生成 fine-grained PAT：Repository access 选「Only select repositories」→ xcdha/Guru，Permissions → Issues → Read and write。使用系统加密存储，仅保存在本机。"
             value={token}
             onChange={setToken}
             placeholder={loaded ? (token ? '已填写（留空保持不变）' : 'github_pat_...') : '加载中...'}
@@ -1869,7 +1869,7 @@ export function FeedbackSettings(): React.ReactElement {
             value={repo}
             onChange={() => undefined}
             disabled
-            placeholder="GeoffBao/MyYoda"
+            placeholder="xcdha/Guru"
           />
         </SettingsCard>
       </SettingsSection>
@@ -1880,7 +1880,7 @@ export function FeedbackSettings(): React.ReactElement {
             <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-foreground/80">
               <Info size={14} className="mt-0.5 shrink-0 text-amber-500" />
               <span>
-                反馈已切换到 GitHub Issues，检测到旧的 Notion 配置不再使用。保存新配置后本条提示消失；旧字段可自行删除（~/.myyoda/feedback.json 中的 databaseId/tokenEncrypted）。
+                反馈已切换到 GitHub Issues，检测到旧的 Notion 配置不再使用。保存新配置后本条提示消失；旧字段可自行删除（~/.guru/feedback.json 中的 databaseId/tokenEncrypted）。
               </span>
             </div>
           </SettingsCard>
@@ -1957,7 +1957,7 @@ Expected: 主进程测试保持通过（渲染层无单测，UI 行为 Task 12 �
 
 ```bash
 git add apps/electron/src/renderer/components/settings/FeedbackSettings.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(settings): 反馈渠道配置改为 GitHub PAT + Notion 迁移提示"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(settings): 反馈渠道配置改为 GitHub PAT + Notion 迁移提示"
 ```
 
 ---
@@ -1991,7 +1991,7 @@ import {
   FEEDBACK_DESCRIPTION_MAX_LENGTH,
   FEEDBACK_MAX_SCREENSHOTS,
   type FeedbackType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 ```
 new:
 ```tsx
@@ -2000,7 +2000,7 @@ import {
   FEEDBACK_MAX_SCREENSHOTS,
   type FeedbackDraftItem,
   type FeedbackType,
-} from '@myyoda/shared'
+} from '@guru/shared'
 ```
 
 **编辑 3 — 新增草稿 state（configured state 之后）：**
@@ -2200,7 +2200,7 @@ old:
 ```
 new:
 ```tsx
-              遇到问题或有好主意？反馈会公开提交到 GitHub Issues（GeoffBao/MyYoda 仓库），附上截图和联系方式会帮助我们更快定位。
+              遇到问题或有好主意？反馈会公开提交到 GitHub Issues（xcdha/Guru 仓库），附上截图和联系方式会帮助我们更快定位。
 ```
 
 **Step 3: 验证**
@@ -2215,7 +2215,7 @@ Expected: 主进程测试保持通过（渲染层无单测）。
 
 ```bash
 git add apps/electron/src/renderer/components/feedback/FeedbackDialog.tsx apps/electron/src/renderer/components/discover/FeedbackSection.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(feedback): 弹窗公开提示、GitHub 文案与本地草稿列表"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(feedback): 弹窗公开提示、GitHub 文案与本地草稿列表"
 ```
 
 ---
@@ -2260,7 +2260,7 @@ import * as React from 'react'
 import { useAtom } from 'jotai'
 import { toast } from 'sonner'
 import { ArrowLeft, ChevronRight, CloudOff, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react'
-import type { WikiPageNode } from '@myyoda/shared'
+import type { WikiPageNode } from '@guru/shared'
 import {
   wikiCurrentPageAtom,
   wikiPageContentAtom,
@@ -2466,7 +2466,7 @@ Expected: 主进程测试保持通过。
 
 ```bash
 git add apps/electron/src/renderer/atoms/discover-atoms.ts apps/electron/src/renderer/components/discover/WikiBrowser.tsx apps/electron/src/renderer/components/discover/HelpSection.tsx
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "feat(discover): 帮助 tab 接入 Wiki 在线文档浏览"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "feat(discover): 帮助 tab 接入 Wiki 在线文档浏览"
 ```
 
 ---
@@ -2510,7 +2510,7 @@ Expected: `1586 + 新增（wiki-pages 9 + feedback-format 10 + wiki-service 6 �
 
 ```bash
 git add -A
-git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "refactor(feedback): 清理 Notion 残留，全量 typecheck 与测试回归通过"
+git commit --trailer "Co-Authored-By: Guru <Guru@noreply.github.com>" -m "refactor(feedback): 清理 Notion 残留，全量 typecheck 与测试回归通过"
 ```
 
 ---
@@ -2521,8 +2521,8 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "re
 
 **反馈链路：**
 
-1. `gh api repos/GeoffBao/MyYoda --jq .id` 记录仓库 id（供对照 user-attachments 请求）
-2. 设置 → 意见反馈：填入仅授 `Issues: Read and write` 于 GeoffBao/MyYoda 的 PAT → 测试连接 → 应显示「凭证有效」
+1. `gh api repos/xcdha/Guru --jq .id` 记录仓库 id（供对照 user-attachments 请求）
+2. 设置 → 意见反馈：填入仅授 `Issues: Read and write` 于 xcdha/Guru 的 PAT → 测试连接 → 应显示「凭证有效」
 3. 故意填一个错误 token → 测试连接 → 应显示「Token 无效或已失效」
 4. 「发现」→ 反馈 tab → 提交反馈：填描述 + 截屏 1 张 + 上传 1 张 → 提交 → toast 成功，附 issue 链接
 5. 打开该 issue：标题 `[Bug 报告] ...`、正文含环境信息块与两张截图、label `bug` 存在（若仓库无 label 则无 label）
@@ -2533,11 +2533,11 @@ git commit --trailer "Co-Authored-By: MyYoda <MyYoda@noreply.github.com>" -m "re
 
 **Wiki 链路：**
 
-10. 在 `GeoffBao/MyYoda` wiki 创建 `Home.md`（标题 + 一段正文 + 一张相对路径图片）与 `_Sidebar.md`（两层条目）
+10. 在 `xcdha/Guru` wiki 创建 `Home.md`（标题 + 一段正文 + 一张相对路径图片）与 `_Sidebar.md`（两层条目）
 11. 打开「帮助」tab → 在线文档区块出现页面树（层级缩进正确）→ 点开 Home → 正文渲染、图片经代理可显示 → 「在 GitHub 打开」跳 wiki 网页
 12. 网页上修改 Home 正文 → 应用内点刷新按钮 → 内容更新；或切走再切回帮助 tab 触发后台刷新 → toast「帮助文档已更新」
 13. 断网重开帮助 tab → 显示上次缓存 + 「离线模式」横幅
-14. 删除本地 `~/.myyoda/discover/wiki-cache` 后断网打开 → 错误提示 + 刷新按钮可重试
+14. 删除本地 `~/.guru/discover/wiki-cache` 后断网打开 → 错误提示 + 刷新按钮可重试
 15. 标题过滤：输入关键字 → 列表只显示匹配项
 
 **回归：**

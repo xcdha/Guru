@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, ExternalLink, FileText } from 'lucide-react'
-import type { WorkspaceMemoryFileChange } from '@myyoda/shared'
+import type { WorkspaceMemoryFileChange } from '@guru/shared'
 import { Button } from '@/components/ui/button'
 import { WORKSPACE_TERMS } from '@/lib/workspace-project-terminology'
 

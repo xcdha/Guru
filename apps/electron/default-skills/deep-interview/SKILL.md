@@ -8,7 +8,7 @@ version: "1.0.0"
 
 用苏格拉底式逐题访谈把模糊想法变成可执行的明确规格：每次只问一个问题，针对最弱澄清维度，逐轮评分歧义度，**歧义低于阈值且用户明确批准后才进入实现**。
 
-> 参考：AX-Surfers/deep-interview-skills（Socratic deep interview + mathematical ambiguity gating），按 MyYoda 流程适配。灵感：Ouroboros——"规格质量是 AI 辅助开发的主要瓶颈"。
+> 参考：AX-Surfers/deep-interview-skills（Socratic deep interview + mathematical ambiguity gating），按 Guru 流程适配。灵感：Ouroboros——"规格质量是 AI 辅助开发的主要瓶颈"。
 
 ## 使用场景
 

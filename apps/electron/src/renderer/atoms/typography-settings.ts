@@ -9,7 +9,7 @@
  * fontSize 语义：undefined = 跟随 MarkdownFontSize 档位（applyTypographyToDOM
  * 不写 --md-body-font-size，由 markdown-font-size.ts 的档位逻辑负责）；显式赋值
  * 则精细覆盖档位。
- * 持久化到 ~/.myyoda/settings.json（字段 settings.typography）。
+ * 持久化到 ~/.guru/settings.json（字段 settings.typography）。
  */
 
 import { atom, getDefaultStore } from 'jotai'

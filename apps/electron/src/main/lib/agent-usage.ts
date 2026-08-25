@@ -23,7 +23,7 @@
  *   text 的回复（纯 thinking / tool_use 的工具往返不计）。
  * - **按天 / 按小时 / streak / 热力图** 都从 `_createdAt`（毫秒）推导。
  *
- * 性能：增量聚合缓存 `~/.myyoda/agent-usage-cache.json`，以会话 JSONL 的 (size, mtimeMs)
+ * 性能：增量聚合缓存 `~/.guru/agent-usage-cache.json`，以会话 JSONL 的 (size, mtimeMs)
  * 作为指纹。指纹不变直接复用缓存，只重扫有变更的会话；避免每次打开设置都全量扫描历史。
  */
 
@@ -31,7 +31,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { getAgentSessionsDir, getAgentUsageCachePath } from './config-paths'
 import { readJsonFileSafe, writeJsonFileAtomic } from './safe-file'
-import type { SDKAssistantMessage, SDKResultMessage, SDKUserMessage, ProviderType } from '@myyoda/shared'
+import type { SDKAssistantMessage, SDKResultMessage, SDKUserMessage, ProviderType } from '@guru/shared'
 
 /** 用量时间范围 */
 export type UsageRange = 'all' | '30d' | '7d' | 'month'

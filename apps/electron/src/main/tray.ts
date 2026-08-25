@@ -15,7 +15,7 @@ import {
   setCodeClawSound,
   setCodeClawTheme,
 } from './lib/codeclaw-service'
-import { CODECLAW_THEMES, type CodeClawSize } from '@myyoda/shared'
+import { CODECLAW_THEMES, type CodeClawSize } from '@guru/shared'
 
 let tray: Tray | null = null
 /** 保存 actions 引用：切换桌宠开关后需主动重建托盘菜单（Windows 下 setContextMenu 会吞掉 click/right-click 事件，不重建则菜单永远停留在旧状态） */
@@ -204,13 +204,13 @@ function buildTrayMenu(actions: TrayActions): Menu {
     },
     { type: 'separator' },
     {
-      label: '打开 MyYoda',
+      label: '打开 Guru',
       click: () => actions.showMainWindow(),
     },
     ...buildCodeClawTrayGroup(),
     { type: 'separator' },
     {
-      label: '退出 MyYoda',
+      label: '退出 Guru',
       click: () => {
         app.quit()
       },
@@ -253,7 +253,7 @@ export function createTray(actionsInput?: Partial<TrayActions>): Tray | null {
     tray = new Tray(image)
 
     // 设置 tooltip
-    tray.setToolTip('MyYoda')
+    tray.setToolTip('Guru')
 
     updateTrayMenu(actions)
 

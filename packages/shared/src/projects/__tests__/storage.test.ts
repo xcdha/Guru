@@ -2,14 +2,14 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, sep } from 'path';
-import type { ProjectConfig } from '@myyoda/shared/projects';
-import * as projectContracts from '@myyoda/shared/projects';
+import type { ProjectConfig } from '@guru/shared/projects';
+import * as projectContracts from '@guru/shared/projects';
 import * as projectStorage from '../storage.ts';
 
 const tempRoots: string[] = [];
 
 function createTempWorkspaceRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'myyoda-project-storage-'));
+  const root = mkdtempSync(join(tmpdir(), 'guru-project-storage-'));
   tempRoots.push(root);
   return root;
 }
@@ -301,7 +301,7 @@ describe('workspace project storage', () => {
 
   test('带真实 workingDirectory 的本地目录项目 memoryLocation 为 project，Memory 落在 <workingDirectory>/.context/MEMORY.md', () => {
     const workspaceRoot = createTempWorkspaceRoot();
-    const externalDir = mkdtempSync(join(tmpdir(), 'myyoda-project-external-'));
+    const externalDir = mkdtempSync(join(tmpdir(), 'guru-project-external-'));
     tempRoots.push(externalDir);
 
     const project = projectStorage.createProject(workspaceRoot, {
@@ -313,7 +313,7 @@ describe('workspace project storage', () => {
     const memoryPath = projectStorage.getProjectMemoryPath(workspaceRoot, project.slug);
     expect(memoryPath).toBe(join(externalDir, '.context', 'MEMORY.md'));
 
-    // 写入时自动创建 .context/ 目录，且不落在 MyYoda 托管的 projects/{slug}/ 下
+    // 写入时自动创建 .context/ 目录，且不落在 Guru 托管的 projects/{slug}/ 下
     projectStorage.writeProjectMemory(workspaceRoot, project.slug, '# 项目记忆\n第一次');
     expect(existsSync(join(externalDir, '.context', 'MEMORY.md'))).toBe(true);
     expect(existsSync(join(projectStorage.getProjectPath(workspaceRoot, project.slug), 'MEMORY.md'))).toBe(false);
@@ -338,7 +338,7 @@ describe('workspace project storage', () => {
 
   test('老项目（config.json 无 memoryLocation 字段）行为不受影响：手写 config 也解析回托管路径', () => {
     const workspaceRoot = createTempWorkspaceRoot();
-    const externalDir = mkdtempSync(join(tmpdir(), 'myyoda-project-legacy-'));
+    const externalDir = mkdtempSync(join(tmpdir(), 'guru-project-legacy-'));
     tempRoots.push(externalDir);
 
     // 模拟功能上线前已存在的项目：config.json 已有 workingDirectory 但没有 memoryLocation 字段
@@ -368,7 +368,7 @@ describe('workspace project storage', () => {
 
   test('本地目录项目的 Skills/MCP 路径落在 <workingDirectory>/.context/ 下，跟随真实文件夹', () => {
     const workspaceRoot = createTempWorkspaceRoot();
-    const externalDir = mkdtempSync(join(tmpdir(), 'myyoda-project-skills-mcp-'));
+    const externalDir = mkdtempSync(join(tmpdir(), 'guru-project-skills-mcp-'));
     tempRoots.push(externalDir);
 
     const project = projectStorage.createProject(workspaceRoot, {

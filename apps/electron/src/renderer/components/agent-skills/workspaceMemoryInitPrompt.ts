@@ -1,12 +1,12 @@
 /**
  * workspaceMemoryInitPrompt — Yoda 插件「Memory」子模块的记忆沉淀 Prompt
  *
- * 三条互补路径（对齐 Proma「Agent 技能 > 记忆」的两段式引导，并保留 MyYoda 原有的一键生成）：
+ * 三条互补路径（对齐 Proma「Agent 技能 > 记忆」的两段式引导，并保留 Guru 原有的一键生成）：
  * - buildWorkspaceKnowledgeBootstrapPrompt：建立工作区地图与协作画像（不扫历史会话，更克制）
  * - buildWorkspaceSessionEvidencePrompt：授权会话补证据（分批、限量，需先有协作画像）
- * - buildWorkspaceMemoryInitPrompt：一次性生成（MyYoda 原有，范围内直接读历史会话 + 项目知识）
+ * - buildWorkspaceMemoryInitPrompt：一次性生成（Guru 原有，范围内直接读历史会话 + 项目知识）
  *
- * 注意与 Proma 版本的关键差异：MyYoda 系统提示词明确约定 Project 自己工作目录下的
+ * 注意与 Proma 版本的关键差异：Guru 系统提示词明确约定 Project 自己工作目录下的
  * AGENTS.md/CLAUDE.md 是人写只读文件，Agent 不得自动创建或修改；因此这里只授权维护
  * 工作区根目录的 AGENTS.md（跨 Project 共享），不像 Proma 那样同时维护"项目根 AGENTS.md"。
  */
@@ -24,16 +24,16 @@ export function getMemoryHistoryRangeLabel(value: MemoryHistoryRange): string {
   return MEMORY_HISTORY_RANGE_OPTIONS.find((option) => option.value === value)?.promptLabel ?? '最近 1 个月内'
 }
 
-/** 工作区级知识演进受管区块；写入工作区根 AGENTS.md，标记为 MyYoda 受管区块，不覆盖用户手写内容。 */
-export const WORKSPACE_KNOWLEDGE_MAINTENANCE_BLOCK = `<!-- myyoda:knowledge-maintenance:start -->
-## 协作知识演进（MyYoda 维护）
+/** 工作区级知识演进受管区块；写入工作区根 AGENTS.md，标记为 Guru 受管区块，不覆盖用户手写内容。 */
+export const WORKSPACE_KNOWLEDGE_MAINTENANCE_BLOCK = `<!-- guru:knowledge-maintenance:start -->
+## 协作知识演进（Guru 维护）
 
 - 保持本文件中的工作区规则与已验证事实同步；命令、架构、边界和入口变化时做最小更新，不复制到长期记忆。
 - 工作区的 \`memory/\` 是可扩展的长期协作知识库：\`MEMORY.md\` 只做主题索引和路由，按证据创建用户画像、协作偏好、纠错与经验、决策理由等主题文件；不要把临时过程或长篇证据写入其中。
 - 用户画像按具体领域渐进修订，不以"新手/专家"等全局标签定性。只有稳定、会改变未来协作判断的信息才值得维护。若记忆时间敏感、状态会更新，或记录具有后续判断价值的阶段性进展，须在对应正文相邻标注事实/状态的发生、生效或截至时间（至少日期；日内顺序、截止点或时区会影响判断时写明时间和时区），不能用文件修改时间替代；稳定事实无需额外添加时间戳。
 - 基于明确、稳定证据的记忆最小增量可直接写入并在完成后说明；仅在删除或大段覆盖、与既有记录冲突、存在不确定推断，或可能涉及敏感个人信息时，先提出候选并取得确认。工作区规则的已验证事实可直接更新。历史会话仅在用户授权后作为分批、限量的补充证据，不得全量扫描。
 - 各工作区（项目）的 \`memory/\` 记录该工作区专属的决策与踩坑（工作区 = 项目，项目记忆即工作区记忆），不要写入其他工作区；本文件只沉淀当前工作区内的稳定知识。
-<!-- myyoda:knowledge-maintenance:end -->`
+<!-- guru:knowledge-maintenance:end -->`
 
 /** 第一步：建立可维护的工作区地图与协作画像；不扫历史会话，仅基于当前可验证证据 + 真实对话逐步校准。 */
 export function buildWorkspaceKnowledgeBootstrapPrompt(): string {
@@ -44,7 +44,7 @@ export function buildWorkspaceKnowledgeBootstrapPrompt(): string {
 
 1. 先读取现有工作区 AGENTS.md（若存在），再用最小必要的证据核验：当前工作区下各 Project 的实际情况、常用命令、目录入口、近期相关文档。不要只凭文件名或一般经验猜测。
 2. 工作区 AGENTS.md 只负责工作区级的执行环境、跨 Project 命令与工作流约定、以及指向各 Project 自身规则的索引；不要复制某个 Project 的专属事实，也不要枚举已安装 Skills——它们会动态注入系统提示词。
-3. 缺失时创建简洁的最小索引；已有时只做可验证的增量更新。优先维护已有 \`<!-- myyoda:... -->\` 区块；没有时只追加受管区块，绝不整体重写、删除或覆盖用户手写规则。
+3. 缺失时创建简洁的最小索引；已有时只做可验证的增量更新。优先维护已有 \`<!-- guru:... -->\` 区块；没有时只追加受管区块，绝不整体重写、删除或覆盖用户手写规则。
 4. 确保工作区 AGENTS.md 包含下方完整的知识演进区块；若已有同名区块，只保留一个并按原内容做最小修订：
 
 ${WORKSPACE_KNOWLEDGE_MAINTENANCE_BLOCK}
@@ -81,7 +81,7 @@ export function buildWorkspaceSessionEvidencePrompt(historyRange: MemoryHistoryR
 - 不要把会话流水账、一次性任务过程或未经验证的推断写入任何长期文件；不要读取或写入其他工作区的会话或记忆。`
 }
 
-/** 一次性生成（MyYoda 原有，保留作为快捷方式）：单个 Agent 会话内完成读取 + 提炼 + 写入的全流程。 */
+/** 一次性生成（Guru 原有，保留作为快捷方式）：单个 Agent 会话内完成读取 + 提炼 + 写入的全流程。 */
 export function buildWorkspaceMemoryInitPrompt(historyRange: MemoryHistoryRange): string {
   const rangeLabel = getMemoryHistoryRangeLabel(historyRange)
   const rangeGuidance = historyRange === 'all'

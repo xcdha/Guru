@@ -296,7 +296,7 @@ async function callGeminiAndBuildResult(
         filename: result.attachment.filename,
         mediaType: result.attachment.mediaType,
       })
-      textParts.push(`[MYYODA_IMAGE_ATTACHMENT:${attachmentMeta}]`)
+      textParts.push(`[GURU_IMAGE_ATTACHMENT:${attachmentMeta}]`)
     } else if (part.text) {
       textParts.push(part.text)
     }

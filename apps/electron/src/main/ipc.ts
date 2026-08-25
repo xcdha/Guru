@@ -9,7 +9,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isMyYodaPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@myyoda/shared'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isGuruPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@guru/shared'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, EXCALIDRAW_IPC_CHANNELS, QUICK_TASK_IPC_CHANNELS, VOICE_DICTATION_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
 import type {
   QuickTaskSubmitInput,
@@ -95,7 +95,7 @@ import type {
   GitHubRelease,
   GitHubReleaseListOptions,
   PermissionResponse,
-  MyYodaPermissionMode,
+  GuruPermissionMode,
   AskUserResponse,
   ExitPlanModeResponse,
   SystemPromptConfig,
@@ -169,8 +169,8 @@ import type {
   BrowserNavigateInput,
   BrowserTabInput,
   BrowserCreateTabInput,
-} from '@myyoda/shared'
-import type { ExpertManifest, ExpertPackage } from '@myyoda/shared/experts'
+} from '@guru/shared'
+import type { ExpertManifest, ExpertPackage } from '@guru/shared/experts'
 import type { UserProfile, AppSettings } from '../types'
 import { getRuntimeStatus, getGitRepoStatus, reinitializeRuntime } from './lib/runtime-init'
 import { browserController } from './lib/browser-controller'
@@ -188,7 +188,7 @@ import {
   getMainRepoRoot,
 } from './lib/git-diff-service'
 import { listGitBranchesForSession, prepareSessionGitContext, refreshSessionGitBranch } from './lib/git-session-context-service'
-import { registerMyYodaDirectoryPath, registerMyYodaFilePath } from './lib/local-file-protocol'
+import { registerGuruDirectoryPath, registerGuruFilePath } from './lib/local-file-protocol'
 import { registerUpdaterIpc } from './lib/updater/updater-ipc'
 import {
   listChannels,
@@ -205,8 +205,8 @@ import {
 import { loginCodexOAuth, cancelCodexOAuthLogin } from './lib/codex-oauth-service'
 import { loginXaiOAuth, cancelXaiOAuthLogin } from './lib/xai-oauth-service'
 import { resolvePiReasoningCapability } from './lib/adapters/pi-model-registry'
-import { serializeCodexCredentials, serializeClaudeOAuthCredentials, serializeXaiCredentials } from '@myyoda/shared'
-import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, XaiOAuthDeviceCode } from '@myyoda/shared'
+import { serializeCodexCredentials, serializeClaudeOAuthCredentials, serializeXaiCredentials } from '@guru/shared'
+import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, XaiOAuthDeviceCode } from '@guru/shared'
 import { prepareClaudeOAuthLogin, exchangeClaudeOAuthCode, cancelClaudeOAuthLogin } from './lib/claude-oauth-service'
 import {
   listConversations,
@@ -305,7 +305,7 @@ import {
   type CreateTeamInput,
   type UpdateTeamInput,
 } from './lib/expert-service'
-import type { TeamSquad, ExpertTemplate } from '@myyoda/shared/experts'
+import type { TeamSquad, ExpertTemplate } from '@guru/shared/experts'
 import {
   listAgentSessions,
   createAgentSession,
@@ -507,7 +507,7 @@ function getAuthorizedRoots(options?: FileAccessOptions): string[] {
   const roots: string[] = [
     // 无会话上下文时保留全局根供文件面板浏览；有会话时只按具体工作区授权。
     ...(hasSessionContext ? [] : [getAgentWorkspacesDir()]),
-    join(tmpdir(), 'myyoda-preview'),
+    join(tmpdir(), 'guru-preview'),
   ]
 
   const workspaceSlugs = new Set<string>()
@@ -660,7 +660,7 @@ function ensurePathAllowed(filePath: string, options?: FileAccessOptions): boole
 /**
  * 在 ensurePathAllowed 基础上，额外放行「已授权仓库的 worktree」。
  *
- * worktree 常被放在主仓库之外（如 ~/myyoda-dev/worktrees/xxx），其路径不在任何
+ * worktree 常被放在主仓库之外（如 ~/guru-dev/worktrees/xxx），其路径不在任何
  * 授权根下，会被 ensurePathAllowed 拒绝。但只要它回溯到的主仓库已被授权，就应放行。
  * 用 git 自身背书（--git-common-dir），避免粗暴跳过安全检查。
  */
@@ -677,7 +677,7 @@ async function ensurePathAllowedWithWorktree(filePath: string, options?: FileAcc
       if (authorizedRoot === targetMainRepo) return true
     }
     for (const workspaceSlug of getWorkspaceSlugsForAccess(options)) {
-      let repos: import('@myyoda/shared').WorkspaceWorktreeRepo[]
+      let repos: import('@guru/shared').WorkspaceWorktreeRepo[]
       try {
         repos = await getWorktreeRepos(workspaceSlug)
       } catch {
@@ -716,7 +716,7 @@ function getBundledResourcesDir(): string {
  * 默认 App 探测结果按文件后缀缓存，避免反复 spawn Swift / 注册表查询。
  * 成功结果会落盘；失败只做短暂内存冷却，避免一次瞬时失败导致整会话都隐藏按钮。
  */
-const defaultAppCache = new Map<string, import('@myyoda/shared').DefaultAppInfo>()
+const defaultAppCache = new Map<string, import('@guru/shared').DefaultAppInfo>()
 const defaultAppFailureCache = new Map<string, number>()
 const DEFAULT_APP_FAILURE_RETRY_MS = 60_000
 
@@ -759,7 +759,7 @@ async function getMacAppIconViaSips(appPath: string): Promise<string> {
   const icnsPath = candidates.find((p) => existsSync(p))
   if (!icnsPath) return ''
 
-  const tmp = mkdtempSync(join(tmpdir(), 'myyoda-icon-'))
+  const tmp = mkdtempSync(join(tmpdir(), 'guru-icon-'))
   const outPath = join(tmp, 'icon.png')
   try {
     const r = await runCmd('sips', ['-s', 'format', 'png', '-Z', '64', icnsPath, '--out', outPath], { timeoutMs: 4000 })
@@ -979,7 +979,7 @@ async function getWindowsDefaultAppInfo(filePath: string): Promise<{ appPath: st
 async function getDefaultAppInfoForFile(
   filePath: string,
   options?: FileAccessOptions,
-): Promise<import('@myyoda/shared').DefaultAppInfo | null> {
+): Promise<import('@guru/shared').DefaultAppInfo | null> {
   const absPath = await resolveFileAccessPath(filePath, options)
 
   const cacheKey = `${process.platform}:${extOf(filePath) || filePath}`
@@ -1054,7 +1054,7 @@ if let appUrl = NSWorkspace.shared.urlForApplication(toOpen: url) {
   console.log('[DefaultApp] iconDataUrl 长度:', iconDataUrl?.length)
   if (!iconDataUrl) return cacheNull(cacheKey)
 
-  const info: import('@myyoda/shared').DefaultAppInfo = { name: appName, appPath, iconDataUrl }
+  const info: import('@guru/shared').DefaultAppInfo = { name: appName, appPath, iconDataUrl }
   defaultAppCache.set(cacheKey, info)
   defaultAppFailureCache.delete(cacheKey)
   saveCachedDefaultAppInfo(cacheKey, info)
@@ -1446,7 +1446,7 @@ export function registerIpcHandlers(): void {
   // 扫描系统中的编辑器应用（仅 macOS）
   ipcMain.handle(
     IPC_CHANNELS.SCAN_EDITORS,
-    async (): Promise<import('@myyoda/shared').EditorApp[]> => {
+    async (): Promise<import('@guru/shared').EditorApp[]> => {
       if (process.platform !== 'darwin') return []
       const { existsSync } = await import('node:fs')
       const { homedir } = await import('node:os')
@@ -1468,7 +1468,7 @@ export function registerIpcHandlers(): void {
   // 查询某个文件在本机的默认打开应用信息（带图标）
   ipcMain.handle(
     IPC_CHANNELS.GET_DEFAULT_APP_FOR_FILE,
-    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@myyoda/shared').DefaultAppInfo | null> => {
+    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@guru/shared').DefaultAppInfo | null> => {
       if (!filePath || typeof filePath !== 'string') return null
       try {
         const options = normalizeFileAccessOptions(access)
@@ -1562,7 +1562,7 @@ export function registerIpcHandlers(): void {
   // 查询订阅 Plan 额度（用于 Agent Context 圆环 hover 信息）
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.GET_PLAN_QUOTA,
-    async (_, channelId: string): Promise<import('@myyoda/shared').ChannelPlanQuotaResult> => {
+    async (_, channelId: string): Promise<import('@guru/shared').ChannelPlanQuotaResult> => {
       return getChannelPlanQuota(channelId)
     }
   )
@@ -1572,7 +1572,7 @@ export function registerIpcHandlers(): void {
   // apiKey 传给 create/update，channel-manager 加密后存储——与现有 apiKey 明文回传模式一致。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.CODEX_OAUTH_LOGIN,
-    async (event, requestedMethod?: CodexOAuthLoginMethod): Promise<import('@myyoda/shared').CodexOAuthLoginResult> => {
+    async (event, requestedMethod?: CodexOAuthLoginMethod): Promise<import('@guru/shared').CodexOAuthLoginResult> => {
       const method: CodexOAuthLoginMethod = requestedMethod === 'device_code' ? 'device_code' : 'browser'
       try {
         const credentials = await loginCodexOAuth({
@@ -1612,7 +1612,7 @@ export function registerIpcHandlers(): void {
   // 环境下没有 controlling terminal 会静默挂起，详见 claude-oauth-service.ts）。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.CLAUDE_OAUTH_PREPARE,
-    async (): Promise<import('@myyoda/shared').ClaudeOAuthPrepareResult> => {
+    async (): Promise<import('@guru/shared').ClaudeOAuthPrepareResult> => {
       try {
         const authUrl = prepareClaudeOAuthLogin()
         return { success: true, authUrl }
@@ -1630,7 +1630,7 @@ export function registerIpcHandlers(): void {
   // OAuth、以及现有 apiKey 明文回传模式一致。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.CLAUDE_OAUTH_EXCHANGE,
-    async (_event, code: string): Promise<import('@myyoda/shared').ClaudeOAuthLoginResult> => {
+    async (_event, code: string): Promise<import('@guru/shared').ClaudeOAuthLoginResult> => {
       try {
         const credentials = await exchangeClaudeOAuthCode(code)
         return {
@@ -1658,7 +1658,7 @@ export function registerIpcHandlers(): void {
   // 预填的浏览器授权链接；成功后的凭据沿用 Channel.apiKey 加密存储。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.XAI_OAUTH_LOGIN,
-    async (event): Promise<import('@myyoda/shared').XaiOAuthLoginResult> => {
+    async (event): Promise<import('@guru/shared').XaiOAuthLoginResult> => {
       try {
         const credentials = await loginXaiOAuth({
           onDeviceCode: (deviceCode) => {
@@ -2265,7 +2265,7 @@ export function registerIpcHandlers(): void {
       const data = {
         type: 'excalidraw',
         version: 2,
-        source: 'myyoda',
+        source: 'guru',
         elements: [],
         appState: { viewBackgroundColor: '#ffffff' },
         files: {},
@@ -2302,7 +2302,7 @@ export function registerIpcHandlers(): void {
         const data = {
           type: 'excalidraw',
           version: 2,
-          source: 'myyoda',
+          source: 'guru',
           elements: payload.elements || [],
           appState: payload.appState || (existing.appState as Record<string, unknown>) || {},
           // 以本次 payload.files 为准整体替换而非与历史 files 取并集：
@@ -2483,7 +2483,7 @@ export function registerIpcHandlers(): void {
         const data = {
           type: 'excalidraw',
           version: 2,
-          source: 'myyoda',
+          source: 'guru',
           elements: payload.elements || [],
           appState: payload.appState || (existing.appState as Record<string, unknown>) || {},
           files: payload.files !== undefined ? payload.files : ((existing.files as Record<string, unknown>) || {}),
@@ -2953,7 +2953,7 @@ export function registerIpcHandlers(): void {
   // 更新 Agent 工作区
   ipcMain.handle(
     AGENT_IPC_CHANNELS.UPDATE_WORKSPACE,
-    async (_, id: string, updates: { name?: string; kanbanColumns?: import('@myyoda/shared').KanbanColumnDef[] }): Promise<AgentWorkspace> => {
+    async (_, id: string, updates: { name?: string; kanbanColumns?: import('@guru/shared').KanbanColumnDef[] }): Promise<AgentWorkspace> => {
       return updateAgentWorkspace(id, updates)
     }
   )
@@ -3071,7 +3071,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 获取全局 MCP 配置（~/.myyoda/mcp.json，所有工作区共享，设置页真实编辑入口）
+  // 获取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享，设置页真实编辑入口）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_GLOBAL_MCP_CONFIG,
     async (): Promise<WorkspaceMcpConfig> => {
@@ -3090,7 +3090,7 @@ export function registerIpcHandlers(): void {
   // 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_GLOBAL_SCOPE_REVIEW_HINTS,
-    async (): Promise<import('@myyoda/shared').GlobalScopeReviewHints> => {
+    async (): Promise<import('@guru/shared').GlobalScopeReviewHints> => {
       return getGlobalScopeReviewHints()
     }
   )
@@ -3107,7 +3107,7 @@ export function registerIpcHandlers(): void {
   // 测试 MCP 服务器连接
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TEST_MCP_SERVER,
-    async (_, name: string, entry: import('@myyoda/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
+    async (_, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
       const { validateMcpServer } = await import('./lib/mcp-validator')
       const result = await validateMcpServer(name, entry)
       return {
@@ -3135,7 +3135,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 启用或关闭 MyYoda 内置 MCP
+  // 启用或关闭 Guru 内置 MCP
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SET_BUILTIN_MCP_ENABLED,
     async (_, workspaceSlug: string, id: string, enabled: boolean): Promise<WorkspaceCapabilities> => {
@@ -3208,7 +3208,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 获取默认 Skills 的 slug 列表（来自 ~/.myyoda/default-skills/）
+  // 获取默认 Skills 的 slug 列表（来自 ~/.guru/default-skills/）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_DEFAULT_SKILL_SLUGS,
     async () => {
@@ -3672,8 +3672,8 @@ export function registerIpcHandlers(): void {
     AGENT_IPC_CHANNELS.SPAWN_EXPERT_COWORK,
     async (
       _,
-      input: import('@myyoda/shared').SpawnExpertCoworkInput,
-    ): Promise<import('@myyoda/shared').SpawnExpertCoworkResult> => {
+      input: import('@guru/shared').SpawnExpertCoworkInput,
+    ): Promise<import('@guru/shared').SpawnExpertCoworkResult> => {
       if (!input || typeof input !== 'object') throw new Error('input 必须是对象')
       if (typeof input.parentSessionId !== 'string' || input.parentSessionId.length === 0) {
         throw new Error('parentSessionId 必填')
@@ -3690,7 +3690,7 @@ export function registerIpcHandlers(): void {
   // 排队发送消息
   ipcMain.handle(
     AGENT_IPC_CHANNELS.QUEUE_MESSAGE,
-    async (event, input: import('@myyoda/shared').AgentQueueMessageInput): Promise<string> => {
+    async (event, input: import('@guru/shared').AgentQueueMessageInput): Promise<string> => {
       return queueAgentMessage(input, event.sender)
     }
   )
@@ -3698,7 +3698,7 @@ export function registerIpcHandlers(): void {
   // 将等待当前 run 结束的消息交给主进程调度器
   ipcMain.handle(
     AGENT_IPC_CHANNELS.ENQUEUE_QUEUED_MESSAGE,
-    async (event, input: import('@myyoda/shared').AgentDeferredQueueMessageInput): Promise<void> => {
+    async (event, input: import('@guru/shared').AgentDeferredQueueMessageInput): Promise<void> => {
       enqueueAgentQueuedMessage(input, event.sender)
     }
   )
@@ -3708,7 +3708,7 @@ export function registerIpcHandlers(): void {
   // 让因 webContents 缺失而搁置的派发在 renderer 回来后恢复。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_QUEUED_MESSAGES,
-    async (_, sessionId: string): Promise<import('@myyoda/shared').AgentQueuedMessageSnapshot[]> => {
+    async (_, sessionId: string): Promise<import('@guru/shared').AgentQueuedMessageSnapshot[]> => {
       const snapshots = getAgentQueuedMessageSnapshots(sessionId)
       pokeAgentQueuedMessages()
       return snapshots
@@ -3717,14 +3717,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.CANCEL_QUEUED_MESSAGE,
-    async (_, input: import('@myyoda/shared').AgentQueuedMessageControlInput): Promise<boolean> => {
+    async (_, input: import('@guru/shared').AgentQueuedMessageControlInput): Promise<boolean> => {
       return cancelAgentQueuedMessage(input)
     }
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.MOVE_QUEUED_MESSAGE,
-    async (_, input: import('@myyoda/shared').AgentMoveQueuedMessageInput): Promise<boolean> => {
+    async (_, input: import('@guru/shared').AgentMoveQueuedMessageInput): Promise<boolean> => {
       return moveAgentQueuedMessage(input)
     }
   )
@@ -3762,7 +3762,7 @@ export function registerIpcHandlers(): void {
       if (sessionId) {
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'myyoda_event', event: { type: 'permission_resolved', requestId, behavior } },
+          payload: { kind: 'guru_event', event: { type: 'permission_resolved', requestId, behavior } },
         })
       }
     }
@@ -3788,8 +3788,8 @@ export function registerIpcHandlers(): void {
   // 热切换指定会话的权限模式（运行中生效，不广播）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.UPDATE_SESSION_PERMISSION_MODE,
-    async (_, sessionId: string, mode: MyYodaPermissionMode): Promise<void> => {
-      if (!isMyYodaPermissionMode(mode)) {
+    async (_, sessionId: string, mode: GuruPermissionMode): Promise<void> => {
+      if (!isGuruPermissionMode(mode)) {
         throw new Error(`无效的权限模式: ${mode}`)
       }
       // 会话不存在时直接抛错（避免 updateAgentSessionMeta 的通用异常被降级为 warn）
@@ -4013,7 +4013,7 @@ export function registerIpcHandlers(): void {
       if (sessionId) {
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'myyoda_event', event: { type: 'ask_user_resolved', requestId } },
+          payload: { kind: 'guru_event', event: { type: 'ask_user_resolved', requestId } },
         })
       }
     }
@@ -4033,7 +4033,7 @@ export function registerIpcHandlers(): void {
         // 通知渲染进程请求已处理
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'myyoda_event', event: { type: 'exit_plan_mode_resolved', requestId: response.requestId } },
+          payload: { kind: 'guru_event', event: { type: 'exit_plan_mode_resolved', requestId: response.requestId } },
         })
 
         // 如果用户选择了新的权限模式，通知渲染进程更新 UI
@@ -4049,7 +4049,7 @@ export function registerIpcHandlers(): void {
           }
           event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
             sessionId,
-            payload: { kind: 'myyoda_event', event: { type: 'permission_mode_changed', mode: targetMode } },
+            payload: { kind: 'guru_event', event: { type: 'permission_mode_changed', mode: targetMode } },
           })
           console.log(`[IPC] ExitPlanMode 权限模式切换: ${targetMode}`)
         }
@@ -4062,7 +4062,7 @@ export function registerIpcHandlers(): void {
   // 获取所有待处理的交互请求快照（渲染进程重载后恢复状态）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_PENDING_REQUESTS,
-    async (): Promise<import('@myyoda/shared').PendingRequestsSnapshot> => {
+    async (): Promise<import('@guru/shared').PendingRequestsSnapshot> => {
       return {
         permissions: permissionService.getPendingRequests(),
         askUsers: askUserService.getPendingRequests(),
@@ -4314,7 +4314,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.ADD_WORKTREE_REPO,
-    async (_, workspaceSlug: string, repo: import('@myyoda/shared').WorkspaceWorktreeRepo) => {
+    async (_, workspaceSlug: string, repo: import('@guru/shared').WorkspaceWorktreeRepo) => {
       return addWorktreeRepo(workspaceSlug, repo)
     }
   )
@@ -4468,7 +4468,7 @@ export function registerIpcHandlers(): void {
       const { existsSync, mkdirSync } = await import('node:fs')
       const { writeFile } = await import('node:fs/promises')
 
-      const tmpDir = join(tmpdir(), 'myyoda-preview')
+      const tmpDir = join(tmpdir(), 'guru-preview')
       if (!existsSync(tmpDir)) {
         mkdirSync(tmpDir, { recursive: true })
       }
@@ -4546,7 +4546,7 @@ export function registerIpcHandlers(): void {
   // 打开（或复用）终端实例
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TERMINAL_OPEN,
-    async (_, input: import('@myyoda/shared').TerminalOpenInput): Promise<import('@myyoda/shared').TerminalViewState> => {
+    async (_, input: import('@guru/shared').TerminalOpenInput): Promise<import('@guru/shared').TerminalViewState> => {
       const session = getAgentSessionMeta(input.sessionId)
       if (!session) throw new Error('会话不存在')
       const ws = session.workspaceId ? getAgentWorkspace(session.workspaceId) : undefined
@@ -4561,7 +4561,7 @@ export function registerIpcHandlers(): void {
   // 写入终端输入
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TERMINAL_WRITE,
-    (_event, input: import('@myyoda/shared').TerminalWriteInput): void => {
+    (_event, input: import('@guru/shared').TerminalWriteInput): void => {
       agentTerminalController.write(input)
     }
   )
@@ -4569,7 +4569,7 @@ export function registerIpcHandlers(): void {
   // 调整终端尺寸
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TERMINAL_RESIZE,
-    (_event, input: import('@myyoda/shared').TerminalResizeInput): void => {
+    (_event, input: import('@guru/shared').TerminalResizeInput): void => {
       agentTerminalController.resize(input)
     }
   )
@@ -4577,7 +4577,7 @@ export function registerIpcHandlers(): void {
   // 关闭单个终端实例
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TERMINAL_CLOSE,
-    (_event, input: import('@myyoda/shared').TerminalCloseInput): import('@myyoda/shared').TerminalViewState | null => {
+    (_event, input: import('@guru/shared').TerminalCloseInput): import('@guru/shared').TerminalViewState | null => {
       return agentTerminalController.close(input)
     }
   )
@@ -4601,7 +4601,7 @@ export function registerIpcHandlers(): void {
   // 获取终端状态
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TERMINAL_GET_STATE,
-    (_event, terminalId: string): import('@myyoda/shared').TerminalViewState | null => {
+    (_event, terminalId: string): import('@guru/shared').TerminalViewState | null => {
       return agentTerminalController.getState(terminalId)
     }
   )
@@ -4660,7 +4660,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 仅解析文件路径（供 PDF/图片等用 myyoda-file:// 加载）
+  // 仅解析文件路径（供 PDF/图片等用 guru-file:// 加载）
   ipcMain.handle(
     'file:resolve-path',
     async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<ResolvedFileUrl | null> => {
@@ -4672,10 +4672,10 @@ export function registerIpcHandlers(): void {
         return null
       }
       if (!result) return null
-      // registerMyYodaFilePath 对目录路径会抛「不是文件」。渲染端（如悬浮预览解析 markdown
+      // registerGuruFilePath 对目录路径会抛「不是文件」。渲染端（如悬浮预览解析 markdown
       // 链接）可能传入目录路径，此处优雅降级为 null，而不是让异常冒泡成未捕获的 handler 错误。
       try {
-        return { url: registerMyYodaFilePath(result) }
+        return { url: registerGuruFilePath(result) }
       } catch (err) {
         console.warn('[IPC] file:resolve-path 无法注册为文件，跳过:', result, err instanceof Error ? err.message : err)
         return null
@@ -4684,7 +4684,7 @@ export function registerIpcHandlers(): void {
   )
 
   // 为 HTML 预览注册所在目录，使相对 CSS、脚本和图片资源保持可加载。
-  // 返回的仍是 token-gated myyoda-file URL，不向渲染进程泄露本机绝对路径。
+  // 返回的仍是 token-gated guru-file URL，不向渲染进程泄露本机绝对路径。
   ipcMain.handle(
     'file:resolve-html-preview-path',
     async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<ResolvedFileUrl | null> => {
@@ -4693,7 +4693,7 @@ export function registerIpcHandlers(): void {
       const result = resolveFilePath(filePath, getPreviewCandidateBasePaths(options))
       if (!result) return null
       try {
-        const directoryUrl = registerMyYodaDirectoryPath(dirname(result))
+        const directoryUrl = registerGuruDirectoryPath(dirname(result))
         return { url: `${directoryUrl}/${encodeURIComponent(basename(result))}` }
       } catch (err) {
         console.warn('[IPC] file:resolve-html-preview-path 无法注册预览目录，跳过:', result, err instanceof Error ? err.message : err)
@@ -4756,7 +4756,7 @@ export function registerIpcHandlers(): void {
   // XLSX/PPTX 转 HTML（内联预览使用 OOXML 解析）
   ipcMain.handle(
     'file:office-to-html',
-    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@myyoda/shared').OfficePreviewResult | null> => {
+    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@guru/shared').OfficePreviewResult | null> => {
       const { convertOfficeToHtml, resolveFilePath } = await import('./lib/file-preview-service')
       const options = normalizeFileAccessOptions(access)
       const allowedBasePaths = getAllowedCandidateBasePaths(options)
@@ -5472,14 +5472,14 @@ export function registerIpcHandlers(): void {
     return getWikiPage(name)
   })
 
-  // 为已下载视频文件注册 myyoda-file:// 播放 URL（token 门控，支持 Range seek）
+  // 为已下载视频文件注册 guru-file:// 播放 URL（token 门控，支持 Range seek）
   ipcMain.handle(DISCOVER_IPC_CHANNELS.GET_VIDEO_URL, async (_event, filePath: string) => {
     const { isPathInVideoCacheDir } = await import('./lib/content-service')
     if (!isPathInVideoCacheDir(filePath)) {
       throw new Error('非法的视频缓存路径')
     }
-    const { registerMyYodaFilePath } = await import('./lib/local-file-protocol')
-    return registerMyYodaFilePath(filePath)
+    const { registerGuruFilePath } = await import('./lib/local-file-protocol')
+    return registerGuruFilePath(filePath)
   })
 
   // 为远程视频注册 discover-video:// 流式播放 URL（白名单校验在主进程）
@@ -5572,7 +5572,7 @@ export function registerIpcHandlers(): void {
   // 保存单个 Bot 配置
   ipcMain.handle(
     FEISHU_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (_, input: import('@myyoda/shared').FeishuBotConfigInput) => {
+    async (_, input: import('@guru/shared').FeishuBotConfigInput) => {
       const saved = saveFeishuBotConfig(input)
       feishuBridgeManager.setSessionMirrorOperator(saved.id, input.operatorOpenId)
       // 配置变更后自动重启或停止（不阻塞保存结果）
@@ -5631,7 +5631,7 @@ export function registerIpcHandlers(): void {
   // 测试飞书连接
   ipcMain.handle(
     FEISHU_IPC_CHANNELS.TEST_CONNECTION,
-    async (_, appId: string, appSecret: string, domain?: import('@myyoda/shared').FeishuDomain): Promise<FeishuTestResult> => {
+    async (_, appId: string, appSecret: string, domain?: import('@guru/shared').FeishuDomain): Promise<FeishuTestResult> => {
       return feishuBridgeManager.testConnection(appId, appSecret, domain)
     }
   )
@@ -5689,7 +5689,7 @@ export function registerIpcHandlers(): void {
         const lark = await import('@larksuiteoapi/node-sdk')
         const QRCode = (await import('qrcode')).default
         const result = await lark.registerApp({
-          source: 'myyoda',
+          source: 'guru',
           signal: abort.signal,
           onQRCodeReady: async (info) => {
             if (event.sender.isDestroyed()) return
@@ -5817,7 +5817,7 @@ export function registerIpcHandlers(): void {
   // 保存单个 Bot 配置
   ipcMain.handle(
     DINGTALK_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (_, input: import('@myyoda/shared').DingTalkBotConfigInput) => {
+    async (_, input: import('@guru/shared').DingTalkBotConfigInput) => {
       const saved = saveDingTalkBotConfig(input)
       // 配置变更后自动重启或停止（不阻塞保存结果）
       if (saved.enabled && saved.clientId && saved.clientSecret) {
@@ -6105,7 +6105,7 @@ export function registerIpcHandlers(): void {
       const sourceInputId = typeof input?.sourceInputId === 'string' && input.sourceInputId.length > 0 && input.sourceInputId.length <= 512
         ? input.sourceInputId
         : undefined
-      toggleVoiceDictationWindow({ targetIsMyYoda: !!sourceWindow, sourceInputId })
+      toggleVoiceDictationWindow({ targetIsGuru: !!sourceWindow, sourceInputId })
     }
   )
 
@@ -6239,7 +6239,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('migration:open-data-folder', async (): Promise<void> => {
     const dataDir = getConfigDir()
     const error = await shell.openPath(dataDir)
-    if (error) throw new Error(`无法打开 MyYoda 数据文件夹：${error}`)
+    if (error) throw new Error(`无法打开 Guru 数据文件夹：${error}`)
   })
 
   // ===== 窗口控制（Windows 自定义标题栏按钮）=====
@@ -6512,7 +6512,7 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_SYNC_CONFLICTS, async (): Promise<PlanningNativeSyncConflict[]> => listPlanningNativeSyncConflicts())
   ipcMain.handle(PLANNING_IPC_CHANNELS.RESOLVE_NATIVE_SYNC_CONFLICT, async (_, input: ResolvePlanningNativeSyncConflictInput): Promise<boolean> => {
-    if (!input || typeof input.id !== 'string' || !['keep_myyoda', 'keep_system'].includes(input.resolution)) throw new Error('冲突解决参数非法')
+    if (!input || typeof input.id !== 'string' || !['keep_guru', 'keep_system'].includes(input.resolution)) throw new Error('冲突解决参数非法')
     const resolved = resolvePlanningNativeSyncConflict(input)
     if (resolved) { broadcastPlanningChanged(['todos', 'calendar_events']); void runPlanningNativeSync(true) }
     return resolved
@@ -6532,7 +6532,7 @@ export function registerIpcHandlers(): void {
   // ===== 定时任务（Automation）=====
 
   // 渲染进程可能被注入内容污染（XSS via markdown / MCP tool output），主进程必须自己校验入参，
-  // 否则 NaN / -Infinity / 越界值会污染 ~/.myyoda/automations.json，无法回滚。
+  // 否则 NaN / -Infinity / 越界值会污染 ~/.guru/automations.json，无法回滚。
   const isNonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.length > 0
   const isNonBlankString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
   const isFiniteInt = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v)

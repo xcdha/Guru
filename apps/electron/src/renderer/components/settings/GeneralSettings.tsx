@@ -54,10 +54,10 @@ import type {
   NotificationSoundType,
   NotificationSoundSettings,
 } from "@/types/settings";
-import type { AgentThinkingLevel } from "@myyoda/shared";
+import type { AgentThinkingLevel } from "@guru/shared";
 import {
   DEFAULT_AGENT_THINKING_LEVEL,
-} from "@myyoda/shared";
+} from "@guru/shared";
 import {
   ThinkingLevelSlider,
   normalizeToUiIndex,
@@ -345,7 +345,7 @@ export function GeneralSettings(): React.ReactElement {
               <Volume2 className="mt-0.5 size-3.5 shrink-0" />
               <div className="min-w-0">
                 <p>音效与卡片插画来自 UI SFX，采用 CC0 公共领域许可。</p>
-                <p className="mt-0.5">MyYoda 非常喜欢这个音效库，并特别还原了一部分 UI SFX 的设计风格，推荐大家访问和使用他们的产品。</p>
+                <p className="mt-0.5">Guru 非常喜欢这个音效库，并特别还原了一部分 UI SFX 的设计风格，推荐大家访问和使用他们的产品。</p>
               </div>
             </div>
             <a

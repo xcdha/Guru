@@ -5,9 +5,9 @@
  * 带 5 分钟缓存和内置 fallback——断网或接口不可用时至少能拿到官方上游 URL。
  */
 
-import type { InstallerManifest, InstallerSource } from '@myyoda/shared'
+import type { InstallerManifest, InstallerSource } from '@guru/shared'
 
-const MANIFEST_URL = 'https://raw.githubusercontent.com/GeoffBao/MyYoda/main/installer-manifest.json'
+const MANIFEST_URL = 'https://raw.githubusercontent.com/xcdha/Guru/main/installer-manifest.json'
 const CACHE_TTL_MS = 5 * 60 * 1000
 
 interface ManifestCache {
@@ -86,7 +86,7 @@ export async function fetchInstallerManifest(force = false): Promise<InstallerMa
     const response = await fetch(MANIFEST_URL, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'MyYoda-Desktop-App',
+        'User-Agent': 'Guru-Desktop-App',
       },
     })
 

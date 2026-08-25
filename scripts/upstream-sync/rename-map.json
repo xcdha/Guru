@@ -1,5 +1,5 @@
 {
-  "$comment": "Proma → MyYoda 同步后 rename / 门禁规则。apply-renames 与 sync:check 共用。",
+  "$comment": "Proma → Guru 同步后 rename / 门禁规则。apply-renames 与 sync:check 共用。",
   "skipDirNames": [
     ".git",
     "node_modules",
@@ -58,23 +58,23 @@
     },
     {
       "from": "@proma/",
-      "to": "@myyoda/"
+      "to": "@guru/"
     },
     {
       "from": "~/.proma",
-      "to": "~/.myyoda"
+      "to": "~/.guru"
     },
     {
       "from": ".proma-dev",
-      "to": ".myyoda-dev"
+      "to": ".guru-dev"
     },
     {
       "from": "/.proma/",
-      "to": "/.myyoda/"
+      "to": "/.guru/"
     },
     {
       "from": "\"@proma/",
-      "to": "\"@myyoda/"
+      "to": "\"@guru/"
     },
     {
       "from": "requiresPromaUserAgent",
@@ -90,27 +90,27 @@
     },
     {
       "from": "PromaPermissionMode",
-      "to": "MyYodaPermissionMode"
+      "to": "GuruPermissionMode"
     },
     {
       "from": "proma_event",
-      "to": "myyoda_event"
+      "to": "guru_event"
     },
     {
       "from": "_promaLiveRunStartedAt",
-      "to": "_myyodaLiveRunStartedAt"
+      "to": "_guruLiveRunStartedAt"
     }
   ],
   "forbiddenPatterns": [
     {
       "id": "pkg-scope",
       "regex": "@proma/",
-      "message": "残留 @proma/ 包作用域，应改为 @myyoda/"
+      "message": "残留 @proma/ 包作用域，应改为 @guru/"
     },
     {
       "id": "home-proma",
       "regex": "~/.proma",
-      "message": "残留 ~/.proma 路径，应改为 ~/.myyoda"
+      "message": "残留 ~/.proma 路径，应改为 ~/.guru"
     },
     {
       "id": "dot-proma",
@@ -125,7 +125,7 @@
   ],
   "sdkPlatformPackages": [],
   "luxOnlySkills": [
-    "myyoda-coach",
+    "guru-coach",
     "guizang-ppt-skill"
   ]
 }

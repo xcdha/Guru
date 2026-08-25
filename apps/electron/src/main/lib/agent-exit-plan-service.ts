@@ -15,15 +15,15 @@ import type {
   ExitPlanModeRequest,
   ExitPlanModeResponse,
   ExitPlanAllowedPrompt,
-  MyYodaPermissionMode,
-} from '@myyoda/shared'
+  GuruPermissionMode,
+} from '@guru/shared'
 
 /** ExitPlanMode 审批结果（扩展 SDK PermissionResult，附加 targetMode） */
 export type ExitPlanPermissionResult = {
   behavior: 'allow'
   updatedInput: Record<string, unknown>
   /** 用户选择的目标权限模式 */
-  targetMode?: MyYodaPermissionMode
+  targetMode?: GuruPermissionMode
 } | {
   behavior: 'deny'
   message: string
@@ -39,7 +39,7 @@ interface PendingExitPlan {
 /** ExitPlanMode 审批结果回调（通知编排层切换权限模式） */
 export interface ExitPlanModeCallbacks {
   /** 切换权限模式 */
-  onPermissionModeChange: (mode: MyYodaPermissionMode) => void
+  onPermissionModeChange: (mode: GuruPermissionMode) => void
 }
 
 /**
@@ -92,7 +92,7 @@ export class AgentExitPlanService {
    *
    * @returns { sessionId, targetMode } 用于通知编排层；未找到返回 null
    */
-  respondToExitPlanMode(response: ExitPlanModeResponse): { sessionId: string; targetMode: MyYodaPermissionMode | null } | null {
+  respondToExitPlanMode(response: ExitPlanModeResponse): { sessionId: string; targetMode: GuruPermissionMode | null } | null {
     const pending = this.pendingRequests.get(response.requestId)
     if (!pending) return null
 

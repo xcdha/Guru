@@ -15,7 +15,7 @@ import { execSync } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
-import type { ShellEnvResult } from '@myyoda/shared'
+import type { ShellEnvResult } from '@guru/shared'
 
 /**
  * Windows PATH 分隔符

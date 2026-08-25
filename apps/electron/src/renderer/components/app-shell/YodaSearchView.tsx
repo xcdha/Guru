@@ -43,8 +43,8 @@ import {
 import type {
   MessageSearchResult,
   AgentMessageSearchResult,
-} from '@myyoda/shared'
-import { findBestSearchMatch } from '@myyoda/shared'
+} from '@guru/shared'
+import { findBestSearchMatch } from '@guru/shared'
 
 /** 标题搜索结果项 */
 interface TitleResult {
@@ -483,8 +483,8 @@ export function YodaSearchDialog(): React.ReactElement {
     )
     const channelId = deepseekChannel?.id ?? currentAgentChannelId ?? undefined
 
-    const configDir = import.meta.env.DEV ? '.myyoda-dev' : '.myyoda'
-    const prompt = `请帮我在 MyYoda 的全部会话历史中搜索与以下描述相关的内容：\n\n"${q}"\n\n搜索范围：\n- Chat 会话消息文件：~/${configDir}/conversations/ 目录下所有 .jsonl 文件\n- Agent 会话消息文件：~/${configDir}/agent-sessions/ 目录下所有 .jsonl 文件\n\n要求：\n1. 理解用户描述的语义，不要求关键词完全匹配，根据内容相关性判断\n2. 找到相关会话后，给出会话标题、相关内容摘要，以及文件路径\n3. 按相关性排序，最相关的结果排在最前面`
+    const configDir = import.meta.env.DEV ? '.guru-dev' : '.guru'
+    const prompt = `请帮我在 Guru 的全部会话历史中搜索与以下描述相关的内容：\n\n"${q}"\n\n搜索范围：\n- Chat 会话消息文件：~/${configDir}/conversations/ 目录下所有 .jsonl 文件\n- Agent 会话消息文件：~/${configDir}/agent-sessions/ 目录下所有 .jsonl 文件\n\n要求：\n1. 理解用户描述的语义，不要求关键词完全匹配，根据内容相关性判断\n2. 找到相关会话后，给出会话标题、相关内容摘要，以及文件路径\n3. 按相关性排序，最相关的结果排在最前面`
 
     setOpen(false)
     const sessionId = await createAgent({ channelId })
@@ -639,7 +639,7 @@ export function YodaSearchDialog(): React.ReactElement {
           <button
             onClick={() => void handleAgentSearch()}
             disabled={trimmedQuery.length < 2}
-            title="适合在精准搜索找不到的情况下使用，Agent 会帮助你搜索整个 MyYoda 会话库"
+            title="适合在精准搜索找不到的情况下使用，Agent 会帮助你搜索整个 Guru 会话库"
             className={cn(
               'flex shrink-0 items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors',
               trimmedQuery.length >= 2

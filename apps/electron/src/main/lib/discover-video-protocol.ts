@@ -5,7 +5,7 @@
  * getFetchFn，非 Chromium 级），国内网络下无法播放。因此由主进程持有 token → 远程 URL
  * 映射，经代理感知 fetch 拉取上游并流式转发，Range 头透传以支持视频 seek。
  *
- * - 只允许内容仓库（GeoffBao/myyoda-content）的 Release / raw / jsDelivr 地址
+ * - 只允许内容仓库（xcdha/Guru-content）的 Release / raw / jsDelivr 地址
  * - Content-Type 按扩展名强制修正（GitHub 资产返回 octet-stream，<video> 需要 video/*）
  */
 import { randomUUID } from 'node:crypto'
@@ -25,9 +25,9 @@ const MAX_ENTRIES = 200
 
 /** 允许流式转发的远程地址前缀（内容仓库白名单） */
 const ALLOWED_URL_PREFIXES = [
-  'https://github.com/GeoffBao/myyoda-content/releases/download/',
-  'https://raw.githubusercontent.com/GeoffBao/myyoda-content/',
-  'https://cdn.jsdelivr.net/gh/GeoffBao/myyoda-content@',
+  'https://github.com/xcdha/Guru-content/releases/download/',
+  'https://raw.githubusercontent.com/xcdha/Guru-content/',
+  'https://cdn.jsdelivr.net/gh/xcdha/Guru-content@',
 ]
 
 /** 常见视频扩展名 → MIME（上游 Content-Type 不可靠时强制修正） */

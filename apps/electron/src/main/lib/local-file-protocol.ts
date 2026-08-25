@@ -1,7 +1,7 @@
 /**
  * Token-gated local file protocol support for inline previews.
  *
- * The renderer never receives raw myyoda-file:// absolute paths. Main process
+ * The renderer never receives raw guru-file:// absolute paths. Main process
  * code registers an already-authorized file or directory and gets back an
  * opaque URL that the protocol handler can resolve.
  */
@@ -169,18 +169,18 @@ function registerEntry(path: string, isDirectory: boolean, allowedRelativePaths?
       : undefined,
     createdAt: Date.now(),
   })
-  return `myyoda-file://${token}`
+  return `guru-file://${token}`
 }
 
-export function registerMyYodaFilePath(path: string): string {
+export function registerGuruFilePath(path: string): string {
   return registerEntry(path, false)
 }
 
-export function registerMyYodaDirectoryPath(path: string, allowedRelativePaths?: readonly string[]): string {
+export function registerGuruDirectoryPath(path: string, allowedRelativePaths?: readonly string[]): string {
   return registerEntry(path, true, allowedRelativePaths)
 }
 
-export function handleMyYodaFileRequest(request: Request): Promise<Response> | Response {
+export function handleGuruFileRequest(request: Request): Promise<Response> | Response {
   let url: URL
   try {
     url = new URL(request.url)

@@ -13,7 +13,7 @@
 
 import * as React from 'react'
 import { BarChart3, RefreshCw, Activity, Layers, MessageSquare, Flame, TrendingUp, Clock, Star, Hash, Sun, Database } from 'lucide-react'
-import { PROVIDER_LABELS, type ProviderType } from '@myyoda/shared'
+import { PROVIDER_LABELS, type ProviderType } from '@guru/shared'
 import {
   SettingsSection,
   SettingsCard,

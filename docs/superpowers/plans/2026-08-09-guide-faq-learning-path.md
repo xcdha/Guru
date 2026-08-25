@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 MyYoda 的使用指南和 FAQ 改造成可执行的学习路径，并为所有截图增加可读的大图预览。
+**Goal:** 把 Guru 的使用指南和 FAQ 改造成可执行的学习路径，并为所有截图增加可读的大图预览。
 
 **Architecture:** 在 renderer 内新增一个复用的 Lightbox 图片预览组件；GuideView 负责分章节的入门路径，FaqDialog 继续负责搜索式问答并复用图片预览。内容继续使用 TypeScript 常量，图片继续使用本地静态资源，不新增依赖、不引入远程视频。
 
@@ -29,7 +29,7 @@
 - [ ] **Step 1: 编写 Lightbox 交互测试或可验证行为清单**：覆盖点击打开、Escape 关闭、关闭按钮、背景点击和 alt 文本。
 - [ ] **Step 2: 实现 `ImageLightbox`**：使用 Radix Dialog，图片使用 `max-h-[82vh] max-w-[92vw] object-contain`，缩略图按钮提供“点击查看大图” aria-label。
 - [ ] **Step 3: 替换 GuideView 与 FaqDialog 的直接 `<img>`**：所有精选图统一通过组件渲染，保留原来的裁切缩略图效果。
-- [ ] **Step 4: 运行 renderer 类型检查**：`bun run --filter @myyoda/electron typecheck`，预期通过。
+- [ ] **Step 4: 运行 renderer 类型检查**：`bun run --filter @guru/electron typecheck`，预期通过。
 
 ### Task 2: 将 GuideView 扩展为可执行的学习路径
 
@@ -46,7 +46,7 @@
 - [ ] **Step 4: 增加能力组合和任务自动化章节**：解释 Skills、MCP、专家、Task、Automation 的使用时机与边界。
 - [ ] **Step 5: 增加故障排查章节**：覆盖模型不可用、Agent 不执行、目录错误、任务失败四类问题，并链接回 FAQ。
 - [ ] **Step 6: 为章节内所有截图接入 `ImageLightbox`**：标题、说明与原图保持对应。
-- [ ] **Step 7: 运行 Renderer 构建**：`bun run --filter @myyoda/electron build:renderer`，预期成功；只接受已有的大 chunk warning。
+- [ ] **Step 7: 运行 Renderer 构建**：`bun run --filter @guru/electron build:renderer`，预期成功；只接受已有的大 chunk warning。
 
 ### Task 3: 扩充 FAQ 实用问题库
 
@@ -69,7 +69,7 @@
 **Files:**
 - Test: existing renderer and shared test suites
 
-- [ ] **Step 1: 运行 `bun run --filter @myyoda/electron typecheck`**。
+- [ ] **Step 1: 运行 `bun run --filter @guru/electron typecheck`**。
 - [ ] **Step 2: 运行 `bun test`**，预期 0 fail。
 - [ ] **Step 3: 运行 `git diff --check`**。
 - [ ] **Step 4: 启动 `bun run dev`，手动验证 Guide 滚动、图片 Lightbox、FAQ 搜索和入口跳转。

@@ -1,5 +1,5 @@
 import { atom } from 'jotai'
-import type { WorkspaceMemoryFileChange } from '@myyoda/shared'
+import type { WorkspaceMemoryFileChange } from '@guru/shared'
 
 /** 渲染进程生命周期内的展示态：当前工作区全局记忆变更 Dock 用。 */
 export const workspaceMemoryChangesAtom = atom<Map<string, WorkspaceMemoryFileChange[]>>(new Map())

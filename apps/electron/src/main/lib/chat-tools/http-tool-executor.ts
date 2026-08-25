@@ -5,8 +5,8 @@
  * 支持 URL/Body 模板占位符替换、超时控制、响应路径提取。
  */
 
-import type { ToolCall, ToolResult } from '@myyoda/core'
-import type { ChatToolMeta, ChatToolHttpConfig } from '@myyoda/shared'
+import type { ToolCall, ToolResult } from '@guru/core'
+import type { ChatToolMeta, ChatToolHttpConfig } from '@guru/shared'
 import { getChatToolsConfig } from '../chat-tool-config'
 
 /** HTTP 请求超时（30 秒） */

@@ -1,11 +1,11 @@
 /**
  * BotHubSettings - 消息（IM 集成）视图
  *
- * 由 Proma 遗留的「远程连接 / BotHub」重构为 MyYoda 独有「消息」模块，
+ * 由 Proma 遗留的「远程连接 / BotHub」重构为 Guru 独有「消息」模块，
  * 入口在左侧栏「功能」组（插件与知识库之间，仅 Project 模式），以全屏视图
  * 取代 TabBar + TabContent（activeView='messaging'，见 MainArea.tsx）。
  *
- * 布局采用 MyYoda 自有设计（与 Proma 的左侧平台栏 + 右侧配置面板、Hermes 的
+ * 布局采用 Guru 自有设计（与 Proma 的左侧平台栏 + 右侧配置面板、Hermes 的
  * 三栏 Messaging 页刻意拉开差异）：
  * - Hub：顶部标题 + 「已接入」渠道卡片网格 + 「默认配置与命令」+「即将上线」占位卡片网格
  * - 点已接入卡片 → 进入该渠道配置详情（带返回按钮）
@@ -82,14 +82,14 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     name: '飞书',
     iconSrc: feishuLogo,
     iconBgClass: 'bg-blue-500/15',
-    description: '通过飞书 Bot 与 MyYoda Agent 对话，支持群聊 / 单聊绑定与 Session 同步。',
+    description: '通过飞书 Bot 与 Guru Agent 对话，支持群聊 / 单聊绑定与 Session 同步。',
   },
   {
     id: 'wechat',
     name: '微信',
     iconSrc: wechatLogo,
     iconBgClass: 'bg-green-500/15',
-    description: '扫码登录微信，在微信中收发消息、控制 MyYoda Agent。',
+    description: '扫码登录微信，在微信中收发消息、控制 Guru Agent。',
   },
   {
     id: 'wecom',
@@ -98,7 +98,7 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     iconChar: '企',
     iconBgClass: 'bg-sky-500/15',
     iconTextClass: 'text-sky-600 dark:text-sky-400',
-    description: '把 MyYoda Agent 接入企业微信，在公司通讯录里直接对话与协作。',
+    description: '把 Guru Agent 接入企业微信，在公司通讯录里直接对话与协作。',
     plannedFeatures: [
       '群机器人接入（Webhook 回调）',
       '自建应用接入（收发单聊 / 群聊消息）',
@@ -113,7 +113,7 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     iconChar: 'S',
     iconBgClass: 'bg-purple-500/15',
     iconTextClass: 'text-purple-600 dark:text-purple-400',
-    description: '在 Slack 工作区中与 MyYoda Agent 对话，用 @提及 唤起协作。',
+    description: '在 Slack 工作区中与 Guru Agent 对话，用 @提及 唤起协作。',
     plannedFeatures: [
       'Slack App OAuth 接入',
       '@提及 触发对话',
@@ -128,7 +128,7 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     iconChar: 'D',
     iconBgClass: 'bg-indigo-500/15',
     iconTextClass: 'text-indigo-600 dark:text-indigo-400',
-    description: '把 MyYoda Agent 接入你的 Discord 服务器，支持 Bot 消息与斜杠命令。',
+    description: '把 Guru Agent 接入你的 Discord 服务器，支持 Bot 消息与斜杠命令。',
     plannedFeatures: [
       'Bot Token 接入',
       '斜杠命令交互',
@@ -143,7 +143,7 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     icon: Mail,
     iconBgClass: 'bg-red-500/15',
     iconTextClass: 'text-red-600 dark:text-red-400',
-    description: '通过专属邮箱与 MyYoda Agent 通信，支持 IMAP 收信与 SMTP 发信。',
+    description: '通过专属邮箱与 Guru Agent 通信，支持 IMAP 收信与 SMTP 发信。',
     plannedFeatures: [
       'IMAP / SMTP 邮箱配置',
       '白名单用户限制',
@@ -158,7 +158,7 @@ const PLATFORMS: readonly BotPlatformDef[] = [
     icon: Plug,
     iconBgClass: 'bg-emerald-500/15',
     iconTextClass: 'text-emerald-600 dark:text-emerald-400',
-    description: '把 MyYoda 包装为 OpenAI 兼容的 HTTP API，供 Open WebUI 等第三方前端调用。',
+    description: '把 Guru 包装为 OpenAI 兼容的 HTTP API，供 Open WebUI 等第三方前端调用。',
     plannedFeatures: [
       '一键开关与鉴权 Key',
       '自定义监听端口与主机',
@@ -461,7 +461,7 @@ export function BotHubSettings(): React.ReactElement {
               <h1 className="text-2xl font-semibold text-foreground">消息</h1>
             </div>
             <span className="hidden text-[13px] text-foreground/40 sm:block">
-              在飞书、微信等 IM 中与 MyYoda Agent 对话
+              在飞书、微信等 IM 中与 Guru Agent 对话
             </span>
           </>
         )}

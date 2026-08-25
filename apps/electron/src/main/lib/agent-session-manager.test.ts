@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { execFileSync } from 'node:child_process'
 import * as os from 'node:os'
 import { join } from 'node:path'
-import type { SDKMessage } from '@myyoda/shared'
+import type { SDKMessage } from '@guru/shared'
 import { mockElectronModule } from './__tests__/electron-mock'
 
 type AgentSessionManager = typeof import('./agent-session-manager')
@@ -13,7 +13,7 @@ let manager: AgentSessionManager
 let contextPrompt: AgentSessionContextPrompt
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR
 
 mockElectronModule({
@@ -33,13 +33,13 @@ function jsonl(rows: string[]): string {
 }
 
 function writeAgentSessionJsonl(sessionId: string, rows: string[]): void {
-  const dir = join(tempHome, '.myyoda', 'agent-sessions')
+  const dir = join(tempHome, '.guru', 'agent-sessions')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, `${sessionId}.jsonl`), jsonl(rows), 'utf-8')
 }
 
 function writeSdkSessionJsonl(sdkSessionId: string, rows: string[]): void {
-  const dir = join(tempHome, '.myyoda', 'sdk-config', 'projects', 'test-project')
+  const dir = join(tempHome, '.guru', 'sdk-config', 'projects', 'test-project')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, `${sdkSessionId}.jsonl`), jsonl(rows), 'utf-8')
 }
@@ -51,7 +51,7 @@ function writeAgentSessionsIndex(sessions: Array<{
   createdAt: number
   updatedAt: number
 }>): void {
-  const dir = join(tempHome, '.myyoda')
+  const dir = join(tempHome, '.guru')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'agent-sessions.json'), JSON.stringify({ version: 1, sessions }), 'utf-8')
 }
@@ -63,7 +63,7 @@ function writeAgentWorkspacesIndex(workspaces: Array<{
   createdAt: number
   updatedAt: number
 }>): void {
-  const dir = join(tempHome, '.myyoda')
+  const dir = join(tempHome, '.guru')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'agent-workspaces.json'), JSON.stringify({ version: 2, workspaces }), 'utf-8')
 }
@@ -79,10 +79,10 @@ function createIndexedSessions(count: number) {
 }
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-agent-session-manager-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-agent-session-manager-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
-  delete process.env.MYYODA_DEV
+  delete process.env.GURU_DEV
+  delete process.env.GURU_DEV
   delete process.env.CLAUDE_CONFIG_DIR
   manager = await import('./agent-session-manager')
   contextPrompt = await import('./agent-session-context-prompt')
@@ -95,9 +95,9 @@ afterAll(() => {
     process.env.HOME = originalHome
   }
   if (originalMyyodaDev === undefined) {
-    delete process.env.MYYODA_DEV
+    delete process.env.GURU_DEV
   } else {
-    process.env.MYYODA_DEV = originalMyyodaDev
+    process.env.GURU_DEV = originalMyyodaDev
   }
   if (originalClaudeConfigDir === undefined) {
     delete process.env.CLAUDE_CONFIG_DIR
@@ -122,7 +122,7 @@ describe('Agent 会话 JSONL 读取', () => {
     execFileSync('git', ['-C', repo, 'worktree', 'add', '-q', '-b', 'delete-test', worktree])
 
     writeAgentSessionJsonl(sessionId, ['{"type":"user"}'])
-    writeFileSync(join(tempHome, '.myyoda', 'agent-sessions.json'), JSON.stringify({
+    writeFileSync(join(tempHome, '.guru', 'agent-sessions.json'), JSON.stringify({
       version: 1,
       sessions: [{
         id: sessionId,
@@ -133,7 +133,7 @@ describe('Agent 会话 JSONL 读取', () => {
         gitWorktreePath: worktree,
       }],
     }), 'utf-8')
-    const recoveryRoot = join(tempHome, '.myyoda', 'agent-sessions', '.recovery-trash')
+    const recoveryRoot = join(tempHome, '.guru', 'agent-sessions', '.recovery-trash')
     const outside = join(tempHome, 'outside-session-recovery')
     mkdirSync(outside, { recursive: true })
     symlinkSync(outside, recoveryRoot, 'dir')
@@ -164,16 +164,16 @@ describe('Agent 会话 JSONL 读取', () => {
       updatedAt: 2,
     }])
     writeAgentSessionJsonl(sessionId, ['{"type":"user"}'])
-    const sessionDir = join(tempHome, '.myyoda', 'agent-workspaces', 'workspace-a', sessionId)
+    const sessionDir = join(tempHome, '.guru', 'agent-workspaces', 'workspace-a', sessionId)
     mkdirSync(sessionDir, { recursive: true })
     writeFileSync(join(sessionDir, 'draft.md'), '保留内容\n', 'utf-8')
 
     manager.deleteAgentSession(sessionId)
 
-    const messagePath = join(tempHome, '.myyoda', 'agent-sessions', `${sessionId}.jsonl`)
+    const messagePath = join(tempHome, '.guru', 'agent-sessions', `${sessionId}.jsonl`)
     expect(() => manager.appendSDKMessages(sessionId, [{ type: 'user' } as SDKMessage])).toThrow('不存在')
-    const recoveryRoot = join(tempHome, '.myyoda', 'agent-sessions', '.recovery-trash')
-    const workspaceRecoveryRoot = join(tempHome, '.myyoda', 'agent-workspaces', 'workspace-a', '.recovery-trash')
+    const recoveryRoot = join(tempHome, '.guru', 'agent-sessions', '.recovery-trash')
+    const workspaceRecoveryRoot = join(tempHome, '.guru', 'agent-workspaces', 'workspace-a', '.recovery-trash')
     expect(existsSync(messagePath)).toBe(false)
     expect(existsSync(sessionDir)).toBe(false)
 
@@ -299,7 +299,7 @@ describe('Agent 会话 JSONL 读取', () => {
 
     manager.appendSDKMessages(sessionId, [message])
 
-    const stored = readFileSync(join(tempHome, '.myyoda', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
+    const stored = readFileSync(join(tempHome, '.guru', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
     expect(stored.length).toBeLessThan(2_000)
     expect(stored).not.toContain(hugeBase64)
     const persisted = JSON.parse(stored.trim()) as { message: { content: Array<{ type: string; content: Array<Record<string, unknown>> }> } }
@@ -334,7 +334,7 @@ describe('Agent 会话 JSONL 读取', () => {
 
     manager.appendSDKMessages(sessionId, [message])
 
-    const stored = readFileSync(join(tempHome, '.myyoda', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
+    const stored = readFileSync(join(tempHome, '.guru', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
     expect(stored.length).toBeLessThan(2_000)
     expect(stored).not.toContain(hugeBase64)
     const persisted = JSON.parse(stored.trim()) as { message: { content: Array<{ type: string; content: Array<Record<string, unknown>> }> } }
@@ -369,7 +369,7 @@ describe('Agent 会话 JSONL 读取', () => {
 
     manager.appendSDKMessages(sessionId, [message])
 
-    const stored = readFileSync(join(tempHome, '.myyoda', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
+    const stored = readFileSync(join(tempHome, '.guru', 'agent-sessions', `${sessionId}.jsonl`), 'utf-8')
     expect(stored).toContain('截图成功')
     expect(stored).not.toContain(hugeBase64)
     const persisted = JSON.parse(stored.trim()) as { message: { content: Array<{ type: string; content: Array<Record<string, unknown>> }> } }
@@ -381,10 +381,10 @@ describe('Agent 会话 JSONL 读取', () => {
 
 describe('Agent 会话 runtime 元数据', () => {
   test('Given 新安装用户将默认思考设为 off When 连续新建并读取会话 Then 默认值不固化到会话（运行期解析）', () => {
-    const settingsPath = join(tempHome, '.myyoda', 'settings.json')
-    const indexPath = join(tempHome, '.myyoda', 'agent-sessions.json')
+    const settingsPath = join(tempHome, '.guru', 'settings.json')
+    const indexPath = join(tempHome, '.guru', 'agent-sessions.json')
     const indexBackupPath = `${indexPath}.bak`
-    mkdirSync(join(tempHome, '.myyoda'), { recursive: true })
+    mkdirSync(join(tempHome, '.guru'), { recursive: true })
     rmSync(indexPath, { force: true })
     rmSync(indexBackupPath, { force: true })
     writeFileSync(settingsPath, JSON.stringify({ defaultThinkingLevel: 'off' }), 'utf-8')
@@ -405,9 +405,9 @@ describe('Agent 会话 runtime 元数据', () => {
   })
 
   test('Given 历史索引没有迁移标记 When 读取旧版 off 会话 Then 仍执行一次 high 默认升级', () => {
-    const indexPath = join(tempHome, '.myyoda', 'agent-sessions.json')
+    const indexPath = join(tempHome, '.guru', 'agent-sessions.json')
     const indexBackupPath = `${indexPath}.bak`
-    mkdirSync(join(tempHome, '.myyoda'), { recursive: true })
+    mkdirSync(join(tempHome, '.guru'), { recursive: true })
     writeFileSync(indexPath, JSON.stringify({
       version: 1,
       sessions: [{

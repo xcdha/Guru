@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { AgentSessionMeta } from '@myyoda/shared'
+import type { AgentSessionMeta } from '@guru/shared'
 import {
   buildAgentSessionTrees,
   getSessionTreeActivityAt,

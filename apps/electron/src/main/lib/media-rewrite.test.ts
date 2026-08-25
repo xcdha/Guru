@@ -4,7 +4,7 @@ import { rewriteMarkdownMedia, rewriteRemoteMediaUrl } from './media-rewrite'
 /** 测试用 register：给白名单地址加前缀标记 */
 const fakeRegister = (url: string): string | null => {
   if (url.includes('user-images.githubusercontent.com') || url.includes('github.com')) {
-    return `myyoda-remote://token-for-${encodeURIComponent(url.slice(0, 24))}`
+    return `guru-remote://token-for-${encodeURIComponent(url.slice(0, 24))}`
   }
   return null
 }
@@ -13,7 +13,7 @@ describe('rewriteMarkdownMedia', () => {
   test('白名单图片地址被重写为代理 URL', () => {
     const markdown = '正文 ![截图](https://user-images.githubusercontent.com/1/2.png) 结尾'
     const result = rewriteMarkdownMedia(markdown, fakeRegister)
-    expect(result).toContain('myyoda-remote://')
+    expect(result).toContain('guru-remote://')
     expect(result).not.toContain('https://user-images.githubusercontent.com')
     expect(result).toContain('正文')
     expect(result).toContain('结尾')
@@ -36,7 +36,7 @@ describe('rewriteMarkdownMedia', () => {
   test('相对路径图片解析为 github.com 绝对地址并重写', () => {
     const markdown = '![assets](/assets/images/a.png)'
     const result = rewriteMarkdownMedia(markdown, fakeRegister)
-    expect(result).toContain('myyoda-remote://')
+    expect(result).toContain('guru-remote://')
   })
 
   test('多图混合场景', () => {
@@ -51,8 +51,8 @@ describe('rewriteMarkdownMedia', () => {
 
 describe('rewriteRemoteMediaUrl', () => {
   test('头像地址被重写', () => {
-    const result = rewriteRemoteMediaUrl('https://avatars.githubusercontent.com/u/1?v=4', () => 'myyoda-remote://x')
-    expect(result).toBe('myyoda-remote://x')
+    const result = rewriteRemoteMediaUrl('https://avatars.githubusercontent.com/u/1?v=4', () => 'guru-remote://x')
+    expect(result).toBe('guru-remote://x')
   })
 
   test('register 返回 null 时保持原值', () => {

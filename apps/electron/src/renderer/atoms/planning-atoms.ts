@@ -1,5 +1,5 @@
 import { atom } from 'jotai'
-import type { ActivePlanningReminder, CalendarEvent, PlanningGroup, PlanningTag, PlanningWorkspaceScope, Todo } from '@myyoda/shared'
+import type { ActivePlanningReminder, CalendarEvent, PlanningGroup, PlanningTag, PlanningWorkspaceScope, Todo } from '@guru/shared'
 
 export type PlanningTab = 'todos' | 'calendar' | 'automations'
 

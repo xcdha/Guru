@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useAtomValue } from 'jotai'
-import type { SkillFileNode, WorkspaceMemoryFileChange } from '@myyoda/shared'
+import type { SkillFileNode, WorkspaceMemoryFileChange } from '@guru/shared'
 import { workspaceMemoryChangesAtom } from '@/atoms/memory-change-atoms'
 import { WorkspaceMemoryChangeShelf } from './WorkspaceMemoryChangeShelf'
 

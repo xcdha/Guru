@@ -26,7 +26,7 @@ export interface SessionWatcherOwnershipScope {
 
 /**
  * 根据可用会话范围，归还可以归属给该会话的 watcher 变更路径。
- * 注意：当前 MyYoda 的会话文件变更走 tool 事件（tool_start/tool_result）路径，
+ * 注意：当前 Guru 的会话文件变更走 tool 事件（tool_start/tool_result）路径，
  * 不使用 watcher 归属；本函数与 upstream 保持一致，为未来 watcher 接入保留。
  */
 export function getOwnedSessionWatcherPaths(

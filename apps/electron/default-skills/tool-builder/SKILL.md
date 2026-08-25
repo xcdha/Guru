@@ -22,7 +22,7 @@ version: "1.0.3"
 
 ### 2. 构建配置
 
-根据收集的信息构建工具配置 JSON。配置文件位于 `~/.myyoda/chat-tools.json`。
+根据收集的信息构建工具配置 JSON。配置文件位于 `~/.guru/chat-tools.json`。
 
 #### 配置文件结构
 
@@ -90,7 +90,7 @@ version: "1.0.3"
 ### 3. 写入配置
 
 操作步骤：
-1. 读取 `~/.myyoda/chat-tools.json`（如不存在则创建）
+1. 读取 `~/.guru/chat-tools.json`（如不存在则创建）
 2. 将新工具追加到 `customTools` 数组（按 `id` 去重）
 3. 在 `toolStates` 中添加 `{ "enabled": false }`（与插件中心一致：添加后默认关闭）
 4. 写回文件（保持 JSON 格式化）

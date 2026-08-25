@@ -10,7 +10,7 @@
 import * as React from 'react'
 import { Bot, Users, ShieldCheck, Layers, Code2, ClipboardCheck, UserRound, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ExpertPackage, TeamSquad } from '@myyoda/shared/experts'
+import type { ExpertPackage, TeamSquad } from '@guru/shared/experts'
 
 /** 常用图标映射：expert.json / team.json 的 avatar.icon 只允许白名单（避免动态导入全量图标） */
 const ICON_MAP: Record<string, LucideIcon> = {

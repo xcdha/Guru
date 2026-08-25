@@ -3,16 +3,16 @@
  *
  * 将旧的"工作区全隔离"模型一次性迁移到"MCP 全局唯一 + Skills 全局 < 工作区 < 项目三层叠加"模型：
  *
- * 1. MCP：所有工作区 mcp.json + 嵌套 Project 的 .context/mcp.json 合并进全局 ~/.myyoda/mcp.json
+ * 1. MCP：所有工作区 mcp.json + 嵌套 Project 的 .context/mcp.json 合并进全局 ~/.guru/mcp.json
  *    - 同名 server 冲突：保留"默认工作区"（最早创建）版本，其余以 `{name}@{slug}` 后缀保留并告警
- * 2. Skills：~/.myyoda/default-skills/ 复制到 ~/.myyoda/global-skills/（已存在不覆盖）
+ * 2. Skills：~/.guru/default-skills/ 复制到 ~/.guru/global-skills/（已存在不覆盖）
  *    - 存量工作区 skills/ 中属于预制白名单（getDefaultSkillSlugs）的 skill 复制上浮到全局
  *    - 运行时三层叠加生效（getEffectiveSkillsDirs），global 优先级最高（first-wins），工作区/项目层同名仅产生 collision 诊断，不是真正的“覆盖”
  *
  * AGENTS.md 与 Memory 仍按工作区基线管理，本迁移不改动它们。
  *
- * 幂等：进度写入 ~/.myyoda/.migration-global-scope.json，重复执行跳过已完成步骤。
- * 可回滚：所有被合并的源文件先备份到 ~/.myyoda/.migration-backup/。
+ * 幂等：进度写入 ~/.guru/.migration-global-scope.json，重复执行跳过已完成步骤。
+ * 可回滚：所有被合并的源文件先备份到 ~/.guru/.migration-backup/。
  */
 
 import {
@@ -51,8 +51,8 @@ import { projectRepository } from './project-repository'
 import {
   getProjectMcpConfigPath,
   readProjectMcpConfigRaw,
-} from '@myyoda/shared/projects/storage'
-import type { GlobalScopeReviewHints, WorkspaceMcpConfig } from '@myyoda/shared'
+} from '@guru/shared/projects/storage'
+import type { GlobalScopeReviewHints, WorkspaceMcpConfig } from '@guru/shared'
 
 interface MigrationState {
   version: number
@@ -283,7 +283,7 @@ function migrateMcpToGlobal(): string[] {
 
 // ===== 2. Skills：default-skills → global-skills + 工作区预制 skill 上浮 =====
 
-/** 步骤 2a：把 ~/.myyoda/default-skills/ 复制到 global-skills/（已存在不覆盖，全局优先） */
+/** 步骤 2a：把 ~/.guru/default-skills/ 复制到 global-skills/（已存在不覆盖，全局优先） */
 async function migrateDefaultSkillsToGlobal(): Promise<string[]> {
   const warnings: string[] = []
   const sourceDir = getDefaultSkillsDir()

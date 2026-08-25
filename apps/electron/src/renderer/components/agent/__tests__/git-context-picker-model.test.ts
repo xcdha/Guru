@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { GitBranchInfo } from '@myyoda/shared'
+import type { GitBranchInfo } from '@guru/shared'
 import {
   canCheckoutBranchInLocal,
   filterGitBranches,
@@ -60,7 +60,7 @@ describe('git-context-picker-model', () => {
   })
 
   test('Given repo path When building storage key Then key is per-repo and strips trailing slashes', () => {
-    expect(getGitModeStorageKey('/repo/project/')).toBe('myyoda:git:execution-mode:/repo/project')
+    expect(getGitModeStorageKey('/repo/project/')).toBe('guru:git:execution-mode:/repo/project')
   })
 
   test('Given same bound repo root When comparing Then matches', () => {

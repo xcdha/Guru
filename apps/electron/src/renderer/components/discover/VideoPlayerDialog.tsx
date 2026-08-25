@@ -2,13 +2,13 @@
  * VideoPlayerDialog — 应用内视频播放器
  *
  * 播放策略：优先 discover-video:// 远程流式播放（主进程代理感知转发 + Range seek），
- * 流式失败时提供「下载后播放」兜底（下载到本地缓存后经 myyoda-file:// 播放）。
+ * 流式失败时提供「下载后播放」兜底（下载到本地缓存后经 guru-file:// 播放）。
  */
 import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Download, Loader2, RefreshCw, X } from 'lucide-react'
 import { useAtomValue } from 'jotai'
-import type { DiscoverContentItem } from '@myyoda/shared'
+import type { DiscoverContentItem } from '@guru/shared'
 import { videoDownloadStatesAtom } from '@/atoms/discover-atoms'
 
 export interface VideoPlayerDialogProps {

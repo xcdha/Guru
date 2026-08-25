@@ -9,7 +9,7 @@ type StorageService = typeof import('./storage-service')
 let storageService: StorageService
 let tempHome: string
 const originalHome = process.env.HOME
-const originalMyyodaDev = process.env.MYYODA_DEV
+const originalMyyodaDev = process.env.GURU_DEV
 
 mockElectronModule({
   app: {
@@ -24,7 +24,7 @@ mock.module('node:os', () => ({
 }))
 
 function sessionDir(): string {
-  return join(tempHome, '.myyoda', 'agent-sessions')
+  return join(tempHome, '.guru', 'agent-sessions')
 }
 
 function writeSessionJsonl(sessionId: string, content: string): void {
@@ -40,7 +40,7 @@ function writeAgentSessionsIndex(sessions: Array<{
   updatedAt?: number
   archived?: boolean
 }>): void {
-  const dir = join(tempHome, '.myyoda')
+  const dir = join(tempHome, '.guru')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'agent-sessions.json'), JSON.stringify({
     version: 1,
@@ -74,22 +74,22 @@ function oversizedImageLine(toolUseId: string, dataLength: number): string {
 }
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'myyoda-storage-service-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-storage-service-'))
   process.env.HOME = tempHome
-  delete process.env.MYYODA_DEV
+  delete process.env.GURU_DEV
   storageService = await import('./storage-service')
 })
 
 beforeEach(() => {
   // 每个用例独立的会话目录，避免 strip 类全量扫描测试之间互相污染
-  rmSync(join(tempHome, '.myyoda'), { recursive: true, force: true })
+  rmSync(join(tempHome, '.guru'), { recursive: true, force: true })
 })
 
 afterAll(() => {
   if (originalHome === undefined) delete process.env.HOME
   else process.env.HOME = originalHome
-  if (originalMyyodaDev === undefined) delete process.env.MYYODA_DEV
-  else process.env.MYYODA_DEV = originalMyyodaDev
+  if (originalMyyodaDev === undefined) delete process.env.GURU_DEV
+  else process.env.GURU_DEV = originalMyyodaDev
   rmSync(tempHome, { recursive: true, force: true })
 })
 

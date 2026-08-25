@@ -1,4 +1,4 @@
-import type { AgentStreamEvent } from '@myyoda/shared'
+import type { AgentStreamEvent } from '@guru/shared'
 
 export interface AgentStreamEventBatcherOptions {
   dispatch: (event: AgentStreamEvent) => void

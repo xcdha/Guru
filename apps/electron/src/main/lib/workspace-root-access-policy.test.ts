@@ -10,7 +10,7 @@ const tempRoots: string[] = []
 const noSymlinkPermission = (() => {
   if (process.platform !== 'win32') return false
   try {
-    const probe = mkdtempSync(join(tmpdir(), 'myyoda-symlink-probe-'))
+    const probe = mkdtempSync(join(tmpdir(), 'guru-symlink-probe-'))
     symlinkSync(probe, join(probe, 'probe'))
     rmSync(probe, { recursive: true, force: true })
     return false
@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 function createWorkspace(name: string): string {
-  const root = mkdtempSync(join(tmpdir(), `myyoda-${name}-`))
+  const root = mkdtempSync(join(tmpdir(), `guru-${name}-`))
   tempRoots.push(root)
   return root
 }

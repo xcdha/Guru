@@ -6,7 +6,7 @@
  * - Pi-Agent 模式通过 pi-model-registry 注册为 `openai-responses` 协议
  */
 
-import type { ProviderType } from '@myyoda/shared'
+import type { ProviderType } from '@guru/shared'
 import type {
   ContinuationMessage,
   ImageAttachmentData,
@@ -19,7 +19,7 @@ import type {
 } from './types.ts'
 import { resolveOpenAIResponsesUrl } from './url-utils.ts'
 
-// ===== Responses API 类型（只声明 MyYoda 需要的字段） =====
+// ===== Responses API 类型（只声明 Guru 需要的字段） =====
 
 interface ResponsesInputTextPart {
   type: 'input_text' | 'output_text'

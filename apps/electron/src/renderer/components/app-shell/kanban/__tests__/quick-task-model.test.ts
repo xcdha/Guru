@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { TaskSpecSchema } from '@myyoda/shared/tasks/schema'
+import { TaskSpecSchema } from '@guru/shared/tasks/schema'
 import {
   buildQuickTaskRequest,
   submitQuickTask,

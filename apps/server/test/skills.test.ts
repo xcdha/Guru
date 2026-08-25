@@ -67,9 +67,9 @@ async function uploadZip(
 
 describe('Skills 仓库与分发', () => {
   beforeAll(() => {
-    process.env.MYYODA_SERVER_DB = ':memory:'
+    process.env.GURU_SERVER_DB = ':memory:'
     closeDb()
-    process.env.MYYODA_SERVER_SKILLS_DIR = '/tmp/myyoda-server-test-skills'
+    process.env.GURU_SERVER_SKILLS_DIR = '/tmp/guru-server-test-skills'
   })
 
   test('发布 Skill 成功', async () => {

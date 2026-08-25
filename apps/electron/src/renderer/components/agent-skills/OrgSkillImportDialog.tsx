@@ -11,7 +11,7 @@ import { Building2, Download, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import type { OrganizationMembership, OrganizationSkill } from '@myyoda/shared'
+import type { OrganizationMembership, OrganizationSkill } from '@guru/shared'
 
 interface OrgSkillImportDialogProps {
   open: boolean

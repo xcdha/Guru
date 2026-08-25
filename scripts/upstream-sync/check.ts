@@ -183,13 +183,13 @@ if (!pinned) {
         message: '仍引用已退役的 claude-agent-sdk',
       })
     }
-    // 旧 @proma 排除应变为 @myyoda
+    // 旧 @proma 排除应变为 @guru
     if (yml.includes('!node_modules/@proma/**')) {
       add({
         severity: 'error',
         check: 'sdk/builder',
         file: 'apps/electron/electron-builder.yml',
-        message: '仍排除 @proma/**，应改为 @myyoda/**',
+        message: '仍排除 @proma/**，应改为 @guru/**',
       })
     }
   }
@@ -300,10 +300,10 @@ function normalizeSkillBody(content: string): string {
   text = text.replace(/^---\s*\n[\s\S]*?\n---\s*/, '')
   // 忽略已知品牌差异
   text = text
-    .replace(/~\/\.proma/g, '~/.myyoda')
-    .replace(/~\/\.myyoda/g, '~/.myyoda')
-    .replace(/@proma\//g, '@myyoda/')
-    .replace(/Proma/g, 'MyYoda')
+    .replace(/~\/\.proma/g, '~/.guru')
+    .replace(/~\/\.guru/g, '~/.guru')
+    .replace(/@proma\//g, '@guru/')
+    .replace(/Proma/g, 'Guru')
     .replace(/\s+/g, ' ')
     .trim()
   return text
