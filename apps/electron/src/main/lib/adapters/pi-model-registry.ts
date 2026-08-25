@@ -239,7 +239,7 @@ function createXaiRuntimeCredentialStore(
 }
 
 /**
- * Pi 0.84.2 的内置 catalog 尚未声明以下 DeepSeek V4 Flash 变体的原生视觉。
+ * Pi 0.84.3 的内置 catalog 尚未声明以下 DeepSeek V4 Flash 变体的原生视觉。
  * 在上游目录同步前，本地覆盖只扩展 input，不改变实际模型 ID、协议或推理参数。
  */
 const DEEPSEEK_V4_FLASH_VISION_MODEL_IDS = new Set([
