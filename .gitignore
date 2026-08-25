@@ -73,3 +73,4 @@ pnpm-workspace.yaml
 !apps/electron/default-skills/**/vendor/**
 graphify-out/
 generated-images/
+.icon-backup-*/
