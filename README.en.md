@@ -1,12 +1,12 @@
-# MyYoda
+# Guru
 
 > **Thinking More, Do More!**
 
-MyYoda is a local-first AI coding workbench built for real software delivery. It brings multi-model chat, code execution, project context, task orchestration, collaborative sub-agents, automation, and durable knowledge into one desktop application.
+Guru is a local-first AI coding workbench built for real software delivery. It brings multi-model chat, code execution, project context, task orchestration, collaborative sub-agents, automation, and durable knowledge into one desktop application.
 
-**[中文](./README.md)** · **[Download the latest release](https://github.com/GeoffBao/MyYoda/releases)** · **[User Guide](./apps/electron/resources/tutorial.md)**
+**[中文](./README.md)** · **[Download the latest release](https://github.com/xcdha/Guru/releases)** · **[User Guide](./apps/electron/resources/tutorial.md)**
 
-## Why MyYoda
+## Why Guru
 
 A great coding product should do more than produce an answer. It should help users finish complex work reliably.
 
@@ -41,7 +41,7 @@ Subscription login channels are currently intended for Code. Chat availability d
 
 ### Projects and Long-Running Work
 
-- Workspaces isolate sessions, Skills, Memory, Projects, and shared files; MCP defaults to a global `~/.myyoda/mcp.json` shared by all workspaces;
+- Workspaces isolate sessions, Skills, Memory, Projects, and shared files; MCP defaults to a global `~/.guru/mcp.json` shared by all workspaces;
 - Projects bind to the real repository through `workingDirectory` and keep reference assets and project memory;
 - Projects & Kanban provides Todo, In Progress, and Done columns by default;
 - TaskEditor can generate or manually edit a subtask DAG with orchestration models, dependencies, acceptance criteria, and repair limits;
@@ -53,7 +53,7 @@ Subscription login channels are currently intended for Code. Chat availability d
 - **Plugin Center**: a unified place for Overview, Experts, Expert Teams, Skills, Connectors, and Memory.
 - **Connectors**: user-facing external integrations backed by MCP, API-key tools, or custom HTTP tools. Automations, collaboration sub-agents, task creation, and Planning belong to Overview “built-in abilities”, not Connectors.
 - **Skills**: reusable workflows, decision rules, and standard operating procedures;
-- **MCP**: the underlying tool-extension protocol; user MCP defaults to `~/.myyoda/mcp.json` and is shared across workspaces unless a Project has its own overlay (full replace, that Project only);
+- **MCP**: the underlying tool-extension protocol; user MCP defaults to `~/.guru/mcp.json` and is shared across workspaces unless a Project has its own overlay (full replace, that Project only);
 - **Memory**: cross-session experience, user preferences, and long-lived Project knowledge;
 - **Context**: task plans, temporary notes, and shared workspace material;
 - **Agent Experts**: stable roles, rules, and capability bundles for engineering disciplines.
@@ -81,7 +81,7 @@ Subscription login channels are currently intended for Code. Chat availability d
 
 ### 1. Install
 
-Download the macOS or Windows build from [GitHub Releases](https://github.com/GeoffBao/MyYoda/releases).
+Download the macOS or Windows build from [GitHub Releases](https://github.com/xcdha/Guru/releases).
 
 ### 2. Configure a Model
 
@@ -114,7 +114,7 @@ Workspace, Project, and session cwd are different concepts:
 
 | Concept | Meaning |
 |---------|---------|
-| **Workspace** | MyYoda's top-level isolation and capability container |
+| **Workspace** | Guru's top-level isolation and capability container |
 | **Project** | An engineering or business context inside a Workspace |
 | **Project workingDirectory** | The real repository or project directory |
 | **Default working directory** | App-level setting: fallback engineering directory for sessions without a bound Project (Settings → Workspace) |
@@ -123,8 +123,8 @@ Workspace, Project, and session cwd are different concepts:
 | **Project assets / MEMORY.md** | Project references and long-lived context |
 
 ```text
-~/.myyoda/mcp.json                 # Global MCP, shared by all workspaces
-~/.myyoda/agent-workspaces/{workspace}/
+~/.guru/mcp.json                 # Global MCP, shared by all workspaces
+~/.guru/agent-workspaces/{workspace}/
 ├── {session-id}/
 │   └── .context/              # Current task plans and temporary notes
 ├── workspace-files/           # Cross-session shared material
@@ -139,14 +139,14 @@ Workspace, Project, and session cwd are different concepts:
 └── src/ ...                     # Referenced by Project workingDirectory
 ```
 
-When a session is bound to a Project, MyYoda explicitly supplies the `workingDirectory`, helping the Agent distinguish the repository from the session cwd.
+When a session is bound to a Project, Guru explicitly supplies the `workingDirectory`, helping the Agent distinguish the repository from the session cwd.
 
 ## Local Data and Security
 
-Core MyYoda data is stored under `~/.myyoda/` by default:
+Core Guru data is stored under `~/.guru/` by default:
 
 ```text
-~/.myyoda/
+~/.guru/
 ├── settings.json
 ├── channels.json
 ├── mcp.json                   # Global MCP, shared by all Workspaces
@@ -160,7 +160,7 @@ Core MyYoda data is stored under `~/.myyoda/` by default:
 - API keys and OAuth tokens are encrypted with Electron `safeStorage` when OS-backed encryption is available. If it is unavailable, the current implementation may fall back to plaintext local storage;
 - sessions primarily use auditable JSON and JSONL files;
 - model requests still send user-submitted prompts, selected attachment content, or necessary tool results to the model provider chosen by the user;
-- MyYoda explicitly provides the current Workspace, Project, session, and attached directories to Code Agents. It does not currently provide an OS-level filesystem sandbox, so fully automatic mode should only be used in trusted environments;
+- Guru explicitly provides the current Workspace, Project, session, and attached directories to Code Agents. It does not currently provide an OS-level filesystem sandbox, so fully automatic mode should only be used in trusted environments;
 - the product requires Agents to request explicit confirmation before publishing, payment, irreversible deletion, and other high-risk operations, but users should still verify actual tool calls.
 
 ## Run from Source
@@ -202,10 +202,10 @@ bun run dist
 ## Repository Structure
 
 ```text
-MyYoda/
+Guru/
 ├── apps/
 │   ├── electron/       # Electron main process, preload, React renderer, and resources
-│   └── cli/            # MyYoda CLI and progressive session-reading tools
+│   └── cli/            # Guru CLI and progressive session-reading tools
 ├── packages/
 │   ├── shared/         # Shared types, protocols, IPC constants, and utilities
 │   ├── core/           # Provider adapters and model invocation primitives
@@ -242,9 +242,9 @@ Before submitting a change, verify that it:
 
 ## Acknowledgements
 
-MyYoda continues to evolve with the open-source community and benefits from projects including:
+Guru continues to evolve with the open-source community and benefits from projects including:
 
-- [Proma](https://github.com/proma-ai/Proma), MyYoda's early open-source foundation;
+- [Proma](https://github.com/proma-ai/Proma), Guru's early open-source foundation;
 - [Pi Agent](https://github.com/badlogic/pi-mono), the Agent Runtime ecosystem;
 - [Claude Agent SDK](https://docs.anthropic.com/), compatible runtime support for Claude subscriptions;
 - [Model Context Protocol](https://modelcontextprotocol.io/), the standard for extending Agent tools;

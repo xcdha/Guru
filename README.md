@@ -1,12 +1,12 @@
-# MyYoda
+# Guru
 
 > **Thinking More, Do More!**
 
-MyYoda 是面向真实研发交付的本地优先 AI Coding 工作台。它把多模型对话、代码执行、项目上下文、任务编排、协作子 Agent、自动任务和持续知识沉淀整合在一个桌面应用中。
+Guru 是面向真实研发交付的本地优先 AI Coding 工作台。它把多模型对话、代码执行、项目上下文、任务编排、协作子 Agent、自动任务和持续知识沉淀整合在一个桌面应用中。
 
-**[English](./README.en.md)** · **[下载最新版本](https://github.com/GeoffBao/MyYoda/releases)** · **[使用指南](./apps/electron/resources/tutorial.md)**
+**[English](./README.en.md)** · **[下载最新版本](https://github.com/xcdha/Guru/releases)** · **[使用指南](./apps/electron/resources/tutorial.md)**
 
-## 为什么选择 MyYoda
+## 为什么选择 Guru
 
 优秀的 Coding 产品不应只给出答案，还应帮助用户把复杂工作真正完成。
 
@@ -41,7 +41,7 @@ Projects & Kanban 位于 Code 内。进入 Code 后，可在“会话”和“�
 
 ### 项目与长任务执行
 
-- Workspace 隔离会话、Skills、Memory、Projects 和共享资料；MCP 默认全局共享（`~/.myyoda/mcp.json`）；
+- Workspace 隔离会话、Skills、Memory、Projects 和共享资料；MCP 默认全局共享（`~/.guru/mcp.json`）；
 - Project 绑定真实工程目录 `workingDirectory`，并保存参考资料和项目记忆；
 - **默认工作区目录**（设置 → 工作区）：未绑定项目的新会话回退使用的工程代码目录，配置后 Agent 直接在该目录下工作，目录失效时自动降级到会话隔离沙箱（不阻断）；
 - **项目目录失效一键恢复**：绑定目录被移动/删除后，报错卡片提供「重新关联目录」「设置默认工作区目录」，并自动探测父目录下可能的移动候选（如 `LuxAgents` → `LuxAgent`）供一键关联；
@@ -55,7 +55,7 @@ Projects & Kanban 位于 Code 内。进入 Code 后，可在“会话”和“�
 - **插件中心**：以“万物即插件”为心智，统一管理专家、专家团、技能、连接器与记忆（总览 / 专家 / 专家团 / 技能 / 连接器 / 记忆）；
 - **连接器**：统一管理 MCP、API Key 工具、自定义 HTTP 工具与外部系统接入；定时任务、协作子 Agent、创建任务和 Planning 属于总览「内置能力」，不是连接器；
 - **Skills**：可复用的工作流、决策规则和 SOP；
-- **MCP**：Agent 工具扩展协议；用户 MCP 默认写在 `~/.myyoda/mcp.json`，所有工作区共享；仅当 Project 自建 MCP 时整份覆盖、仅该项目生效；
+- **MCP**：Agent 工具扩展协议；用户 MCP 默认写在 `~/.guru/mcp.json`，所有工作区共享；仅当 Project 自建 MCP 时整份覆盖、仅该项目生效；
 - **Memory**：跨会话经验、用户偏好和 Project 长期知识；
 - **Context**：当前任务计划、临时记录和跨会话资料；
 - **Agent 专家**：为不同工程领域提供稳定角色、规则和能力组合。
@@ -86,7 +86,7 @@ Projects & Kanban 位于 Code 内。进入 Code 后，可在“会话”和“�
 
 ### 1. 安装
 
-从 [GitHub Releases](https://github.com/GeoffBao/MyYoda/releases) 下载适用于 macOS 或 Windows 的安装包。
+从 [GitHub Releases](https://github.com/xcdha/Guru/releases) 下载适用于 macOS 或 Windows 的安装包。
 
 ### 2. 配置模型
 
@@ -119,7 +119,7 @@ Workspace、Project 和会话 cwd 不是同一个概念：
 
 | 概念 | 含义 |
 |------|------|
-| **Workspace** | MyYoda 的顶层隔离与能力容器 |
+| **Workspace** | Guru 的顶层隔离与能力容器 |
 | **Project** | Workspace 内的工程或业务上下文 |
 | **Project workingDirectory** | 真实代码仓库或工程目录 |
 | **默认工作区目录** | 应用级设置：未绑定项目的新会话回退使用的工程代码目录（设置 → 工作区） |
@@ -128,8 +128,8 @@ Workspace、Project 和会话 cwd 不是同一个概念：
 | **Project assets / MEMORY.md** | Project 参考资料和长期上下文 |
 
 ```text
-~/.myyoda/mcp.json                 # 全局 MCP，所有工作区共享
-~/.myyoda/agent-workspaces/{workspace}/
+~/.guru/mcp.json                 # 全局 MCP，所有工作区共享
+~/.guru/agent-workspaces/{workspace}/
 ├── {session-id}/
 │   └── .context/              # 当前会话的计划和临时记录
 ├── workspace-files/           # 跨会话共享资料
@@ -148,10 +148,10 @@ Workspace、Project 和会话 cwd 不是同一个概念：
 
 ## 本地数据与安全
 
-MyYoda 的核心数据默认保存在 `~/.myyoda/`：
+Guru 的核心数据默认保存在 `~/.guru/`：
 
 ```text
-~/.myyoda/
+~/.guru/
 ├── settings.json
 ├── channels.json
 ├── mcp.json                   # 全局 MCP，所有工作区共享
@@ -165,7 +165,7 @@ MyYoda 的核心数据默认保存在 `~/.myyoda/`：
 - API Key 和 OAuth Token 在系统支持 Electron `safeStorage` 时会加密后写入本地配置；如果操作系统加密能力不可用，当前版本可能降级为明文存储；
 - 会话主要使用 JSON / JSONL 文件保存，便于备份和审计；
 - 模型请求仍会将用户提交的 Prompt、所选附件内容或必要工具结果发送给用户选择的模型服务商；
-- MyYoda 会向 Code Agent 明确提供当前 Workspace、Project、会话及附加目录；当前版本不提供 OS 级文件系统沙箱，完全自动模式只应在可信环境中使用；
+- Guru 会向 Code Agent 明确提供当前 Workspace、Project、会话及附加目录；当前版本不提供 OS 级文件系统沙箱，完全自动模式只应在可信环境中使用；
 - 对发布、付款、不可逆删除等高风险操作，产品要求 Agent 在执行前进行明确确认，但用户仍应核对实际工具调用。
 
 ## 从源码运行
@@ -207,10 +207,10 @@ bun run dist
 ## 仓库结构
 
 ```text
-MyYoda/
+Guru/
 ├── apps/
 │   ├── electron/       # Electron 主进程、Preload、React Renderer 和资源
-│   └── cli/            # MyYoda CLI 与渐进式会话读取工具
+│   └── cli/            # Guru CLI 与渐进式会话读取工具
 ├── packages/
 │   ├── shared/         # 共享类型、协议、IPC 常量和工具
 │   ├── core/           # Provider Adapter 和模型调用基础能力
@@ -247,9 +247,9 @@ Provider / Agent Runtime / Workspace / Task / Automation
 
 ## 致谢
 
-MyYoda 基于开源社区持续演进，并受益于以下项目和生态：
+Guru 基于开源社区持续演进，并受益于以下项目和生态：
 
-- [Proma](https://github.com/proma-ai/Proma)：MyYoda 的早期开源基础；
+- [Proma](https://github.com/proma-ai/Proma)：Guru 的早期开源基础；
 - [Pi Agent](https://github.com/badlogic/pi-mono)：Agent Runtime 生态；
 - [Model Context Protocol](https://modelcontextprotocol.io/)：Agent 工具扩展标准；
 - [Shiki](https://shiki.style/)、[Mermaid](https://mermaid.js.org/) 和其他优秀开源项目。
