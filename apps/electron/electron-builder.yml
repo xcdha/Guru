@@ -108,10 +108,12 @@ extraResources:
     to: icon.ico
   - from: resources/icon-light.ico
     to: icon-light.ico
-  - from: resources/icon.icns
-    to: icon.icns
   - from: resources/icon-light.icns
     to: icon-light.icns
+  # 注意：icon.icns 不在这里拷 —— mac.icon（下方 mac.icon: resources/icon.icns）
+  # 会把它放进 Guru.app/Contents/Resources/（即 mac 的 process.resourcesPath），
+  # 若再经 extraResources 拷一遍会与 mac.icon 撞同一目标路径导致 EEXIST。
+  # Dock 图标默认读取该位置的 icon.icns 即可。
   # Renderer bundle 载入前显示的静态启动页，避免运行时检测期间出现空白窗口。
   - from: resources/startup-splash
     to: startup-splash
