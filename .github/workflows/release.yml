@@ -93,10 +93,18 @@ jobs:
           if gh release view "${tag}" >/dev/null 2>&1; then
             echo "Release ${tag} 已存在，跳过创建"
           else
+            version="${tag#v}"
+            # 优先使用单版本 release note（只含当前版本更新）；
+            # 缺失时回退到累积 RELEASE_NOTES.md（含全部历史版本）
+            if [[ -f "apps/electron/resources/release-notes/${version}.md" ]]; then
+              NOTES_FILE="apps/electron/resources/release-notes/${version}.md"
+            else
+              NOTES_FILE="apps/electron/RELEASE_NOTES.md"
+            fi
             gh release create "${tag}" \
               --title "Guru ${tag}" \
-              --notes-file apps/electron/RELEASE_NOTES.md
-            echo "已创建 Release ${tag}"
+              --notes-file "${NOTES_FILE}"
+            echo "已创建 Release ${tag}（notes: ${NOTES_FILE}）"
           fi
 
   build-mac-arm64:
