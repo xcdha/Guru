@@ -149,9 +149,11 @@ jobs:
           tag="v${version}-debug"
           # 显式上传到 debug 专属 pre-release，避免 electron-builder 自动定位
           # 到同 commit 的正式 tag（v0.7.7 与 v0.7.7-debug 指向同一提交）
-          # 只上传文件，跳过子目录（electron-builder 产物在 out/）（gh 不能上传目录）
+          # 只上传文件，跳过子目录（electron-builder 产物在 out/）
+          # 跳过 builder-debug.yml：三平台并行都会生成同名调试文件，
+          # 同时上传必然 422 ReleaseAsset.name already exists（对用户无用）
           for f in out/*; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [ "${f##*/}" != "builder-debug.yml" ]; then
               gh release upload "${tag}" "$f" --clobber
             fi
           done
@@ -197,8 +199,10 @@ jobs:
           version="${{ needs.validate-test-version.outputs.version }}"
           tag="v${version}-debug"
           # 只上传文件，跳过子目录（electron-builder 产物在 out/）
+          # 跳过 builder-debug.yml：三平台并行都会生成同名调试文件，
+          # 同时上传必然 422 ReleaseAsset.name already exists（对用户无用）
           for f in out/*; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [ "${f##*/}" != "builder-debug.yml" ]; then
               gh release upload "${tag}" "$f" --clobber
             fi
           done
@@ -244,8 +248,10 @@ jobs:
           version="${{ needs.validate-test-version.outputs.version }}"
           tag="v${version}-debug"
           # 只上传文件，跳过子目录（electron-builder 产物在 out/）
+          # 跳过 builder-debug.yml：三平台并行都会生成同名调试文件，
+          # 同时上传必然 422 ReleaseAsset.name already exists（对用户无用）
           for f in out/*; do
-            if [ -f "$f" ]; then
+            if [ -f "$f" ] && [ "${f##*/}" != "builder-debug.yml" ]; then
               gh release upload "${tag}" "$f" --clobber
             fi
           done
