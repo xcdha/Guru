@@ -6,9 +6,9 @@
  * 系统主题变化时调用，保证图标与界面主题一致。
  */
 
-import { app, nativeTheme } from 'electron'
+import { app, nativeTheme, BrowserWindow, nativeImage } from 'electron'
 import { getSettings } from './settings-service'
-import { getDockIconPath, getWindowIconPath, resolveIconSkinVariant } from './icon-theme'
+import { getDockIconPath, getWindowIconPath, getWinTrayIconPath, resolveIconSkinVariant } from './icon-theme'
 import { updateTrayIcon } from '../tray'
 
 /** 主窗口创建时使用的图标路径（按当前图标皮肤变体） */
@@ -46,6 +46,26 @@ export function applyIconForCurrentTheme(): void {
       }
     } catch (error) {
       console.error('[图标] Dock 图标切换失败:', error)
+    }
+  }
+
+  // Windows 窗口 / 任务栏 / Alt-Tab 图标（可动态换）
+  if (process.platform === 'win32') {
+    try {
+      const iconPath = getWinTrayIconPath(variant)
+      const image = nativeImage.createFromPath(iconPath)
+      if (!image.isEmpty()) {
+        BrowserWindow.getAllWindows().forEach((win) => {
+          if (!win.isDestroyed()) {
+            win.setIcon(image)
+          }
+        })
+        console.log('[图标] 窗口/任务栏图标已切换:', variant)
+      } else {
+        console.warn('[图标] 窗口图标为空，跳过:', iconPath)
+      }
+    } catch (error) {
+      console.error('[图标] 窗口/任务栏图标切换失败:', error)
     }
   }
 
