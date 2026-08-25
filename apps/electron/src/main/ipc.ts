@@ -233,6 +233,7 @@ import { extractTextFromAttachment } from './lib/document-parser'
 import { getTutorialContent, createWelcomeConversation } from './lib/tutorial-service'
 import { getUserProfile, updateUserProfile } from './lib/user-profile-service'
 import { getSettings, updateSettings } from './lib/settings-service'
+import { applyIconForCurrentTheme } from './lib/icon-applier'
 import { refreshCodeClawConfiguration } from './lib/codeclaw-service'
 import { setBuiltinMcpUserEnabled } from './lib/builtin-mcp/settings'
 import { setDockBadgeCount } from './lib/dock-badge-service'
@@ -2026,6 +2027,11 @@ export function registerIpcHandlers(): void {
         })
       }
 
+      // 主题/图标皮肤变化时，刷新 macOS Dock + Windows 托盘图标
+      if (updates.themeMode !== undefined || updates.themeStyle !== undefined || updates.themeActiveVariant !== undefined || updates.iconSkin !== undefined) {
+        applyIconForCurrentTheme()
+      }
+
       return result
     }
   )
@@ -2064,6 +2070,8 @@ export function registerIpcHandlers(): void {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send(SETTINGS_IPC_CHANNELS.ON_SYSTEM_THEME_CHANGED, isDark)
     })
+    // system 模式 + auto 图标皮肤需要跟随系统深浅刷新图标
+    applyIconForCurrentTheme()
   })
 
   // ===== Scratch Pad 持久化 =====

@@ -234,6 +234,11 @@ export interface ShortcutOverrides {
 /** 主题模式：保留 special 以兼容旧版具名主题。 */
 export type ThemeMode = 'light' | 'dark' | 'system' | 'special'
 
+/** 图标皮肤（何时用深底/浅底图标）：auto 跟随主题实际深浅，dark/light 强制。 */
+export type IconSkin = 'auto' | 'dark' | 'light'
+
+export const DEFAULT_ICON_SKIN: IconSkin = 'auto'
+
 /** 旧版具名主题 + Craft 风格自定义主题。 */
 export const THEME_STYLES = [
   'default',
@@ -477,6 +482,8 @@ export interface AppSettings {
    * 会读到从未写入过的另一侧 pack，表现为选中态打勾但视觉毫无变化。
    */
   themeActiveVariant?: ThemeVariant
+  /** 图标皮肤：auto 跟随主题实际深浅，dark/light 强制用深底/浅底图标。默认 auto。 */
+  iconSkin?: IconSkin
   /** 界面风格 */
   interfaceVariant?: InterfaceVariant
   /** Agent 默认渠道 ID（由当前 Agent Core 解释） — 当前选中的渠道 */

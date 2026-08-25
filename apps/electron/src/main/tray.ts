@@ -2,6 +2,7 @@ import { Tray, Menu, app, nativeImage, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { listAgentSessions } from './lib/agent-session-manager'
+import { getWinTrayIconPath, type IconSkinVariant } from './lib/icon-theme'
 import { listAgentWorkspaces } from './lib/agent-workspace-manager'
 import { isAgentSessionActive } from './lib/agent-service'
 import { createTrayMenuModel, type TrayRecentSessionItem } from './lib/tray-menu-model'
@@ -274,6 +275,27 @@ export function createTray(actionsInput?: Partial<TrayActions>): Tray | null {
   } catch (error) {
     console.error('Failed to create system tray:', error)
     return null
+  }
+}
+
+/**
+ * 按图标皮肤变体刷新托盘图标。
+ * - Windows：托盘用彩色图标，随 iconSkin 切换 icon.png / icon-light.png
+ * - macOS：使用 Template 单色图标（系统自动适配深/浅菜单栏），无需切换
+ */
+export function updateTrayIcon(variant: IconSkinVariant): void {
+  if (!tray) return
+  if (process.platform === 'darwin') return
+  const iconPath = getWinTrayIconPath(variant)
+  if (!existsSync(iconPath)) {
+    console.warn('Tray icon not found at:', iconPath)
+    return
+  }
+  try {
+    tray.setImage(nativeImage.createFromPath(iconPath))
+    console.log('[图标] 托盘图标已切换:', variant)
+  } catch (error) {
+    console.error('[图标] 托盘图标切换失败:', error)
   }
 }
 

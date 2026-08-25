@@ -86,6 +86,7 @@ import { createApplicationMenu } from './menu'
 import { registerIpcHandlers } from './ipc'
 import { registerTaskHandlers, rehydrateIncompleteTaskRuns, healOrphanedTaskRuns } from './lib/task-handlers'
 import { createTray, destroyTray, getTray } from './tray'
+import { applyIconForCurrentTheme, getCurrentWindowIconPath } from './lib/icon-applier'
 import { initializeRuntime } from './lib/runtime-init'
 import { seedDefaultSkills, seedDefaultExpertTemplates, getExpertsDir } from './lib/config-paths'
 import { initializeReleaseNotes } from './lib/release-notes-service'
@@ -438,7 +439,7 @@ function isDevServerNavigation(url: string): boolean {
 }
 
 function createWindow(): void {
-  const iconPath = getIconPath()
+  const iconPath = getCurrentWindowIconPath()
   const iconExists = existsSync(iconPath)
 
   if (!iconExists) {
@@ -794,6 +795,9 @@ async function bootstrap(): Promise<void> {
       sendToMainWindow(TRAY_IPC_CHANNELS.CREATE_SESSION, { mode: 'agent' })
     },
   })
+
+  // 按当前主题应用图标皮肤（macOS Dock + Windows 托盘）
+  applyIconForCurrentTheme()
 
   // 启动工作区文件监听（Agent MCP/Skills + 文件浏览器自动刷新）
   if (mainWindow) {

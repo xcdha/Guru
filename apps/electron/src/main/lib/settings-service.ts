@@ -7,7 +7,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { getSettingsPath } from './config-paths'
-import { DEFAULT_AGENT_RUNTIME, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE } from '../../types'
+import { DEFAULT_AGENT_RUNTIME, DEFAULT_ICON_SKIN, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE } from '../../types'
 import type { AppSettings } from '../../types'
 
 /**
@@ -22,6 +22,7 @@ export function getSettings(): AppSettings {
     return {
       themeMode: DEFAULT_THEME_MODE,
       interfaceVariant: DEFAULT_INTERFACE_VARIANT,
+      iconSkin: DEFAULT_ICON_SKIN,
       onboardingCompleted: false,
       environmentCheckSkipped: false,
       notificationsEnabled: true,
@@ -56,6 +57,7 @@ export function getSettings(): AppSettings {
       ...settings,
       themeMode: data.themeMode || DEFAULT_THEME_MODE,
       interfaceVariant: data.interfaceVariant || DEFAULT_INTERFACE_VARIANT,
+      iconSkin: data.iconSkin ?? DEFAULT_ICON_SKIN,
       onboardingCompleted: data.onboardingCompleted ?? false,
       environmentCheckSkipped: data.environmentCheckSkipped ?? false,
       notificationsEnabled: data.notificationsEnabled ?? true,
@@ -77,6 +79,7 @@ export function getSettings(): AppSettings {
     return {
       themeMode: DEFAULT_THEME_MODE,
       interfaceVariant: DEFAULT_INTERFACE_VARIANT,
+      iconSkin: DEFAULT_ICON_SKIN,
       onboardingCompleted: false,
       environmentCheckSkipped: false,
       notificationsEnabled: true,

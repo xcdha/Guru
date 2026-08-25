@@ -101,6 +101,17 @@ extraResources:
   # 默认 Dock 图标（macOS app.dock.setIcon 使用）
   - from: resources/icon.png
     to: icon.png
+  # 图标皮肤动态切换（深/浅两套：Dock/窗口/托盘运行时按主题取值）
+  - from: resources/icon-light.png
+    to: icon-light.png
+  - from: resources/icon.ico
+    to: icon.ico
+  - from: resources/icon-light.ico
+    to: icon-light.ico
+  - from: resources/icon.icns
+    to: icon.icns
+  - from: resources/icon-light.icns
+    to: icon-light.icns
   # Renderer bundle 载入前显示的静态启动页，避免运行时检测期间出现空白窗口。
   - from: resources/startup-splash
     to: startup-splash

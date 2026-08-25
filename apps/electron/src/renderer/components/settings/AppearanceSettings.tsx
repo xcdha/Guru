@@ -33,8 +33,8 @@ import { typographySettingsAtom, updateTypographySettings, TYPOGRAPHY_LIMITS } f
 import { areaStylesAtom, updateAreaStyle, resetAreaStyle } from '@/atoms/area-styles'
 import { previewModePreferenceAtom, type PreviewModePreference } from '@/atoms/preview-atoms'
 import { cn } from '@/lib/utils'
-import type { InterfaceVariant, MarkdownFontSize, StyleAreaId, ThemeMode, ThemePack, ThemeStyle, ThemeVariant } from '../../../types'
-import { AREA_FONT_SIZE_LIMITS, AREA_LABELS } from '../../../types'
+import type { IconSkin, InterfaceVariant, MarkdownFontSize, StyleAreaId, ThemeMode, ThemePack, ThemeStyle, ThemeVariant } from '../../../types'
+import { AREA_FONT_SIZE_LIMITS, AREA_LABELS, DEFAULT_ICON_SKIN } from '../../../types'
 import { CRAFT_THEME_PRESETS, getCraftThemePack, type CraftThemePreset } from '@/theme/theme.logic'
 
 import themeCloudDancer from '@/assets/theme-previews/theme-cloud-dancer.webp'
@@ -49,6 +49,12 @@ const THEME_MODE_OPTIONS = [
   { value: 'light', label: '浅色' },
   { value: 'dark', label: '深色' },
   { value: 'system', label: '跟随系统' },
+]
+
+const ICON_SKIN_OPTIONS: { value: IconSkin; label: string }[] = [
+  { value: 'auto', label: '跟随主题' },
+  { value: 'dark', label: '深色图标' },
+  { value: 'light', label: '浅色图标' },
 ]
 
 const INTERFACE_VARIANT_OPTIONS: { value: InterfaceVariant; label: string }[] = [
@@ -112,6 +118,22 @@ export function AppearanceSettings(): React.ReactElement {
   const [previewModePref, setPreviewModePref] = useAtom(previewModePreferenceAtom)
   const [typography, setTypography] = useAtom(typographySettingsAtom)
   const [areaStyles, setAreaStyles] = useAtom(areaStylesAtom)
+  const [iconSkin, setIconSkin] = React.useState<IconSkin>(DEFAULT_ICON_SKIN)
+
+  // 初始化图标皮肤（从持久化 settings 读取）
+  React.useEffect(() => {
+    void window.electronAPI.getSettings().then((s) => {
+      const skin = s.iconSkin
+      if (skin === 'light' || skin === 'dark' || skin === 'auto') setIconSkin(skin)
+    })
+  }, [])
+
+  const handleIconSkinChange = React.useCallback((value: string) => {
+    const next = value as IconSkin
+    setIconSkin(next)
+    void window.electronAPI.updateSettings({ iconSkin: next })
+  }, [])
+
   const isCustomActive = themeMode === 'special' && themeStyle === 'custom'
   // "主题模式"标签不再单列"主题风格"选项：选中某个预设时 themeMode 内部仍是 'special'
   // （legacy 主题的 CSS class 应用逻辑依赖这个值），标签显示哪个变体则由 themeActiveVariantAtom
@@ -203,6 +225,8 @@ export function AppearanceSettings(): React.ReactElement {
       <SettingsSection title="外观设置" description="个性化界面外观、主题风格与显示设置。">
         <SettingsCard>
           <SettingsSegmentedControl label="主题模式" description="选择浅色、深色，或跟随系统；每个变体下面都可以直接挑一套主题风格" value={displayMode} onValueChange={handleThemeModeChange} options={THEME_MODE_OPTIONS} />
+
+          <SettingsSegmentedControl label="图标皮肤" description="控制桌面 Dock / 托盘选择的图标深浅；跟随主题时随主题自动切换" value={iconSkin} onValueChange={handleIconSkinChange} options={ICON_SKIN_OPTIONS} />
 
           {displayMode !== 'system' ? (
             <div className="border-t border-border px-4 py-3 space-y-3">
