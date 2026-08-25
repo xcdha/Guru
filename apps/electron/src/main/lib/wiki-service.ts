@@ -29,7 +29,7 @@ import {
 const execFileAsync = promisify(execFile)
 
 /** Wiki 承载仓库（与社区 Discussions 同仓库） */
-export const WIKI_REPO = { owner: 'GeoffBao', repo: 'Guru' }
+export const WIKI_REPO = { owner: 'xcdha', repo: 'Guru' }
 
 /** 默认远端 URL（测试可经参数注入本地 fixture） */
 export function getDefaultWikiRemoteUrl(): string {

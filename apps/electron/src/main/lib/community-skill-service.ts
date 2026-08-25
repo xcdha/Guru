@@ -1,7 +1,7 @@
 /**
  * 社区市场服务（私有市场接入）
  *
- * 默认市场为 Guru 自建私有市场（xcdha/Guru-skills），遵循标准的 SKILL.md 目录市场规范，
+ * 默认市场为 Guru 自建私有市场（xcdha/myyoda-skills），遵循标准的 SKILL.md 目录市场规范，
  * 提供 sources.yaml 结构化清单 + skills/ 目录。本服务：
  * 1. 拉取市场 sources.yaml 解析 skill 清单（name/description/category/version/downloads/source）
  * 2. 安装本仓库托管 skill：下载市场仓库 tar.gz → 解压 → 按清单提取目标 skill 目录
@@ -23,8 +23,8 @@ import type { CommunitySkill as SharedCommunitySkill } from '@guru/shared'
 
 /** 市场仓库配置（默认 Guru 私有市场） */
 export const COMMUNITY_MARKET = {
-  name: 'guru-skills',
-  repo: 'xcdha/Guru-skills',
+  name: 'myyoda-skills',
+  repo: 'xcdha/myyoda-skills',
   branch: 'main',
   manifestPath: 'sources.yaml',
   /** 清单解析后 skills 目录根（仓库内相对路径） */

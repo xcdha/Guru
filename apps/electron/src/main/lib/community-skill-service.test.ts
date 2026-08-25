@@ -85,7 +85,7 @@ describe('社区市场服务 · 增强字段', () => {
       path: skills/hosted-skill
     license: MIT
     author:
-      name: GeoffBao
+      name: xcdha
 
   - name: external-skill
     description: external desc

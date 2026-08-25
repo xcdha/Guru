@@ -30,7 +30,7 @@ import { fetchWithSystemFallback, getFetchFn } from './proxy-fetch'
 import { getEffectiveProxyUrl } from './proxy-settings-service'
 
 /** 内容源配置（维护者公开仓库） */
-export const CONTENT_SOURCE = { owner: 'GeoffBao', repo: 'guru-content', branch: 'main' }
+export const CONTENT_SOURCE = { owner: 'xcdha', repo: 'myyoda-content', branch: 'main' }
 
 const RAW_BASE = `https://raw.githubusercontent.com/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}/${CONTENT_SOURCE.branch}`
 const JSDELIVR_BASE = `https://cdn.jsdelivr.net/gh/${CONTENT_SOURCE.owner}/${CONTENT_SOURCE.repo}@${CONTENT_SOURCE.branch}`

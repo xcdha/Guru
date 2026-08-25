@@ -23,7 +23,7 @@ export const FEEDBACK_TYPE_TITLE_PREFIX: Record<FeedbackType, string> = {
 }
 
 /** 反馈承载仓库（公开，issue 可见） */
-export const FEEDBACK_REPO = { owner: 'GeoffBao', repo: 'Guru' } as const
+export const FEEDBACK_REPO = { owner: 'xcdha', repo: 'Guru' } as const
 
 /** 详细描述最大长度（对齐 newmax） */
 export const FEEDBACK_DESCRIPTION_MAX_LENGTH = 5000

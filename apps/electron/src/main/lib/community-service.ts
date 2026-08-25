@@ -24,7 +24,7 @@ import { registerRemoteMediaUrl } from './discover-remote-media'
 export const DISCUSSION_CACHE_TTL_MS = 5 * 60 * 1000
 
 /** 社区承载仓库（Guru 主仓库） */
-export const COMMUNITY_REPO = { owner: 'GeoffBao', repo: 'Guru' }
+export const COMMUNITY_REPO = { owner: 'xcdha', repo: 'Guru' }
 
 const KNOWN_CATEGORY_SLUGS = new Set<string>(['q-a', 'show-and-tell', 'announcements'])
 
