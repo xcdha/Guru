@@ -10,8 +10,6 @@
 
 name: Test Release (debug)
 
-run-name: "debug test build v${{ github.event.inputs.version || '' }}"
-
 on:
   push:
     branches:
