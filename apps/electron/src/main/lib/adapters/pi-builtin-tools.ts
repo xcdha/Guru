@@ -1142,8 +1142,12 @@ function readRefImagesFromPaths(paths: unknown, cwd?: string): Array<{ mimeType:
   if (!Array.isArray(paths)) return out
   for (const raw of paths) {
     if (typeof raw !== 'string' || !raw) continue
+    // 相对路径必须基于 Agent 工作目录解析；cwd 缺失时给出明确错误，避免静默丢失参考图
+    if (!isAbsolute(raw) && !cwd) {
+      throw new Error(`参考图相对路径需要 Agent 工作目录（当前会话未提供 agentCwd）: ${raw}，请改用绝对路径`)
+    }
     try {
-      const filePath = isAbsolute(raw) ? raw : resolve(cwd ?? process.cwd(), raw)
+      const filePath = isAbsolute(raw) ? raw : resolve(cwd!, raw)
       if (!existsSync(filePath)) continue
       const mimeType = IMAGE_EXT_TO_MIME[extname(filePath).toLowerCase()]
       if (!mimeType || !isImageAttachment(mimeType)) continue
@@ -1167,8 +1171,9 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
   const credentials = getToolCredentials('nano-banana')
   if (!credentials.apiKey) return []
 
-  const provider = credentials.provider?.trim() || 'gemini'
-  const isOpenAI = provider === 'openai-images'
+  // provider 归一化：trim + 小写，兼容 'openai' / 'openai-images' / 'gpt-image' 等变体都走 OpenAI Images 协议，其余走 Gemini
+  const provider = (credentials.provider?.trim() || 'gemini').toLowerCase()
+  const isOpenAI = provider === 'openai-images' || provider === 'openai' || provider === 'gpt-image'
   const baseUrl = credentials.baseUrl?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_BASE_URL : 'https://generativelanguage.googleapis.com')
   const model = credentials.model?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_MODEL : 'gemini-3.1-flash-image-preview')
 
@@ -1185,7 +1190,7 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
         numberOfImages: Type.Optional(Type.Number({ description: 'Number of images to generate (1-4, default 1).' })),
         referenceImagePaths: Type.Optional(Type.Array(Type.String(), { description: 'Local paths of images to edit/use as reference. Relative paths resolve against the agent working directory.' })),
       }),
-      async execute(_toolCallId, params) {
+      async execute(_toolCallId, params, signal) {
         const args = params as Record<string, unknown>
         const prompt = typeof args.prompt === 'string' ? args.prompt.trim() : ''
         if (!prompt) throw new Error('prompt 必填')
@@ -1215,11 +1220,15 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
             generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(Object.keys(imageConfig).length > 0 ? { imageConfig } : {}) },
           }
           const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
+          // 合并 SDK 外部中止信号与 10 分钟超时：用户停止 Agent 时可立即中断生图请求
+          const effectiveSignal = signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(600_000)])
+            : AbortSignal.timeout(600_000)
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credentials.apiKey! },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(600_000),
+            signal: effectiveSignal,
           })
           if (!response.ok) {
             throw new Error(`Gemini API 请求失败 (${response.status}): ${(await response.text()).slice(0, 300)}`)

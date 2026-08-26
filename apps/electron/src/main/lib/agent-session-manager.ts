@@ -935,7 +935,13 @@ export function assertAgentSessionDeletionSafe(id: string, requireWorktreeClean 
   if (sdkSessionIds.length > 0) assertRecoveryRootSafe(getSdkConfigDir())
 
   if (!candidate.gitWorktreePath || !candidate.gitRepoPath) return
-  const stillReferenced = index.sessions.some((session) => session.id !== id && session.gitWorktreePath === candidate.gitWorktreePath)
+  // 同时检查 gitWorktreePath 字段与其他会话的 activeWorktree.path 引用，
+  // 避免另一会话仅通过 activeWorktree 引用同一 worktree 时误判为无引用。
+  const stillReferenced = index.sessions.some(
+    (session) =>
+      session.id !== id
+      && (session.gitWorktreePath === candidate.gitWorktreePath || session.activeWorktree?.path === candidate.gitWorktreePath),
+  )
   if (requireWorktreeClean || !stillReferenced) assertWorktreeClean(candidate.gitWorktreePath)
 }
 
@@ -1047,7 +1053,12 @@ export function deleteAgentSession(id: string): void {
   // Worktree 是最后一个破坏性步骤：只有所有可恢复文件都已成功 quarantine 后才调用 Git
   // 删除。若 Git 删除失败，rollback 会把已隔离文件移回原位并恢复 Session 索引。
   if (removed.gitWorktreePath && removed.gitRepoPath && existsSync(removed.gitWorktreePath)) {
-    const stillReferenced = originalSessions.some((session) => session.id !== id && session.gitWorktreePath === removed.gitWorktreePath)
+    // 同时检查 activeWorktree.path 引用，避免其他会话通过 activeWorktree 引用同一 worktree 时误删。
+    const stillReferenced = originalSessions.some(
+      (session) =>
+        session.id !== id
+        && (session.gitWorktreePath === removed.gitWorktreePath || session.activeWorktree?.path === removed.gitWorktreePath),
+    )
     if (!stillReferenced) {
       try {
         removeSessionWorktree(removed.gitRepoPath, removed.gitWorktreePath)
@@ -1151,32 +1162,55 @@ export function moveSessionToWorkspace(sessionId: string, targetWorkspaceId: str
   const now = Date.now()
   let updatedRoot = session
   let movedCount = 0
+  // 记录已移动的会话，writeIndex 失败时回滚目录，避免「目录已移动但索引未更新」的不一致。
+  const movedBackups: Array<{ sessionId: string; sourceWorkspaceSlug: string; destWorkspaceSlug: string }> = []
 
-  for (let i = 0; i < index.sessions.length; i++) {
-    const current = index.sessions[i]!
-    if (!sessionTreeIds.has(current.id) || current.workspaceId === targetWorkspaceId) continue
+  try {
+    for (let i = 0; i < index.sessions.length; i++) {
+      const current = index.sessions[i]!
+      if (!sessionTreeIds.has(current.id) || current.workspaceId === targetWorkspaceId) continue
 
-    moveSessionWorkspaceDir(current, targetWs.slug)
-    // 确保目标工作区下有 session 目录。
-    getAgentSessionWorkspacePath(targetWs.slug, current.id)
+      const sourceWorkspaceSlug = current.workspaceId ? getAgentWorkspace(current.workspaceId)?.slug : undefined
+      moveSessionWorkspaceDir(current, targetWs.slug)
+      // 确保目标工作区下有 session 目录。
+      getAgentSessionWorkspacePath(targetWs.slug, current.id)
 
-    const updated: AgentSessionMeta = {
-      ...current,
-      workspaceId: targetWorkspaceId,
-      // Pi artifact 与 entry bindings 都以原 cwd 为根；跨工作区复用会造成错误 resume/fork/rewind。
-      sdkSessionId: undefined,
-      piSessionFile: undefined,
-      piEntryBindings: undefined,
-      // 已切换到另一项目，不能沿用旧项目授权下选择的 worktree。
-      activeWorktree: undefined,
-      updatedAt: now,
+      const updated: AgentSessionMeta = {
+        ...current,
+        workspaceId: targetWorkspaceId,
+        // Pi artifact 与 entry bindings 都以原 cwd 为根；跨工作区复用会造成错误 resume/fork/rewind。
+        sdkSessionId: undefined,
+        piSessionFile: undefined,
+        piEntryBindings: undefined,
+        // 已切换到另一项目，不能沿用旧项目授权下选择的 worktree。
+        activeWorktree: undefined,
+        updatedAt: now,
+      }
+      index.sessions[i] = updated
+      if (current.id === sessionId) {
+        updatedRoot = updated
+      }
+      // sourceWorkspaceSlug 理论必存在（moveSessionWorkspaceDir 内部对无 workspaceId 的会话已跳过），
+      // 兜底空串仅为满足类型；回滚时 destDir 用 getAgentWorkspacePath('') 不会命中实际目录。
+      movedBackups.push({ sessionId: current.id, sourceWorkspaceSlug: sourceWorkspaceSlug ?? current.workspaceId ?? '', destWorkspaceSlug: targetWs.slug })
     }
-    index.sessions[i] = updated
+    // 全部目录移动成功后一次性写索引：任一会话索引更新失败即整体回滚。
     writeIndex(index)
-    movedCount++
-    if (current.id === sessionId) {
-      updatedRoot = updated
+  } catch (error) {
+    // 回滚已移动的目录，保持会话目录与索引一致。
+    console.error('[Agent 会话] 迁移到目标工作区失败，回滚已移动目录:', error)
+    for (const backup of movedBackups.reverse()) {
+      try {
+        const srcDir = join(getAgentWorkspacePath(backup.destWorkspaceSlug), backup.sessionId)
+        const destDir = join(getAgentWorkspacePath(backup.sourceWorkspaceSlug), backup.sessionId)
+        if (existsSync(srcDir) && !existsSync(destDir)) {
+          renameWithRetry(srcDir, destDir)
+        }
+      } catch (rollbackError) {
+        console.error('[Agent 会话] 回滚目录失败:', rollbackError)
+      }
     }
+    throw error
   }
 
   console.log(`[Agent 会话] 已迁移会话及子会话到工作区: ${updatedRoot.title}（${movedCount} 个）→ ${targetWs.name}`)

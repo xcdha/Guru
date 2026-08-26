@@ -108,7 +108,9 @@ export class AgentQueueCoordinator {
     if (queueMessageId && this.dispatching.get(sessionId)?.messageId === queueMessageId) {
       this.dispatching.delete(sessionId)
     }
-    if (backgroundTasksPending) {
+    // 用户已停止时不应进入后台等待：run 已终止，task_notification 永远不会再来，
+    // 否则队列会永久卡在 backgroundWaiting（会话无法再派发新消息）。
+    if (backgroundTasksPending && !stoppedByUser) {
       this.backgroundWaiting.add(sessionId)
       return
     }
