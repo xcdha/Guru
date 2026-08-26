@@ -24,9 +24,10 @@ import {
   type TerminalViewState,
   type TerminalWriteInput,
 } from '@guru/shared'
-import { chmodSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { chmodSync, existsSync, realpathSync, statSync } from 'node:fs'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { createRequire } from 'node:module'
+import { appendTerminalOutput, readTerminalOutput, type TerminalOutputBuffer, type TerminalOutputReadOptions, type TerminalOutputReadResult } from './terminal-output-buffer'
 
 // CJS bundle（esbuild format=cjs）下 import.meta 为空对象；用 __filename 保证 createRequire 有效。
 const require = createRequire(__filename)
@@ -48,6 +49,8 @@ interface TerminalEntry {
   exitCode: number | null
   /** 输出滚动缓冲：预启动期间无订阅者时的数据暂存，面板挂载后 drain 回放 */
   buffer: string
+  /** Agent 回读缓冲：带字符偏移的 PTY 输出（TerminalRead 工具读取，不受 drain 影响） */
+  readbackBuffer: TerminalOutputBuffer
   /** warmup 预启动时间戳；仅 warmup 实例设置（用于空闲回收） */
   warmupAt: number | null
   /** 用户是否打开过面板（true 后不再被空闲回收，随 tab 关闭/面板关闭清理） */
@@ -193,6 +196,7 @@ export class AgentTerminalController {
       running: true,
       exitCode: null,
       buffer: '',
+      readbackBuffer: { output: '', sequence: 0, startOffset: 0, endOffset: 0 },
       warmupAt: input.warmup ? Date.now() : null,
       panelOpened: !input.warmup,
     }
@@ -206,6 +210,12 @@ export class AgentTerminalController {
       if (!current || current.pty !== pty) return
       // 滚动缓冲（截断保留最近内容），供面板挂载后回放
       current.buffer = (current.buffer + data).slice(-MAX_TERMINAL_BUFFER)
+      // Agent 回读缓冲：带偏移的完整输出流（供 TerminalRead 工具分页读取）
+      current.readbackBuffer = appendTerminalOutput(
+        current.readbackBuffer,
+        { sequence: 0, data },
+        MAX_TERMINAL_BUFFER,
+      )
       this.emit(AGENT_IPC_CHANNELS.TERMINAL_DATA, { terminalId, data } satisfies TerminalDataEventLike)
     })
     pty.onExit(({ exitCode }) => {
@@ -285,6 +295,13 @@ export class AgentTerminalController {
     return buffered
   }
 
+  /** Agent 回读终端输出（TerminalRead 工具用，带 offset 分页）。 */
+  readOutput(terminalId: string, options: TerminalOutputReadOptions = {}): TerminalOutputReadResult | null {
+    const entry = this.entries.get(terminalId)
+    if (!entry) return null
+    return readTerminalOutput(entry.readbackBuffer, options)
+  }
+
   /** 应用退出/主窗口销毁时清理所有 pty。 */
   disposeAll(): void {
     if (this.idleTimer) {
@@ -349,3 +366,149 @@ interface TerminalDataEventLike {
 
 /** 全局单例：ipc.ts / index.ts 共享。 */
 export const agentTerminalController = new AgentTerminalController()
+
+/**
+ * 读取指定会话/终端的输出（TerminalRead 工具入口）。
+ * 返回 null 表示终端不存在；读不到内容时返回空输出结果。
+ */
+export function readAgentTerminalOutput(
+  sessionId: string,
+  terminalId: string,
+  options: TerminalOutputReadOptions = {},
+): TerminalOutputReadResult {
+  const result = agentTerminalController.readOutput(terminalId, options)
+  if (!result) {
+    throw new Error(`Agent 终端不存在: ${terminalId}（会话 ${sessionId}）`)
+  }
+  return result
+}
+
+// ===== Agent 终端工具服务（移植自 Proma e23b1f39/c4dc874d） =====
+// Agent 可通过 TerminalOpen/Execute/List/Interrupt/Close/Read 工具创建并操作
+// 自己会话归属的可见终端。复用 agentTerminalController（node-pty），
+// instanceId 用独立计数器（1000+）避免与渲染层 UI 终端的实例号冲突。
+
+/** Agent 终端记录（工具返回给 Agent 的元数据）。 */
+export interface AgentTerminalRecord {
+  sessionId: string
+  terminalId: string
+  title: string
+  cwd: string
+  status: 'running' | 'exited'
+}
+
+/** 已打开的 Agent 终端记录（terminalId → record）。 */
+const agentTerminals = new Map<string, AgentTerminalRecord>()
+/** Agent 终端独立实例计数器（与 UI 终端的 instanceId 空间隔离）。 */
+let agentTerminalInstanceCounter = 1000
+
+/**
+ * 解析 Agent 终端初始 cwd 到会话已授权目录（移植自 Proma terminal-agent-policy）。
+ * 注意：这不是 OS sandbox——交互 shell 用户拥有本机 shell 本身的文件访问能力，
+ * cwd 不能当作命令权限边界。
+ */
+function resolveAgentTerminalCwd(input: {
+  cwd?: string
+  sessionCwd?: string
+  allowedRoots?: string[]
+}): string {
+  const fallback = input.sessionCwd
+  if (!fallback) throw new Error('当前 Agent 会话没有可用工作目录')
+  const cwd = resolve(fallback, input.cwd || '.')
+  if (!existsSync(cwd) || !statSync(cwd).isDirectory()) {
+    throw new Error('终端工作目录不存在或不是目录')
+  }
+
+  // 比较规范真实路径，阻止将授权目录内、指向外部位置的 symlink 当作 cwd 传入。
+  const realCwd = realpathSync(cwd)
+  const roots = [...new Set([fallback, ...(input.allowedRoots ?? [])])]
+    .filter((root) => existsSync(root) && statSync(root).isDirectory())
+    .map((root) => realpathSync(root))
+  if (!roots.some((root) => isPathWithin(realCwd, root))) {
+    throw new Error('终端初始工作目录不在当前 Agent 会话的授权范围内')
+  }
+  return realCwd
+}
+
+function isPathWithin(candidate: string, root: string): boolean {
+  const path = resolve(candidate)
+  const parent = resolve(root)
+  const relation = relative(parent, path)
+  return relation === '' || (!relation.startsWith('..') && !relation.includes(`${sep}..${sep}`) && !relation.startsWith(sep))
+}
+
+/** 打开一个 Agent 可见终端（工具 TerminalOpen）。 */
+export function openAgentTerminal(input: {
+  sessionId: string
+  cwd?: string
+  sessionCwd?: string
+  allowedRoots?: string[]
+  title?: string
+}): AgentTerminalRecord {
+  const cwd = resolveAgentTerminalCwd(input)
+  const instanceId = agentTerminalInstanceCounter++
+  const terminalId = buildTerminalId(input.sessionId, instanceId)
+  const title = input.title?.trim().slice(0, 80) || 'Agent 终端'
+  agentTerminalController.open({
+    sessionId: input.sessionId,
+    instanceId,
+    cwd,
+    cols: 80,
+    rows: 24,
+    warmup: false,
+  })
+  const record: AgentTerminalRecord = { sessionId: input.sessionId, terminalId, title, cwd, status: 'running' }
+  agentTerminals.set(terminalId, record)
+  return record
+}
+
+/** 在 Agent 可见终端执行一条完整命令（工具 TerminalExecute）。 */
+export function executeAgentTerminal(input: {
+  sessionId: string
+  command: string
+  cwd?: string
+  sessionCwd?: string
+  allowedRoots?: string[]
+  title?: string
+}): AgentTerminalRecord {
+  const command = input.command.trim()
+  if (!command || command.length > 64 * 1024) throw new Error('终端命令为空或过长')
+  const title = input.title?.trim() || `Agent · ${command.replace(/\s+/g, ' ').slice(0, 48)}`
+  const record = openAgentTerminal({ ...input, title })
+  agentTerminalController.write({ terminalId: record.terminalId, data: `${command}\r` })
+  return record
+}
+
+/** 列出当前会话的 Agent 终端（工具 TerminalList）。 */
+export function listAgentTerminals(sessionId: string): AgentTerminalRecord[] {
+  return [...agentTerminals.values()].filter((record) => record.sessionId === sessionId)
+}
+
+/** 中断（Ctrl+C）一个 Agent 终端（工具 TerminalInterrupt）。 */
+export function interruptAgentTerminal(sessionId: string, terminalId: string): void {
+  const record = agentTerminals.get(terminalId)
+  if (!record || record.sessionId !== sessionId) {
+    throw new Error(`Agent 终端不存在: ${terminalId}（会话 ${sessionId}）`)
+  }
+  agentTerminalController.write({ terminalId, data: '\u0003' })
+}
+
+/** 关闭一个 Agent 终端（工具 TerminalClose）。 */
+export function closeAgentTerminal(sessionId: string, terminalId: string): void {
+  const record = agentTerminals.get(terminalId)
+  if (!record || record.sessionId !== sessionId) {
+    throw new Error(`Agent 终端不存在: ${terminalId}（会话 ${sessionId}）`)
+  }
+  agentTerminalController.close({ terminalId })
+  agentTerminals.delete(terminalId)
+}
+
+/** 会话删除/结束时回收其全部 Agent 终端。 */
+export function closeAgentTerminalsForSession(sessionId: string): void {
+  for (const [terminalId, record] of agentTerminals) {
+    if (record.sessionId === sessionId) {
+      agentTerminalController.close({ terminalId })
+      agentTerminals.delete(terminalId)
+    }
+  }
+}
