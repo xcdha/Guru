@@ -411,11 +411,15 @@ function resolveAgentTerminalCwd(input: {
   cwd?: string
   sessionCwd?: string
   allowedRoots?: string[]
+  /** true = 严格（无效 cwd 抛错，用于 TerminalExecute）；false = 宽松（无效 cwd 回退会话目录，用于 TerminalOpen） */
+  strict?: boolean
 }): string {
   const fallback = input.sessionCwd
   if (!fallback) throw new Error('当前 Agent 会话没有可用工作目录')
   const cwd = resolve(fallback, input.cwd || '.')
   if (!existsSync(cwd) || !statSync(cwd).isDirectory()) {
+    // 移植自 Proma a2b0e45e：目录被移除后重新打开时保留可用终端体验，而不是把失效 cwd 传给 PTY
+    if (!input.strict) return fallback
     throw new Error('终端工作目录不存在或不是目录')
   }
 
@@ -444,6 +448,8 @@ export function openAgentTerminal(input: {
   sessionCwd?: string
   allowedRoots?: string[]
   title?: string
+  /** true = 无效 cwd 抛错（TerminalExecute）；false = 回退会话目录（TerminalOpen） */
+  strict?: boolean
 }): AgentTerminalRecord {
   const cwd = resolveAgentTerminalCwd(input)
   const instanceId = agentTerminalInstanceCounter++
@@ -474,7 +480,7 @@ export function executeAgentTerminal(input: {
   const command = input.command.trim()
   if (!command || command.length > 64 * 1024) throw new Error('终端命令为空或过长')
   const title = input.title?.trim() || `Agent · ${command.replace(/\s+/g, ' ').slice(0, 48)}`
-  const record = openAgentTerminal({ ...input, title })
+  const record = openAgentTerminal({ ...input, title, strict: true })
   agentTerminalController.write({ terminalId: record.terminalId, data: `${command}\r` })
   return record
 }

@@ -103,6 +103,8 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
   const [autoFiles, setAutoFiles] = React.useState<SkillFileNode[]>([])
   const [selected, setSelected] = React.useState<SelectedMemoryFile | null>(null)
   const [editText, setEditText] = React.useState('')
+  const [editBaseText, setEditBaseText] = React.useState('')
+  const [saveConflict, setSaveConflict] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
   const [loadingFile, setLoadingFile] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
@@ -117,13 +119,15 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
 
   // 自动保存：用 ref 持有最新的编辑状态，供防抖定时器与"切换文件前 flush"复用，
   // 避免把 selected/editText 塞进一堆回调的依赖数组里。
-  const saveStateRef = React.useRef<{ selected: SelectedMemoryFile | null; editText: string; isDirty: boolean }>({
+  const saveStateRef = React.useRef<{ selected: SelectedMemoryFile | null; editText: string; editBaseText: string; isDirty: boolean; saveConflict: boolean }>({
     selected: null,
     editText: '',
+    editBaseText: '',
     isDirty: false,
+    saveConflict: false,
   })
   React.useEffect(() => {
-    saveStateRef.current = { selected, editText, isDirty }
+    saveStateRef.current = { selected, editText, editBaseText, isDirty, saveConflict }
   }, [selected, editText, isDirty])
   const autoSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const persistInFlightRef = React.useRef<Promise<void> | null>(null)
@@ -142,12 +146,12 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
     return nextSummary
   }, [workspaceSlug])
 
-  /** 底层写入：把指定内容写回目标文件并刷新摘要，供手动保存与自动保存复用 */
-  const persistTarget = React.useCallback(async (target: SelectedMemoryFile, text: string): Promise<void> => {
+  /** 底层写入：先核验磁盘仍是打开时的基线，避免自动保存覆盖外部更新（移植自 Proma d68e4a03）。 */
+  const persistTarget = React.useCallback(async (target: SelectedMemoryFile, text: string, baseText: string): Promise<void> => {
     if (target.kind === 'agents') {
-      await window.electronAPI.writeWorkspaceAgentsMd(workspaceSlug, text)
+      await window.electronAPI.writeWorkspaceAgentsMd(workspaceSlug, text, baseText)
     } else {
-      await window.electronAPI.writeWorkspaceAutoMemoryFile(workspaceSlug, target.relativePath, text)
+      await window.electronAPI.writeWorkspaceAutoMemoryFile(workspaceSlug, target.relativePath, text, baseText)
     }
     const nextSummary = await refreshSummaryAndTree()
     const nextAbsolute = target.kind === 'agents'
@@ -157,6 +161,8 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
     setSelected((prev) => (prev && prev.kind === target.kind && prev.relativePath === target.relativePath
       ? { ...prev, absolutePath: nextAbsolute }
       : prev))
+    setEditBaseText(text)
+    setSaveConflict(false)
   }, [workspaceSlug, refreshSummaryAndTree])
 
   /**
@@ -173,19 +179,21 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
     if (persistInFlightRef.current) {
       await persistInFlightRef.current.catch(() => {})
     }
-    const { selected: curSelected, editText: curText, isDirty: curDirty } = saveStateRef.current
-    if (!curSelected || !curDirty) return
+    const { selected: curSelected, editText: curText, editBaseText: curBaseText, isDirty: curDirty, saveConflict: curSaveConflict } = saveStateRef.current
+    if (!curSelected || !curDirty || curSaveConflict) return
     setIsDirty(false)
     if (showSaving) setSaving(true)
     // 写入通常很快，saving 一闪而过看不到动画；自动保存时保证"保存中"至少显示一小段时间
     const startedAt = performance.now()
     try {
-      const p = persistTarget(curSelected, curText)
+      const p = persistTarget(curSelected, curText, curBaseText)
       persistInFlightRef.current = p
       await p
     } catch (err) {
       console.error('[Workspace Context] 自动保存失败:', err)
-      toast.error(err instanceof Error ? err.message : '自动保存失败')
+      const message = err instanceof Error ? err.message : '自动保存失败'
+      toast.error(message)
+      if (message.startsWith('文件已被外部更新')) setSaveConflict(true)
       setIsDirty(true)
     } finally {
       persistInFlightRef.current = null
@@ -213,6 +221,8 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
         absolutePath: currentSummary.agentsMd.path,
       })
       setEditText(file.content ?? '')
+      setEditBaseText(file.content ?? '')
+      setSaveConflict(false)
       setIsDirty(false)
     } catch (err) {
       console.error('[Workspace Context] 读取 AGENTS.md 失败:', err)
@@ -235,6 +245,8 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
         absolutePath: autoMemoryPath(currentSummary, file.relativePath),
       })
       setEditText(file.content ?? '')
+      setEditBaseText(file.content ?? '')
+      setSaveConflict(false)
       setIsDirty(false)
     } catch (err) {
       console.error('[Workspace Context] 读取 auto memory 文件失败:', err)
@@ -289,6 +301,8 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
     let cancelled = false
     setSelected(null)
     setEditText('')
+    setEditBaseText('')
+    setSaveConflict(false)
     setIsDirty(false)
     setExpanded(new Set())
     setLoading(true)
@@ -351,11 +365,13 @@ export function WorkspaceMemoryTab({ workspaceSlug, search }: WorkspaceMemoryTab
     setSaving(true)
     try {
       setIsDirty(false)
-      await persistTarget(selected, editText)
+      await persistTarget(selected, editText, editBaseText)
       toast.success('记忆文件已保存')
     } catch (err) {
       console.error('[Workspace Context] 保存失败:', err)
-      toast.error(err instanceof Error ? err.message : '保存失败')
+      const message = err instanceof Error ? err.message : '保存失败'
+      toast.error(message)
+      if (message.startsWith('文件已被外部更新')) setSaveConflict(true)
       setIsDirty(true)
     } finally {
       setSaving(false)
