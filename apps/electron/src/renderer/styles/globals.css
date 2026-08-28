@@ -3254,3 +3254,20 @@ html.theme-custom body {
 .prose :is(ul) > li {
   padding-left: 0.25rem;
 }
+
+/* ===== 嵌入式 Skills 容器查询：窄右栏时单列，宽时双列 =====
+ * 移植自 Proma 7c2b8050：基于 container-type: inline-size 而非 viewport 宽度排版，
+ * 让 Skills 卡片在右侧可拖拽工作区中按容器实际宽度自动单/双列切换。
+ * 未来如果需要嵌入式 Skills 卡片自动响应容器宽度，给容器加 skills-embedded-container，
+ * 卡片网格加 skills-embedded-card-grid 即可。 */
+.skills-embedded-container {
+  container-type: inline-size;
+}
+.skills-embedded-card-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 40rem) {
+  .skills-embedded-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
