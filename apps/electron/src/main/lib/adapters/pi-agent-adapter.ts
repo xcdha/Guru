@@ -648,7 +648,14 @@ export function mapSDKErrorToTypedError(errorCode: string, message: string, orig
   } else if (/network|fetch|socket|terminated|ECONNRESET/i.test(diagnosticText)) {
     code = 'network_error'
   } else if (/model/i.test(diagnosticText)) {
-    code = 'invalid_model'
+    // 宽匹配放最后兜底，但避免把含 "model" 的可重试错误（如 "model service unavailable"、
+    // "upstream model API timeout"）误判为 invalid_model（不可重试）。
+    // 优先匹配明确的模型不存在语义；纯文本含 model 但无明显不存在语义时归为 provider_error。
+    if (/model.*(?:not found|does not exist|not exist|未找到|不存在|未知|invalid|not supported|不支持)/i.test(diagnosticText)) {
+      code = 'invalid_model'
+    } else {
+      code = 'provider_error'
+    }
   }
 
   const meta = ERROR_CODE_META[code] ?? { title: 'Agent 执行失败', canRetry: false }
@@ -1751,6 +1758,10 @@ export class PiAgentAdapter implements AgentProviderAdapter {
         assistantUuid: string
       }>()
       let pendingNativeOverflowRecovery = false
+      // 原生 overflow 压缩续跑计数：Pi 的 overflow 恢复路径不走 compactContextRequested（有 20 次上限），
+      // 这里单独计数，防止反复 overflow 时续跑无限循环（只受 runtimeGuard 总时长约束）。
+      let nativeOverflowRecoveryCount = 0
+      const MAX_NATIVE_OVERFLOW_RECOVERIES = 20
       // message_end 发生在 Pi 落盘前；保留对象身份，待 prompt 完成后从
       // SessionManager entries 精确取得 Pi entry ID，绝不按文本猜测。
       const finalAssistantUuids = new Map<AssistantMessage, string>()
@@ -1889,12 +1900,18 @@ export class PiAgentAdapter implements AgentProviderAdapter {
                 event.willRetry,
                 active.abortRequested,
               )
+              // 超过 overflow 续跑上限时不再等待恢复，直接把错误交给 orchestrator 收束本轮，
+              // 避免极端场景下无限 overflow-压缩-续跑循环。
+              const overflowRecoveryAllowed = nativeOverflowRecoveryCount < MAX_NATIVE_OVERFLOW_RECOVERIES
               // Pi 在 agent_end 后才会检测 overflow 并压缩。此时若先将错误交给
               // orchestrator，会触发外层恢复或清理，打断同 transcript 的 continue。
-              const terminalRetryError = waitsForNativeOverflowRecovery
+              const terminalRetryError = waitsForNativeOverflowRecovery && overflowRecoveryAllowed
                 ? undefined
                 : retryTerminalGate.settle(event.willRetry)
-              if (waitsForNativeOverflowRecovery) pendingNativeOverflowRecovery = true
+              if (waitsForNativeOverflowRecovery && overflowRecoveryAllowed) {
+                pendingNativeOverflowRecovery = true
+                nativeOverflowRecoveryCount += 1
+              }
               if (event.willRetry) {
                 // native retry 会在同一 session 中调用 continue()，不要向上游发送终态，
                 // 并保留当前 UUID，供恢复后的输出替换此前 partial。

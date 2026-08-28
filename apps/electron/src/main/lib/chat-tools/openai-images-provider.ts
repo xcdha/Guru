@@ -108,19 +108,50 @@ export function mapToOpenAISize(aspectRatio?: string, imageSize?: string): { siz
 
 // ===== 响应解析 =====
 
+/** 下载失败重试间隔（毫秒） */
+const DOWNLOAD_RETRY_DELAY_MS = 3000
+
+/** 下载最大尝试次数：首次 + 1 次重试 */
+const DOWNLOAD_MAX_ATTEMPTS = 2
+
+/**
+ * 下载生成图片并转 base64。
+ * 网络错误（fetch 失败/超时）与 5xx 服务端错误时重试 1 次（间隔 3s）。
+ */
 async function downloadAsBase64(url: string, apiKey: string): Promise<OpenAIImageRefImage> {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(120_000),
-  })
-  if (!res.ok) {
-    throw new Error(`下载生成图片失败 (${res.status}): ${url.slice(0, 120)}`)
+  const attempt = async (): Promise<OpenAIImageRefImage> => {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(120_000),
+    })
+    if (!res.ok) {
+      throw new Error(`下载生成图片失败 (${res.status}): ${url.slice(0, 120)}`)
+    }
+    const buffer = Buffer.from(await res.arrayBuffer())
+    return {
+      mimeType: res.headers.get('content-type')?.split(';')[0] || 'image/png',
+      data: buffer.toString('base64'),
+    }
   }
-  const buffer = Buffer.from(await res.arrayBuffer())
-  return {
-    mimeType: res.headers.get('content-type')?.split(';')[0] || 'image/png',
-    data: buffer.toString('base64'),
+
+  let lastErr: unknown
+  for (let attemptCount = 1; attemptCount <= DOWNLOAD_MAX_ATTEMPTS; attemptCount++) {
+    try {
+      return await attempt()
+    } catch (err) {
+      lastErr = err
+      const status = err instanceof Error && /^\(\d{3}\)/.test(err.message) ? Number(err.message.slice(1, 4)) : 0
+      // 仅重试网络类错误与 5xx；4xx（如 404/403）不重试
+      const isNetworkError = err instanceof Error && /fetch failed|abort|timed out|ECONN|ECONNRESET|socket|network/i.test(err.message)
+      const retryable = isNetworkError || (status >= 500 && status !== 0)
+      if (attemptCount < DOWNLOAD_MAX_ATTEMPTS && retryable) {
+        await sleep(DOWNLOAD_RETRY_DELAY_MS)
+        continue
+      }
+      throw err
+    }
   }
+  throw lastErr
 }
 
 /** 解析 generations/edits 的响应体，兼容四种响应变体 */
@@ -260,7 +291,8 @@ export async function callOpenAIImages(options: OpenAIImageOptions): Promise<Ope
       const form = new FormData()
       form.append('model', options.model)
       form.append('prompt', prompt)
-      form.append('n', String(n))
+      // edits 分支不发送 n：多数 OpenAI 兼容网关的 edits 接口不支持多图输出，
+      // 传 n>1 会报 400；始终以单图输出（与 generations 分支的 n 字段区分）。
       form.append('size', genSize)
       form.append('response_format', 'b64_json')
       // 单图用 image 字段，多图用 image[] 数组字段（与主流网关兼容）

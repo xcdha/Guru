@@ -2222,6 +2222,11 @@ ${workContext}`
           // 后台任务等待态：result 走轻量完成后置 true，下一轮真正开始（收到 assistant/user/task 消息）时
           // 置回 false 并发 run_resumed，让 UI 从空闲态恢复运行态。
           let awaitingBackgroundWake = false
+          // 后台任务等待安全网：keptOpenForTasks 分支不启动 drain 超时（正常等待后台任务完成），
+          // 但若 SDK 因 task_notification 丢失/runtime 静默退出等原因不再 yield 消息，会话会永久卡在
+          // 运行态。加一个长兜底超时，超时后强制退出事件循环释放会话。
+          const BACKGROUND_TASK_WAIT_TIMEOUT_MS = 30 * 60 * 1000
+          let backgroundTaskTimeoutPromise: Promise<'background_task_timeout'> | null = null
           let visibleRunMessageCount = 0
 
           while (true) {
@@ -2240,8 +2245,26 @@ ${workContext}`
                 }))
               )
             }
+            if (backgroundTaskTimeoutPromise) {
+              racePromises.push(
+                backgroundTaskTimeoutPromise.then(() => ({
+                  kind: 'background_task_timeout' as const,
+                  result: null
+                }))
+              )
+            }
 
             const raceResult = await Promise.race(racePromises)
+
+            if (raceResult.kind === 'background_task_timeout') {
+              // 兜底安全网：后台任务等待超过 30 分钟仍未收到 SDK 消息（task_notification 丢失/
+              // runtime 静默退出），强制退出事件循环释放会话，避免永久卡在运行态。
+              console.warn(`[Agent 编排] background task wait timeout: sessionId=${sessionId} 超过 ${BACKGROUND_TASK_WAIT_TIMEOUT_MS}ms 未收到后台任务消息，强制退出`)
+              pendingNext?.catch(() => {})
+              pendingNext = null
+              queryIterator?.return?.(undefined as never).catch(() => {})
+              break
+            }
 
             if (raceResult.kind === 'drain_timeout') {
               // 安全网：channel.close() 后 SDK 仍未在超时内关闭 iterator，强制退出
@@ -2579,6 +2602,13 @@ ${workContext}`
                 // 轻量完成：UI 置空闲可输入，但 host 保持运行态（不 releaseActiveRun、不 break、不启动 drain 超时），
                 // while 循环继续 park 在 queryIterator.next()，等待后台任务完成时 SDK 自动 yield 的新一轮消息。
                 awaitingBackgroundWake = true
+                // 兜底安全网：后台任务正常等待不受 drain 超时约束，但若 SDK 不再 yield（task_notification
+                // 丢失/runtime 静默退出），会永久卡运行态。30 分钟超时后强制退出释放会话。
+                if (!backgroundTaskTimeoutPromise) {
+                  backgroundTaskTimeoutPromise = new Promise((resolve) =>
+                    setTimeout(() => resolve('background_task_timeout'), BACKGROUND_TASK_WAIT_TIMEOUT_MS),
+                  )
+                }
                 idleComplete(undefined, {
                   startedAt: streamStartedAt,
                   resultSubtype: capturedResultSubtype,

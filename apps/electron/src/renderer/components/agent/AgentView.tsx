@@ -138,6 +138,11 @@ import {
   restoreQueuedMessageToFront,
 } from '@/lib/agent-message-queue'
 import type { AgentQueuedAttachment, AgentQueuedMessage, QueueDropPlacement } from '@/lib/agent-message-queue'
+import {
+  clearStopGenerationTarget,
+  getStopGenerationTarget,
+  rememberStopGenerationTarget,
+} from '@/lib/stop-generation-target'
 
 /** 稳定的空 string 数组引用，避免无附件会话的 memo 链每次渲染失效。 */
 const EMPTY_STRING_ARRAY: string[] = []
@@ -2826,14 +2831,24 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     }
   }, [rewindTargetUuid, sessionId, store])
 
-  // 监听快捷键系统分发的 stop-generation 事件
+  // 监听快捷键系统分发的 stop-generation 事件；仅处理明确指向本会话的停止（多会话不误停）
+  const stopShortcutTarget = React.useMemo(() => ({ kind: 'agent' as const, sessionId }), [sessionId])
+  const markStopShortcutTarget = React.useCallback(() => {
+    rememberStopGenerationTarget(stopShortcutTarget)
+  }, [stopShortcutTarget])
+
   React.useEffect(() => {
-    const handler = (): void => {
-      if (streaming) handleStop()
+    return () => clearStopGenerationTarget(stopShortcutTarget)
+  }, [stopShortcutTarget])
+
+  React.useEffect(() => {
+    const handler = (event: Event): void => {
+      const target = getStopGenerationTarget(event)
+      if (target?.kind === 'agent' && target.sessionId === sessionId && streaming) handleStop()
     }
     window.addEventListener('guru:stop-generation', handler)
     return () => window.removeEventListener('guru:stop-generation', handler)
-  }, [streaming, handleStop])
+  }, [sessionId, streaming, handleStop])
 
   // 监听快捷键系统分发的 focus-input 事件（Cmd+L）
   React.useEffect(() => {
@@ -3236,7 +3251,11 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
   return (
     <>
     <AgentSessionProvider sessionId={sessionId}>
-      <div className="agent-workbench flex h-full min-h-0 flex-1 min-w-0 max-w-[min(80rem,100%)] flex-col overflow-hidden mx-auto">
+      <div
+        className="agent-workbench flex h-full min-h-0 flex-1 min-w-0 max-w-[min(80rem,100%)] flex-col overflow-hidden mx-auto"
+        onFocusCapture={markStopShortcutTarget}
+        onPointerDownCapture={markStopShortcutTarget}
+      >
         {/* Agent Header */}
         {/* key 保证会话切换时重置标题编辑态 */}
         <AgentHeader key={sessionId} sessionId={sessionId} />

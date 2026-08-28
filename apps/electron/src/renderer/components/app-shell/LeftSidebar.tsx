@@ -11,7 +11,7 @@
 import * as React from 'react'
 import { useAtom, useSetAtom, useAtomValue, useStore } from 'jotai'
 import { toast } from 'sonner'
-import { Pin, PinOff, Settings, Plus, Trash2, Pencil, Search, Archive, ArchiveRestore, ArrowLeft, Bot, MoreHorizontal, Folder, FolderOpen, FolderInput, GripVertical, Clock, CalendarDays, ChevronRight, ChevronDown, ChevronUp, GitBranch, Download, Loader2, RotateCw, Layers, LayoutDashboard, PenTool, Library, House, Blocks, ClipboardList, Compass, MessagesSquare } from 'lucide-react'
+import { Pin, PinOff, Settings, Plus, CirclePlus, Trash2, Pencil, Search, Archive, ArchiveRestore, ArrowLeft, Bot, MoreHorizontal, Folder, FolderOpen, FolderInput, GripVertical, Clock, CalendarDays, ChevronRight, ChevronDown, ChevronUp, GitBranch, Download, Loader2, RotateCw, Layers, LayoutDashboard, PenTool, Library, MessageSquare, Blocks, ClipboardList, Compass, MessagesSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { MarqueeText } from '@/components/ui/marquee-text'
@@ -3362,7 +3362,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                     : 'text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/75'
                 )}
               >
-                <House size={17} />
+                <MessageSquare size={17} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Chat 模式</TooltipContent>
@@ -3409,7 +3409,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                 onClick={mode === 'agent' ? handleNewAgentSession : handleNewConversation}
                 className="size-10 flex items-center justify-center rounded-[12px] text-foreground/70 sidebar-control-surface hover:text-foreground transition-[background-color,color] duration-fast titlebar-no-drag"
               >
-                <Plus size={16} />
+                <CirclePlus size={16} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">

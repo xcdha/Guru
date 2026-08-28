@@ -5,7 +5,8 @@
  * 存储在 ~/.guru/settings.json
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
+import { join } from 'node:path'
 import { getSettingsPath } from './config-paths'
 import { DEFAULT_AGENT_RUNTIME, DEFAULT_ICON_SKIN, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE } from '../../types'
 import type { AppSettings } from '../../types'
@@ -76,6 +77,16 @@ export function getSettings(): AppSettings {
     }
   } catch (error) {
     console.error('[设置] 读取失败:', error)
+    // 备份损坏的设置文件，防止后续 updateSettings 用默认值覆盖冲掉用户历史设置。
+    try {
+      if (existsSync(filePath)) {
+        const backupPath = `${filePath}.corrupt-${Date.now()}`
+        renameSync(filePath, backupPath)
+        console.error(`[设置] 已备份损坏的设置文件到: ${backupPath}`)
+      }
+    } catch (backupError) {
+      console.error('[设置] 备份损坏设置文件失败:', backupError)
+    }
     return {
       themeMode: DEFAULT_THEME_MODE,
       interfaceVariant: DEFAULT_INTERFACE_VARIANT,
@@ -112,7 +123,10 @@ export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   const filePath = getSettingsPath()
 
   try {
-    writeFileSync(filePath, JSON.stringify(updated, null, 2), 'utf-8')
+    // 原子写：先写临时文件再 rename，避免写入中途崩溃/断电导致 settings.json 半写损坏。
+    const tmpPath = `${filePath}.tmp-${process.pid}`
+    writeFileSync(tmpPath, JSON.stringify(updated, null, 2), 'utf-8')
+    renameSync(tmpPath, filePath)
     console.log('[设置] 已更新 keys:', Object.keys(updates).join(', '))
   } catch (error) {
     console.error('[设置] 写入失败:', error)

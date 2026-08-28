@@ -33,6 +33,14 @@ import {
   runAutomationNow,
 } from '../automation-scheduler'
 import { getAgentSessionMeta } from '../agent-session-manager'
+import {
+  openAgentTerminal,
+  executeAgentTerminal,
+  listAgentTerminals,
+  interruptAgentTerminal,
+  closeAgentTerminal,
+  readAgentTerminalOutput,
+} from '../agent-terminal'
 import { isBuiltinMcpUserEnabled } from '../builtin-mcp/settings'
 import { buildPiCollaborationTools } from '../agent-collaboration-tools'
 import { getVisionRelayRouteLabel, inspectImageWithVisionRelay, isVisionRelayConfigured, isVisionRelayEligibleForModel } from '../vision-relay-service'
@@ -1124,6 +1132,14 @@ export async function buildPiBuiltinTools(
     }
   }
 
+  // Agent 可见终端工具（Open/Execute/List/Interrupt/Close/Read）
+  // 终端可见且用户可中断；输出按需回读（只读回放缓冲，不读系统终端）。
+  try {
+    tools.push(...buildAgentTerminalTools(sdk, ctx))
+  } catch (error) {
+    console.error('[Pi 桥接] 注入 Agent 终端工具失败:', error)
+  }
+
 // ===== AI 生图（nano-banana / gpt-image 双协议） =====
 
 /** 已知图片扩展名 → MIME 类型映射 */
@@ -1142,8 +1158,12 @@ function readRefImagesFromPaths(paths: unknown, cwd?: string): Array<{ mimeType:
   if (!Array.isArray(paths)) return out
   for (const raw of paths) {
     if (typeof raw !== 'string' || !raw) continue
+    // 相对路径必须基于 Agent 工作目录解析；cwd 缺失时给出明确错误，避免静默丢失参考图
+    if (!isAbsolute(raw) && !cwd) {
+      throw new Error(`参考图相对路径需要 Agent 工作目录（当前会话未提供 agentCwd）: ${raw}，请改用绝对路径`)
+    }
     try {
-      const filePath = isAbsolute(raw) ? raw : resolve(cwd ?? process.cwd(), raw)
+      const filePath = isAbsolute(raw) ? raw : resolve(cwd!, raw)
       if (!existsSync(filePath)) continue
       const mimeType = IMAGE_EXT_TO_MIME[extname(filePath).toLowerCase()]
       if (!mimeType || !isImageAttachment(mimeType)) continue
@@ -1167,8 +1187,9 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
   const credentials = getToolCredentials('nano-banana')
   if (!credentials.apiKey) return []
 
-  const provider = credentials.provider?.trim() || 'gemini'
-  const isOpenAI = provider === 'openai-images'
+  // provider 归一化：trim + 小写，兼容 'openai' / 'openai-images' / 'gpt-image' 等变体都走 OpenAI Images 协议，其余走 Gemini
+  const provider = (credentials.provider?.trim() || 'gemini').toLowerCase()
+  const isOpenAI = provider === 'openai-images' || provider === 'openai' || provider === 'gpt-image'
   const baseUrl = credentials.baseUrl?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_BASE_URL : 'https://generativelanguage.googleapis.com')
   const model = credentials.model?.trim() || (isOpenAI ? OPENAI_IMAGES_DEFAULT_MODEL : 'gemini-3.1-flash-image-preview')
 
@@ -1185,7 +1206,7 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
         numberOfImages: Type.Optional(Type.Number({ description: 'Number of images to generate (1-4, default 1).' })),
         referenceImagePaths: Type.Optional(Type.Array(Type.String(), { description: 'Local paths of images to edit/use as reference. Relative paths resolve against the agent working directory.' })),
       }),
-      async execute(_toolCallId, params) {
+      async execute(_toolCallId, params, signal) {
         const args = params as Record<string, unknown>
         const prompt = typeof args.prompt === 'string' ? args.prompt.trim() : ''
         if (!prompt) throw new Error('prompt 必填')
@@ -1215,11 +1236,15 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
             generationConfig: { responseModalities: ['TEXT', 'IMAGE'], ...(Object.keys(imageConfig).length > 0 ? { imageConfig } : {}) },
           }
           const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
+          // 合并 SDK 外部中止信号与 10 分钟超时：用户停止 Agent 时可立即中断生图请求
+          const effectiveSignal = signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(600_000)])
+            : AbortSignal.timeout(600_000)
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': credentials.apiKey! },
             body: JSON.stringify(body),
-            signal: AbortSignal.timeout(600_000),
+            signal: effectiveSignal,
           })
           if (!response.ok) {
             throw new Error(`Gemini API 请求失败 (${response.status}): ${(await response.text()).slice(0, 300)}`)
@@ -1300,4 +1325,110 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
   tools.push(...cloudTools)
 
   return { tools, collaborationAvailable }
+}
+
+// ===== Agent 终端工具（移植自 Proma e23b1f39/c4dc874d） =====
+
+/**
+ * Agent 可见终端工具集：Open/Execute/List/Interrupt/Close/Read。
+ * 复用 agentTerminalController（node-pty），终端对用户可见（底部抽屉/标签），
+ * 用户可随时中断；输出通过有限内存回放缓冲按需回读，不读系统终端。
+ */
+function buildAgentTerminalTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinition[] {
+  const sessionCwd = ctx.agentCwd
+
+  const terminalInput = (args: Record<string, unknown>): { cwd?: string; title?: string } => {
+    const cwd = typeof args.cwd === 'string' && args.cwd.trim() ? args.cwd.trim() : undefined
+    const title = typeof args.title === 'string' && args.title.trim() ? args.title.trim() : undefined
+    return { cwd, title }
+  }
+
+  return [
+    sdk.defineTool({
+      name: 'TerminalOpen',
+      label: '打开 Agent 终端',
+      description: 'Open a visible terminal in the Agent workspace. cwd controls the initial directory and must resolve within the current session\'s authorized directories; it is not an OS sandbox. This tool opens an interactive terminal but does not run a command.',
+      promptSnippet: 'Open a visible Agent terminal at an authorized cwd. Do not use it to silently run commands.',
+      parameters: Type.Object({
+        cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative initial directory within the current session\'s authorized roots.' })),
+        title: Type.Optional(Type.String({ description: 'Short visible terminal title.' })),
+      }),
+      async execute(_toolCallId: string, params: unknown) {
+        const record = openAgentTerminal({ sessionId: ctx.sessionId, sessionCwd, allowedRoots: ctx.allowedRoots, ...terminalInput(params as Record<string, unknown>) })
+        return jsonToolResult({ terminal: record, visible: true, outputSharedWithAgent: false })
+      },
+    }),
+    sdk.defineTool({
+      name: 'TerminalExecute',
+      label: '在可见终端执行命令',
+      description: 'Run one command in a new visible Agent-owned terminal. The user can see and interrupt it. Terminal output is not automatically returned to the Agent; only the command-start receipt is returned.',
+      promptSnippet: 'Execute one command only when it serves the user request. It is visibly run in the Agent workspace and may require permission approval.',
+      parameters: Type.Object({
+        command: Type.String({ description: 'Complete command to execute in the controlled shell. Do not prepend shell wrappers.' }),
+        cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative directory within the current authorized roots.' })),
+        title: Type.Optional(Type.String({ description: 'Short visible terminal title.' })),
+      }),
+      async execute(_toolCallId: string, params: unknown) {
+        const args = params as Record<string, unknown>
+        const command = typeof args.command === 'string' ? args.command.trim() : ''
+        if (!command) throw new Error('command 必填')
+        const record = executeAgentTerminal({ sessionId: ctx.sessionId, command, sessionCwd, allowedRoots: ctx.allowedRoots, ...terminalInput(args) })
+        return jsonToolResult({ terminal: record, commandStarted: true, outputSharedWithAgent: false })
+      },
+    }),
+    sdk.defineTool({
+      name: 'TerminalList',
+      label: '列出 Agent 终端',
+      description: 'List terminals owned by the current Agent session (id, title, cwd, status).',
+      parameters: Type.Object({}),
+      async execute(_toolCallId: string) {
+        return jsonToolResult({ terminals: listAgentTerminals(ctx.sessionId) })
+      },
+    }),
+    sdk.defineTool({
+      name: 'TerminalInterrupt',
+      label: '中断 Agent 终端',
+      description: 'Send Ctrl+C (SIGINT) to a running Agent-owned terminal.',
+      parameters: Type.Object({
+        terminalId: Type.String({ description: 'Terminal id returned by TerminalOpen/TerminalExecute.' }),
+      }),
+      async execute(_toolCallId: string, params: unknown) {
+        const terminalId = assertNonBlank((params as { terminalId: string }).terminalId, 'terminalId')
+        interruptAgentTerminal(ctx.sessionId, terminalId)
+        return jsonToolResult({ interrupted: true })
+      },
+    }),
+    sdk.defineTool({
+      name: 'TerminalClose',
+      label: '关闭 Agent 终端',
+      description: 'Close (kill) an Agent-owned terminal. Output buffer is discarded.',
+      parameters: Type.Object({
+        terminalId: Type.String({ description: 'Terminal id returned by TerminalOpen/TerminalExecute.' }),
+      }),
+      async execute(_toolCallId: string, params: unknown) {
+        const terminalId = assertNonBlank((params as { terminalId: string }).terminalId, 'terminalId')
+        closeAgentTerminal(ctx.sessionId, terminalId)
+        return jsonToolResult({ closed: true })
+      },
+    }),
+    sdk.defineTool({
+      name: 'TerminalRead',
+      label: '读取 Agent 终端输出',
+      description: 'Read recent output of an Agent-owned terminal from the bounded in-memory playback buffer. Returns text since the given offset (0 = from start of buffer). Never reads other sessions or system terminals.',
+      parameters: Type.Object({
+        terminalId: Type.String({ description: 'Terminal id returned by TerminalOpen/TerminalExecute.' }),
+        offset: Type.Optional(Type.Number({ description: 'Character offset to read from; default 0 (start of retained buffer).' })),
+        limit: Type.Optional(Type.Number({ description: 'Max characters to return; default 4096.' })),
+      }),
+      async execute(_toolCallId: string, params: unknown) {
+        const args = params as Record<string, unknown>
+        const terminalId = assertNonBlank(args.terminalId as string, 'terminalId')
+        const read = readAgentTerminalOutput(ctx.sessionId, terminalId, {
+          offset: numberOrUndefined(args.offset) ?? 0,
+          limit: numberOrUndefined(args.limit) ?? 4096,
+        })
+        return jsonToolResult({ output: read.output, nextOffset: read.nextOffset, truncatedAfter: read.truncatedAfter })
+      },
+    }),
+  ]
 }
