@@ -101,6 +101,8 @@ interface FileBrowserProps {
   onAddToChat?: (entry: FileEntry) => void
   /** 单击文件时在内联预览面板中显示（替代外部窗口预览） */
   onFilePreview?: (filePath: string) => void
+  /** 优先在右侧工作区中以文件夹路径为 cwd 打开终端，独立使用时回退到系统终端。 */
+  onOpenDirectoryTerminal?: (directoryPath: string, directoryName: string) => void
   /**
    * 顶层文件按扩展名机械推断的通用类型分组展示（文档/图片/数据/演示/代码/其他），
    * 用于 Outbox 这类不需要用户维护分类体系的场景。只影响顶层排布和分组标题，
@@ -110,7 +112,7 @@ interface FileBrowserProps {
   groupByType?: boolean
 }
 
-export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access, onAddToChat, onFilePreview, groupByType }: FileBrowserProps): React.ReactElement {
+export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access, onAddToChat, onFilePreview, onOpenDirectoryTerminal, groupByType }: FileBrowserProps): React.ReactElement {
   const [entries, setEntries] = React.useState<FileEntry[]>([])
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -220,10 +222,14 @@ export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access
     window.electronAPI.showInFolder(entry.path, access).catch(console.error)
   }, [access])
 
-  /** 在系统终端中打开文件夹（仅 macOS） */
+  /** 优先在右侧工作区中以文件夹路径为 cwd 打开终端，独立使用时回退到系统终端。 */
   const handleOpenInTerminal = React.useCallback((entry: FileEntry) => {
+    if (onOpenDirectoryTerminal) {
+      onOpenDirectoryTerminal(entry.path, entry.name)
+      return
+    }
     window.electronAPI.openFolderInTerminal(entry.path, access).catch(console.error)
-  }, [access])
+  }, [access, onOpenDirectoryTerminal])
 
   /** 开始重命名 */
   const handleStartRename = React.useCallback((entry: FileEntry) => {
@@ -510,7 +516,8 @@ function FileTreeItem({
   const [childrenLoaded, setChildrenLoaded] = React.useState(false)
   const [flash, setFlash] = React.useState(false)
   const rowRef = React.useRef<HTMLDivElement>(null)
-  const supportsTerminalFolderOpen = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+  const supportsTerminalFolderOpen = Boolean(onOpenInTerminal)
+    || (typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac'))
 
   // 当 refreshVersion 变化时，已展开的文件夹自动重新加载子项
   React.useEffect(() => {
