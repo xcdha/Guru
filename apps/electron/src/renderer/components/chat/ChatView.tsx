@@ -48,6 +48,11 @@ import { registerPendingTitle } from '@/hooks/useGlobalChatListeners'
 import { draftSessionIdsAtom } from '@/atoms/draft-session-atoms'
 import { cn } from '@/lib/utils'
 import { buildQuotedSelectionBlock } from '@/lib/quoted-selection'
+import {
+  clearStopGenerationTarget,
+  getStopGenerationTarget,
+  rememberStopGenerationTarget,
+} from '@/lib/stop-generation-target'
 import type {
   ChatMessage,
   ChatSendInput,
@@ -468,14 +473,24 @@ function ChatViewInner({ conversationId }: ChatViewProps): React.ReactElement {
     window.electronAPI.stopGeneration(conversationId).catch(console.error)
   }, [conversationId, setStreamingStates])
 
-  // 监听快捷键系统分发的 stop-generation 事件
+  // 监听快捷键系统分发的 stop-generation 事件；仅处理明确指向本会话的停止（多会话不误停）
+  const stopShortcutTarget = React.useMemo(() => ({ kind: 'chat' as const, sessionId: conversationId }), [conversationId])
+  const markStopShortcutTarget = React.useCallback(() => {
+    rememberStopGenerationTarget(stopShortcutTarget)
+  }, [stopShortcutTarget])
+
   React.useEffect(() => {
-    const handler = (): void => {
-      if (isStreaming) handleStop()
+    return () => clearStopGenerationTarget(stopShortcutTarget)
+  }, [stopShortcutTarget])
+
+  React.useEffect(() => {
+    const handler = (event: Event): void => {
+      const target = getStopGenerationTarget(event)
+      if (target?.kind === 'chat' && target.sessionId === conversationId && isStreaming) handleStop()
     }
     window.addEventListener('guru:stop-generation', handler)
     return () => window.removeEventListener('guru:stop-generation', handler)
-  }, [isStreaming, handleStop])
+  }, [conversationId, isStreaming, handleStop])
 
   /** 删除消息 */
   const handleDeleteMessage = React.useCallback(async (messageId: string): Promise<void> => {
@@ -626,7 +641,11 @@ function ChatViewInner({ conversationId }: ChatViewProps): React.ReactElement {
   }, [setPendingAttachments])
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div
+      className="flex h-full overflow-hidden"
+      onFocusCapture={markStopShortcutTarget}
+      onPointerDownCapture={markStopShortcutTarget}
+    >
       {/* 主内容区域 */}
       <div className="flex flex-col h-full flex-1 min-w-0">
         {/* Header 在 max-w 外，按钮可到达最右侧 */}

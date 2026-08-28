@@ -3223,3 +3223,34 @@ html.theme-custom body {
 :root.ui-classic .markdown-editor :is(strong, em, b, i) {
   color: var(--md-emphasis-color, var(--area-body-color, var(--md-body-color, inherit)));
 }
+
+/* ===== 有序列表 marker：两位数不被遮挡 =====
+ * 根因：message-body 有 overflow-hidden + prose 默认 ol 的 marker 在容器外，
+ * 两位数（10-99）marker 会被裁切，只看到后一位数。
+ * 修复：显式给 ol 预留足够左 padding + list-style-position: outside + ::marker 表格化数字。 */
+.message-response.prose ol,
+.prose :is(ol) {
+  padding-left: 1.75rem;
+  margin-left: 0;
+  list-style-position: outside;
+}
+.message-response.prose ol > li,
+.prose :is(ol) > li {
+  padding-left: 0.25rem;
+}
+.message-response.prose ol > li::marker,
+.prose :is(ol) > li::marker {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+.message-response.prose ul,
+.prose :is(ul) {
+  padding-left: 1.5rem;
+  margin-left: 0;
+  list-style-position: outside;
+}
+.message-response.prose ul > li,
+.prose :is(ul) > li {
+  padding-left: 0.25rem;
+}

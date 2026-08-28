@@ -1072,6 +1072,7 @@ export function getWorkspaceCapabilities(workspaceSlug: string): WorkspaceCapabi
 }
 
 export function deleteWorkspaceSkill(workspaceSlug: string, skillSlug: string): void {
+  assertValidSkillSlug(skillSlug)
   const skillsDir = getWorkspaceSkillsDir(workspaceSlug)
   const skillPath = join(skillsDir, skillSlug)
 
@@ -1160,6 +1161,7 @@ export function getDefaultSkillSlugs(): string[] {
 
 /** 在 skills/ 和 skills-inactive/ 之间移动来切换启用/禁用 */
 export function toggleWorkspaceSkill(workspaceSlug: string, skillSlug: string, enabled: boolean): void {
+  assertValidSkillSlug(skillSlug)
   const activeDir = getWorkspaceSkillsDir(workspaceSlug)
   const inactiveDir = getInactiveSkillsDir(workspaceSlug)
 
@@ -1183,6 +1185,7 @@ export function toggleWorkspaceSkill(workspaceSlug: string, skillSlug: string, e
 
 /** 删除全局 Skill（active 或 inactive 目录均可）。影响所有共享该全局层的工作区，调用方需先确认。 */
 export function deleteGlobalSkill(skillSlug: string): void {
+  assertValidSkillSlug(skillSlug)
   const activePath = join(getGlobalSkillsDir(), skillSlug)
   const inactivePath = join(getGlobalInactiveSkillsDir(), skillSlug)
   const target = existsSync(activePath) ? activePath : inactivePath
@@ -1197,6 +1200,7 @@ export function deleteGlobalSkill(skillSlug: string): void {
 
 /** 在全局 global-skills/ 与 global-skills-inactive/ 之间移动来切换启用/禁用。影响所有共享该全局层的工作区。 */
 export function toggleGlobalSkill(skillSlug: string, enabled: boolean): void {
+  assertValidSkillSlug(skillSlug)
   const activeDir = getGlobalSkillsDir()
   const inactiveDir = getGlobalInactiveSkillsDir()
 
@@ -1273,6 +1277,7 @@ export function getProjectSkillsDir(workspaceSlug: string, projectId: string): s
 
 /** 删除项目 Skill（active 或 inactive 目录均可） */
 export function deleteProjectSkill(workspaceSlug: string, projectId: string, skillSlug: string): void {
+  assertValidSkillSlug(skillSlug)
   const workspaceRoot = getAgentWorkspacePath(workspaceSlug)
   const activeDir = projectRepository.ensureProjectSkillsDirAtRoot(workspaceRoot, projectId)
   const inactiveDir = projectRepository.ensureProjectInactiveSkillsDirAtRoot(workspaceRoot, projectId)
@@ -1290,6 +1295,7 @@ export function deleteProjectSkill(workspaceSlug: string, projectId: string, ski
 
 /** 在项目 skills/ 与 skills-inactive/ 之间移动来切换启用/禁用 */
 export function toggleProjectSkill(workspaceSlug: string, projectId: string, skillSlug: string, enabled: boolean): void {
+  assertValidSkillSlug(skillSlug)
   const workspaceRoot = getAgentWorkspacePath(workspaceSlug)
   const activeDir = projectRepository.ensureProjectSkillsDirAtRoot(workspaceRoot, projectId)
   const inactiveDir = projectRepository.ensureProjectInactiveSkillsDirAtRoot(workspaceRoot, projectId)
@@ -1643,9 +1649,10 @@ export function updateSkillFromSource(
     throw new Error(`源 Skill 缺少 SKILL.md: ${skillSlug}`)
   }
 
-  // 先复制到临时目录，成功后再替换旧目录，确保原子性
+  // 先复制到临时目录，成功后再替换旧目录，确保原子性。
+  // tmpPath 带随机后缀：并发更新同一 skill 时避免互相踩踏（旧实现固定 .updating 名会互相覆盖）。
   const parentDir = join(targetPath, '..')
-  const tmpPath = join(parentDir, `.${skillSlug}.updating`)
+  const tmpPath = join(parentDir, `.${skillSlug}.updating-${randomUUID().slice(0, 8)}`)
   try {
     cpSync(sourcePath, tmpPath, { recursive: true })
   } catch (err) {
@@ -1654,7 +1661,13 @@ export function updateSkillFromSource(
     throw err
   }
   rmSyncWithRetry(targetPath, { recursive: true, force: true })
-  renameWithRetry(tmpPath, targetPath)
+  try {
+    renameWithRetry(tmpPath, targetPath)
+  } catch (err) {
+    // rename 失败（如目标被占用）时清理临时目录，避免残留 .updating-* 目录
+    if (existsSync(tmpPath)) rmSyncWithRetry(tmpPath, { recursive: true, force: true })
+    throw err
+  }
 
   // 更新来源元数据（保留原始 importedAt）
   const sourceWorkspace = listAgentWorkspaces().find((w) => w.slug === existingSource.sourceWorkspaceSlug)
@@ -1724,6 +1737,24 @@ function assertValidSkillSlug(skillSlug: string): void {
     || skillSlug.includes('\\')
   ) {
     throw new Error(`非法 Skill slug: ${skillSlug}`)
+  }
+}
+
+/**
+ * 校验 zip 条目名的路径安全性：拒绝绝对路径、盘符、反斜杠和 `..` 穿越段，
+ * 防止恶意组织源返回的 zip 内条目名（如 `../../evil`、`C:\\x`、`/abs`）
+ * 在 join(targetPath, name) 时逃逸出 Skill 目录（路径穿越写文件）。
+ */
+function assertSafeZipEntryName(name: string): void {
+  if (typeof name !== 'string' || name.length === 0) {
+    throw new Error('zip 条目名为空')
+  }
+  if (isAbsolute(name) || /^[a-zA-Z]:/.test(name) || name.includes('\\')) {
+    throw new Error(`zip 条目名不合法（绝对路径/盘符/反斜杠）: ${name.slice(0, 80)}`)
+  }
+  const segments = name.split('/')
+  if (segments.some((seg) => seg === '..' || seg === '.')) {
+    throw new Error(`zip 条目名不合法（包含 . 或 .. 段）: ${name.slice(0, 80)}`)
   }
 }
 
@@ -2189,12 +2220,17 @@ export function readWorkspaceAgentsMd(workspaceSlug: string): SkillFileContent {
   }
 }
 
-export function writeWorkspaceAgentsMd(workspaceSlug: string, content: string): void {
+export function writeWorkspaceAgentsMd(workspaceSlug: string, content: string, expectedContent?: string): void {
   const byteLen = Buffer.byteLength(content, 'utf-8')
   if (byteLen > SKILL_FILE_SIZE_LIMIT) {
     throw new Error(`内容过大（${(byteLen / 1024 / 1024).toFixed(2)} MB），超过 10 MB 限制`)
   }
-  writeFileSync(getWorkspaceAgentsMdPath(workspaceSlug), content, 'utf-8')
+  const path = getWorkspaceAgentsMdPath(workspaceSlug)
+  const currentContent = existsSync(path) ? readFileSync(path, 'utf-8') : ''
+  if (expectedContent !== undefined && currentContent !== expectedContent) {
+    throw new Error('文件已被外部更新。请刷新后再处理你的修改。')
+  }
+  writeFileSync(path, content, 'utf-8')
   console.log(`[Agent 工作区] 已更新工作区 AGENTS.md: ${workspaceSlug}`)
 }
 
@@ -2226,12 +2262,18 @@ export function readWorkspaceAutoMemoryFile(workspaceSlug: string, relativePath:
   }
 }
 
-export function writeWorkspaceAutoMemoryFile(workspaceSlug: string, relativePath: string, content: string): void {
+export function writeWorkspaceAutoMemoryFile(workspaceSlug: string, relativePath: string, content: string, expectedContent?: string): void {
   const dir = getWorkspaceAutoMemoryDir(workspaceSlug)
   const abs = resolveAutoMemoryFilePath(dir, relativePath)
   const byteLen = Buffer.byteLength(content, 'utf-8')
   if (byteLen > SKILL_FILE_SIZE_LIMIT) {
     throw new Error(`内容过大（${(byteLen / 1024 / 1024).toFixed(2)} MB），超过 10 MB 限制`)
+  }
+  if (expectedContent !== undefined) {
+    const currentContent = existsSync(abs) ? readFileSync(abs, 'utf-8') : ''
+    if (currentContent !== expectedContent) {
+      throw new Error('文件已被外部更新。请刷新后再处理你的修改。')
+    }
   }
   const parent = dirname(abs)
   if (!existsSync(parent)) {
@@ -2801,6 +2843,7 @@ export async function importSkillFromOrganization(
   }
   mkdirSync(targetPath, { recursive: true })
   for (const [name, content] of Object.entries(files)) {
+    assertSafeZipEntryName(name)
     const filePath = join(targetPath, name)
     mkdirSync(dirname(filePath), { recursive: true })
     writeFileSync(filePath, content)
@@ -2880,6 +2923,7 @@ export async function updateSkillFromOrganizationSource(
     throw new Error('组织 Skill 包缺少 SKILL.md')
   }
   for (const [name, content] of Object.entries(files)) {
+    assertSafeZipEntryName(name)
     const filePath = join(tmpPath, name)
     mkdirSync(dirname(filePath), { recursive: true })
     writeFileSync(filePath, content)

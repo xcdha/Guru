@@ -12,6 +12,7 @@ import { extname, resolve, isAbsolute, join } from 'node:path'
 import { getToolState, getToolCredentials } from '../chat-tool-config'
 import { getBuiltinMcpName } from '../builtin-mcp/baseline'
 import { saveAttachment, isImageAttachment } from '../attachment-service'
+import { stripGeminiTrailingV1 } from './openai-images-provider'
 
 // ===== Gemini API 类型（REST API 使用 camelCase） =====
 
@@ -211,7 +212,7 @@ async function callGeminiAndBuildResult(
     imageSize: options.imageSize,
     numberOfImages: options.numberOfImages,
   })
-  const url = `${baseUrl}/v1beta/models/${model}:generateContent`
+  const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
 
   console.log(`[Nano Banana MCP] 调用 Gemini API: model=${model}, prompt="${prompt.slice(0, 50)}..."`)
 

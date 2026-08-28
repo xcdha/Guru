@@ -469,6 +469,8 @@ export async function runAgentHeadless(
   // 记录本轮完成方式，供 try 块尾部（onComplete 未触发的异常路径）复用
   let completedBackgroundTasksPending = false
   let completedStoppedByUser = false
+  // 防止 onComplete 已回调后，try 尾部/catch 再触发第二次完成回调（外部桥接层会收到重复事件）
+  let completed = false
 
   try {
     await orchestrator.sendMessage(runInput, {
@@ -483,6 +485,8 @@ export async function runAgentHeadless(
         }
       },
       onComplete: (messages, opts) => {
+        if (completed) return
+        completed = true
         // 不再经回调传输完整 messages（上游 #1627 性能优化）；
         // conductor 等调用方通过磁盘读取兜底，options 仍完整传递。
         callbacks.onComplete(undefined, opts)
@@ -540,12 +544,17 @@ export async function runAgentHeadless(
         })
       },
     })
-    agentQueueCoordinator.onRunComplete(runInput.sessionId, undefined, completedBackgroundTasksPending, completedStoppedByUser)
+    if (!completed) {
+      // 正常路径（无异常且 onComplete 未回调的兜底）
+      agentQueueCoordinator.onRunComplete(runInput.sessionId, undefined, completedBackgroundTasksPending, completedStoppedByUser)
+    }
   } catch (err) {
     console.error('[Agent 服务] runAgentHeadless 未处理异常:', err)
     const errorMessage = err instanceof Error ? err.message : '未知错误'
-    callbacks.onError(errorMessage)
-    callbacks.onComplete()
+    if (!completed) {
+      callbacks.onError(errorMessage)
+      callbacks.onComplete()
+    }
     if (wc && !wc.isDestroyed()) {
       wc.send(AGENT_IPC_CHANNELS.STREAM_ERROR, { sessionId: runInput.sessionId, error: errorMessage })
       sendAgentStreamComplete(wc, runInput, {

@@ -29,6 +29,7 @@ import { normalizeLatexDelimiters } from '@/lib/normalize-latex'
 import { normalizeMalformedStrongDelimiters } from '@/lib/markdown-emphasis'
 import { splitMarkdownIntoBlocks } from '@/lib/markdown-blocks'
 import { copyTextToClipboard } from '@/lib/clipboard'
+import { createMentionPattern } from '@/lib/mention-patterns'
 import { Button } from '@/components/ui/button'
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox'
 import {
@@ -382,7 +383,9 @@ export function remarkMentions() {
     walkMdastText(tree, (node, index, parent) => {
       const text = node.value
       // 每次调用创建独立正则实例，避免 /g 状态在并发 remark pipeline 间互相干扰
-      const mentionPattern = /@file:(\S+)|\/skill:(\S+)|#mcp:(\S+)|&session:([A-Za-z0-9-]+)(?:(?:~|::)(\S+))?|&todo:([A-Za-z0-9-]+)(?:(?:~|::)(\S+))?|&calendar_event:([A-Za-z0-9-]+)(?:(?:~|::)(\S+))?/g
+      // 移植自 Proma a6ced306：@file/&session/&todo/&calendar_event 为编码值（非 CJK 边界），
+      // /skill/#mcp 为明文值（可含中文，空白边界）。
+      const mentionPattern = createMentionPattern()
       if (!mentionPattern.test(text)) return
       mentionPattern.lastIndex = 0
 
