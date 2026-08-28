@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs'
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
 
 const INSTRUCTION_FILE_CANDIDATES = [
   { name: 'AGENTS.md', kind: 'agents' },
@@ -38,6 +38,11 @@ export interface ProjectInstructionManifest {
   totalBytes: number
 }
 
+/** 项目根目录是否贡献了活动的 AGENTS 指令（移植自 Proma b0fe28b5）。 */
+export function hasRootProjectAgentsInstruction(manifest: ProjectInstructionManifest | undefined): boolean {
+  return manifest?.sources.some((source) => source.kind === 'agents' && source.scopeRoot === '.') ?? false
+}
+
 export interface ResolveProjectInstructionsOptions {
   /** The user-authorized project root. Proma never walks above it. */
   projectRoot: string
@@ -48,8 +53,44 @@ export interface ResolveProjectInstructionsOptions {
   targetPath?: string
 }
 
+/**
+ * Normalize an absolute path for comparisons without changing the display
+ * path stored in diagnostics. Windows paths are case-insensitive, and native
+ * realpath keeps drive/junction handling consistent with the host filesystem.
+ * 移植自 Proma b0fe28b5：修复 Windows 下 AGENTS.md 大小写变体/软链接/缺失路径的匹配。
+ */
+export function canonicalizeProjectPath(path: string): string {
+  const absolutePath = resolve(path)
+  const missingSegments: string[] = []
+  let current = absolutePath
+
+  while (true) {
+    try {
+      const canonical = realpathSync.native(current)
+      return missingSegments.reduceRight((parent, segment) => join(parent, segment), canonical)
+    } catch {
+      const parent = dirname(current)
+      if (parent === current) return absolutePath
+      missingSegments.push(basename(current))
+      current = parent
+    }
+  }
+}
+
+function comparisonPath(path: string): string {
+  const normalized = normalize(canonicalizeProjectPath(path))
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+/** 规范化路径用于比较（Windows 大小写不敏感；带 realpath 处理软链接/junction）。 */
+export function normalizeProjectPathForComparison(path: string): string {
+  return comparisonPath(path)
+}
+
 function isWithinRoot(root: string, candidate: string): boolean {
-  const rel = relative(root, candidate)
+  const normalizedRoot = comparisonPath(root)
+  const normalizedCandidate = comparisonPath(candidate)
+  const rel = relative(normalizedRoot, normalizedCandidate)
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }
 

@@ -17,6 +17,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, use
 import { useAtomValue } from 'jotai'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { TextSelection } from '@tiptap/pm/state'
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -28,7 +29,7 @@ import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { lowlight } from '@/lib/lowlight'
-import { htmlToMarkdown } from '@/lib/markdown-rich-text'
+import { htmlToMarkdown, hasRichClipboardMarkup, looksLikeMarkdownText, markdownToHtml } from '@/lib/markdown-rich-text'
 import { useOpenPreview } from '@/components/diff/preview-opener'
 import { isImageFilePath } from './file-path-chip'
 import { consumeLocalDraftEcho, recordLocalDraftEcho } from '@/lib/input-draft-echo'
@@ -710,6 +711,21 @@ export const RichTextInput = forwardRef<RichTextInputHandle, RichTextInputProps>
                 .replace(/<\/div>/gi, '</p>')
             ).trim() || plainText)
           : plainText
+
+        // 纯文本是 Markdown 且剪贴板没有富文本语义时，按 Markdown 解析后插入（移植自 Proma 41214830），
+        // 避免把 **粗体** / `代码` 当作字面量粘贴。复制已有富文本时优先保留剪贴板中的语义 HTML。
+        const clipboardHtml = event.clipboardData?.getData('text/html') ?? ''
+        if (
+          looksLikeMarkdownText(plainText)
+          && !hasRichClipboardMarkup(clipboardHtml)
+        ) {
+          const container = document.createElement('div')
+          container.innerHTML = markdownToHtml(plainText)
+          const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(container)
+          event.preventDefault()
+          view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView().setMeta('uiEvent', 'paste'))
+          return true
+        }
         if (
           shouldConvertClipboardTextToAttachment({
             enabled: Boolean(threshold && onPasteLongTextRef.current),

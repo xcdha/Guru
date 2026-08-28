@@ -60,6 +60,12 @@ interface GeminiResponse {
 /** 每个 conversationId 对应的 Gemini 对话历史 */
 const conversationHistory = new Map<string, GeminiContent[]>()
 
+/** 最多保留的对话轮数（每轮 = user + model 两条 contents） */
+const MAX_HISTORY_ROUNDS = 10
+
+/** 请求体序列化体积上限（超过时截断历史再请求，避免被网关拒绝） */
+const MAX_REQUEST_BODY_BYTES = 512 * 1024
+
 // ===== 工具执行上下文 =====
 
 /** Nano Banana 工具执行所需的额外上下文 */
@@ -371,11 +377,24 @@ export async function executeNanoBananaTool(
     const history = conversationHistory.get(context.conversationId) ?? []
 
     // 构建请求
-    const requestBody = buildGeminiRequest(prompt, referenceImageParts, history, {
+    let effectiveHistory = history
+    let requestBody = buildGeminiRequest(prompt, referenceImageParts, effectiveHistory, {
       aspectRatio,
       imageSize,
       numberOfImages,
     })
+
+    // 体积保护：fetch 前检查请求体序列化体积，超过阈值时逐级截断历史（10 → 5 → 2 → 1 轮）重试
+    let rounds = MAX_HISTORY_ROUNDS
+    while (JSON.stringify(requestBody).length > MAX_REQUEST_BODY_BYTES && rounds > 0) {
+      rounds = Math.max(1, Math.floor(rounds / 2))
+      effectiveHistory = history.slice(-rounds * 2)
+      requestBody = buildGeminiRequest(prompt, referenceImageParts, effectiveHistory, {
+        aspectRatio,
+        imageSize,
+        numberOfImages,
+      })
+    }
 
     const url = `${stripGeminiTrailingV1(baseUrl)}/v1beta/models/${model}:generateContent`
 
@@ -458,7 +477,8 @@ export async function executeNanoBananaTool(
       role: 'model',
       parts, // 直接使用原始响应 parts，保留 thoughtSignature 等元数据
     }
-    const updatedHistory = [...history, userContent, modelContent]
+    // 限制历史长度：保留最近 10 轮（每轮 user+model 两条），超出截断，避免无限增长
+    const updatedHistory = [...history, userContent, modelContent].slice(-MAX_HISTORY_ROUNDS * 2)
     conversationHistory.set(context.conversationId, updatedHistory)
 
     // 构建返回结果

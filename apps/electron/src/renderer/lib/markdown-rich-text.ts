@@ -557,6 +557,16 @@ export function htmlToMarkdown(
  * 这个专用出口避免把 Markdown 的段落分隔符带入其他编辑器，同时保留
  * 选区内显式空段落和全部内联 Markdown 语义。
  */
+/** 判断剪贴板纯文本是否包含足够明确的 Markdown 语法（移植自 Proma 41214830）。 */
+export function looksLikeMarkdownText(value: string): boolean {
+  return /(?:^|\n)\s{0,3}(?:#{1,6}\s|[-+*]\s|>\s|```|~~~|\d+[.)]\s|---\s*$)|(?:\*\*|__|~~|`[^`\n]+`|\[[^\]\n]+\]\([^)]+\)|\|[^|\n]+\|)|(?:^|\s)(?:\*[^*\n]+\*|_[^_\n]+_)/m.test(value)
+}
+
+/** 判断剪贴板 HTML 是否已经携带可直接交给 TipTap 的富文本语义（移植自 Proma 41214830）。 */
+export function hasRichClipboardMarkup(value: string): boolean {
+  return /<(?:strong|b|em|i|u|s|del|h[1-6]|ul|ol|li|blockquote|pre|code|hr|table|thead|tbody|tr|th|td|a|img|video)\b/i.test(value)
+}
+
 export function htmlToClipboardText(html: string, options?: { skipMarkdownEscape?: boolean }): string {
   return htmlToMarkdown(html, {
     ...options,

@@ -20,6 +20,7 @@ import {
   openTab,
 } from '@/atoms/tab-atoms'
 import { shortcutOverridesAtom, sendWithCmdEnterAtom } from '@/atoms/shortcut-atoms'
+import { getLastInteractedStopTarget, resolveStopGenerationTarget } from '@/lib/stop-generation-target'
 import {
   agentPendingPromptAtom,
   agentSessionDraftHtmlAtom,
@@ -91,6 +92,8 @@ export function GlobalShortcuts(): null {
 
   // Tab 管理（用于关闭标签页）
   const activeTabId = useAtomValue(activeTabIdAtom)
+  const tabs = useAtomValue(tabsAtom)
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
 
   // 在 store 层同步记录 activeTabId，覆盖 TabBar 点击、会话创建、关闭后回退等所有入口。
   // 前进/后退通过 programmaticNavAtom 抑制本次记录，避免导航动作污染历史栈。
@@ -279,12 +282,16 @@ export function GlobalShortcuts(): null {
     }, []),
   )
 
-  // Cmd+Shift+Backspace → 停止 Agent（通过 CustomEvent 分发到 ChatView/AgentView）
+  // Cmd+Shift+Backspace → 停止光标所在、或最近点击过的 Chat / Agent。
+  // 父会话与委派子会话可能同时挂载，事件必须带目标，不能广播给全部视图（否则多会话时停止错会话）。
   useShortcut(
     'stop-generation',
     useCallback(() => {
-      window.dispatchEvent(new CustomEvent('guru:stop-generation'))
-    }, []),
+      const target = getLastInteractedStopTarget()
+        ?? resolveStopGenerationTarget(activeTab, undefined)
+      if (!target) return
+      window.dispatchEvent(new CustomEvent('guru:stop-generation', { detail: target }))
+    }, [activeTab]),
   )
 
   // Cmd+Shift+T / Ctrl+Shift+T → 打开或聚焦独立任务/日程窗口
