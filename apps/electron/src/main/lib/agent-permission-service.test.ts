@@ -21,7 +21,6 @@ describe('AgentPermissionService 生命周期', () => {
     )
 
     service.clearAllPending()
-
     await expect(first).resolves.toEqual({ behavior: 'deny', message: '应用正在退出' })
     await expect(second).resolves.toEqual({ behavior: 'deny', message: '应用正在退出' })
     expect(service.getPendingRequests()).toEqual([])
