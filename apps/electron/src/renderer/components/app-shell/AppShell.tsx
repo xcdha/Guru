@@ -216,20 +216,21 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
         <div className={cn('flex h-full w-full', settingsOpen && 'hidden')} aria-hidden={settingsOpen}>
           {/* 左侧边栏：折叠态和 Claude 一样整体隐藏（不保留图标 rail），
               折叠/展开按钮固定在 TabBar（紧邻第一个标签），收起后仍可从那里唤回。 */}
-          {!sidebarCollapsed && (
+          {/* 折叠态由 LeftSidebar 内部渲染 60px 窄 rail（Proma 风格收起） */}
             <>
               <div className={cn(isClassic ? 'p-2 pr-0' : '', 'relative z-[60] crt-sidebar')}>
                 <LeftSidebar width={clampedLeftSidebarWidth} noTransition={isDraggingLeftSidebar} />
-                <div
-                  className={cn(
-                    'absolute right-0 top-0 bottom-0 w-4 translate-x-1/2 cursor-col-resize hover:bg-border/40 active:bg-border/70 transition-colors z-20'
-                  )}
-                  onMouseDown={handleLeftSidebarMouseDown}
-                />
+                {!sidebarCollapsed && (
+                  <div
+                    className={cn(
+                      'absolute right-0 top-0 bottom-0 w-4 translate-x-1/2 cursor-col-resize hover:bg-border/40 active:bg-border/70 transition-colors z-20'
+                    )}
+                    onMouseDown={handleLeftSidebarMouseDown}
+                  />
+                )}
               </div>
               {!isClassic && <div aria-hidden="true" className="relative z-[61] w-px flex-shrink-0 bg-border dark:bg-border/80" />}
             </>
-          )}
 
           {/* 中间容器：relative z-[60] 使其在 z-50 拖动区域之上 */}
           <div className={cn('flex-1 min-w-0 relative z-[60]', isClassic && 'p-2')}>
