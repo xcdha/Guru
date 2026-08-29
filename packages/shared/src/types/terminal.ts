@@ -44,6 +44,8 @@ export interface TerminalOpenInput {
   /** 初始列数（xterm 挂载后首次 fit 的近似值） */
   cols: number
   rows: number
+  /** 请求的 shell profile（default 用平台默认 shell；可选 pwsh/powershell/cmd/git-bash/wsl/bash/zsh） */
+  profile?: TerminalProfile
   /**
    * 预启动标记：会话激活时后台预热 shell（不推送 STATE_CHANGED，避免误触发面板）；
    * 用户点开面板时 open 复用 running pty + 回放输出缓冲，达到零等待体验。
@@ -79,3 +81,121 @@ export interface TerminalDataEvent {
 export interface TerminalStateEvent {
   state: TerminalViewState
 }
+
+// ===== 3aec28f9: Agent 终端 shell profile 选择（移植自 Proma） =====
+export type TerminalProfile = 'default' | 'zsh' | 'bash' | 'pwsh' | 'powershell' | 'cmd' | 'git-bash' | 'wsl'
+
+
+const POSIX_TERMINAL_PROFILES = ['default', 'zsh', 'bash'] as const
+const WINDOWS_TERMINAL_PROFILES = ['default', 'pwsh', 'powershell', 'cmd', 'git-bash', 'wsl'] as const
+
+export function getTerminalProfilesForPlatform(platform: string): readonly TerminalProfile[] {
+  if (platform === 'win32') return WINDOWS_TERMINAL_PROFILES
+  if (platform === 'darwin' || platform === 'linux') return POSIX_TERMINAL_PROFILES
+  return ['default']
+}
+
+/** 防止 profile 在不支持它的平台上静默解析为另一个 shell。 */
+
+export function assertTerminalProfileSupported(profile: TerminalProfile, platform: string): TerminalProfile {
+  if (getTerminalProfilesForPlatform(platform).includes(profile)) return profile
+  throw new Error(`shell ${profile} 不支持当前平台 ${platform}；可选值：${getTerminalProfilesForPlatform(platform).join('、')}`)
+}
+
+
+export interface TerminalCreateInput {
+  terminalId: string
+  /** 终端所属 Agent 会话；主进程据此在会话删除时回收 PTY。 */
+  sessionId: string
+  cwd?: string
+  profile?: TerminalProfile
+  cols: number
+  rows: number
+}
+
+
+export interface TerminalInput {
+  terminalId: string
+  data: string
+}
+
+
+export interface TerminalState {
+  terminalId: string
+  title: string
+  cwd: string
+  profile: TerminalProfile
+  pid: number
+}
+
+
+export interface TerminalOutputEvent {
+  terminalId: string
+  /** 单终端单调递增，用于重连去重与 ACK。 */
+  sequence: number
+  data: string
+}
+
+
+export interface TerminalOutputAck {
+  terminalId: string
+  sequence: number
+}
+
+/**
+ * 终端视图重挂载时的受控恢复材料。output 是有限滚动缓冲，sequence 表示其末尾。
+ */
+
+export interface TerminalSnapshot {
+  state: TerminalState
+  output: string
+  sequence: number
+}
+
+/** 主进程通知 Renderer：Agent 已创建一个应呈现在其右侧工作区的终端。 */
+
+export interface AgentTerminalOpenEvent {
+  sessionId: string
+  terminalId: string
+  title: string
+  cwd: string
+  profile?: TerminalProfile
+}
+
+
+export interface AgentTerminalCloseEvent {
+  sessionId: string
+  terminalId: string
+}
+
+
+export interface TerminalExitEvent {
+  terminalId: string
+  exitCode: number
+  signal?: number
+}
+
+
+export function isTerminalProfile(value: unknown): value is TerminalProfile {
+  return value === 'default'
+    || value === 'zsh'
+    || value === 'bash'
+    || value === 'pwsh'
+    || value === 'powershell'
+    || value === 'cmd'
+    || value === 'git-bash'
+    || value === 'wsl'
+}
+
+/**
+ * 把外部输入（如 Agent 工具参数）解析为 TerminalProfile。
+ * 省略或空串回退到 default；显式传入未知值时抛错而非静默回退，
+ * 避免调用方误以为终端运行在指定 shell 上。
+ */
+
+export function parseTerminalProfile(value: unknown): TerminalProfile {
+  if (value === undefined || value === null || value === '') return 'default'
+  if (isTerminalProfile(value)) return value
+  throw new Error(`shell 无效：${String(value)}。可选值：default、pwsh、powershell、cmd、git-bash、wsl、bash、zsh`)
+}
+

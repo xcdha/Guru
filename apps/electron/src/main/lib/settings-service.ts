@@ -8,8 +8,15 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { getSettingsPath } from './config-paths'
-import { DEFAULT_AGENT_RUNTIME, DEFAULT_ICON_SKIN, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE } from '../../types'
+import { DEFAULT_AGENT_RUNTIME, DEFAULT_ICON_SKIN, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE, normalizeProductivityToolsSettings } from '../../types'
 import type { AppSettings } from '../../types'
+import { getTerminalProfilesForPlatform, isTerminalProfile } from '@guru/shared'
+
+export function sanitizeWindowsTerminalProfile(input: unknown): AppSettings['lastWindowsTerminalProfile'] {
+  return isTerminalProfile(input) && getTerminalProfilesForPlatform('win32').includes(input)
+    ? input
+    : undefined
+}
 
 /**
  * 获取应用设置
@@ -38,6 +45,7 @@ export function getSettings(): AppSettings {
       agentThinking: { type: 'adaptive' },
       defaultThinkingLevel: 'high',
       gitAttributionEnabled: true,
+      productivityTools: normalizeProductivityToolsSettings(undefined),
     }
   }
 
@@ -47,11 +55,19 @@ export function getSettings(): AppSettings {
       experimentalAgentRuntimeSwitchEnabled?: boolean
       /** Claude 时代遗留：渠道白名单已随 Pi-only 终态退役 */
       agentChannelIds?: string[]
+      agentRuntime?: unknown
+      builtinMcpDisabledIds?: unknown
+      interfaceVariant?: unknown
+      /** PR #1895 早期构建写入的无平台 profile 字段；仅在 Windows 上迁移。 */
+      lastTerminalProfile?: unknown
     }
     // Pi runtime 已默认可用；读取时清理旧版本遗留的实验开关与 Claude 渠道白名单。
     const {
       experimentalAgentRuntimeSwitchEnabled: _legacyRuntimeSwitch,
       agentChannelIds: _legacyAgentChannelIds,
+      builtinMcpDisabledIds: _legacyBuiltinMcpDisabledIds,
+      interfaceVariant: _legacyInterfaceVariant,
+      lastTerminalProfile: legacyLastTerminalProfile,
       ...settings
     } = data
     return {
@@ -66,14 +82,19 @@ export function getSettings(): AppSettings {
       richTextRenderingEnabled: data.richTextRenderingEnabled ?? false,
       feishuSessionMirror: data.feishuSessionMirror ?? { mode: 'off' },
       visionRelay: data.visionRelay ?? { enabled: false },
-      builtinMcpDisabledIds: settings.builtinMcpDisabledIds ?? [],
+      builtinMcpDisabledIds: data.builtinMcpDisabledIds ?? [],
       sidebarModuleCollapsed: data.sidebarModuleCollapsed ?? {},
       agentRuntime: settings.agentRuntime ?? DEFAULT_AGENT_RUNTIME,
       windowsShellPreference: settings.windowsShellPreference ?? 'auto',
+      lastWindowsTerminalProfile: process.platform === 'win32'
+        ? sanitizeWindowsTerminalProfile(settings.lastWindowsTerminalProfile ?? legacyLastTerminalProfile)
+        : undefined,
       agentThinking: settings.agentThinking ?? { type: 'adaptive' },
       defaultThinkingLevel: settings.defaultThinkingLevel ?? 'high',
       // 缺省 true：老配置文件未写该字段时保持推广默认开启
       gitAttributionEnabled: settings.gitAttributionEnabled ?? true,
+      // 缺省全部开启：老配置文件不会因升级意外隐藏生产力工具。
+      productivityTools: normalizeProductivityToolsSettings(data.productivityTools),
     }
   } catch (error) {
     console.error('[设置] 读取失败:', error)
@@ -105,6 +126,7 @@ export function getSettings(): AppSettings {
       agentThinking: { type: 'adaptive' },
       defaultThinkingLevel: 'high',
       gitAttributionEnabled: true,
+      productivityTools: normalizeProductivityToolsSettings(undefined),
     }
   }
 }
@@ -119,6 +141,10 @@ export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   const updated: AppSettings = {
     ...current,
     ...updates,
+    // 仅保留 macOS 原生 Island 开关，避免旧非原生 surface 字段被继续回写。
+    productivityTools: updates.productivityTools === undefined
+      ? normalizeProductivityToolsSettings(current.productivityTools)
+      : normalizeProductivityToolsSettings({ ...current.productivityTools, ...updates.productivityTools }),
   }
   const filePath = getSettingsPath()
 

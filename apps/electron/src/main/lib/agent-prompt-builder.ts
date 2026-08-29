@@ -24,6 +24,7 @@ import { resolveProjectInstructions } from './project-instruction-resolver'
 import { buildLegacyProjectMigrationPrompt } from './project-instruction-migration'
 import { getSettings } from './settings-service'
 import type { BrowserUserContextSnapshot } from './browser-controller'
+import { DEFAULT_PRODUCTIVITY_TOOLS_SETTINGS, type ProductivityToolsSettings } from '../../types'
 
 // ===== 工具使用指南（可复用常量） =====
 
@@ -59,6 +60,7 @@ interface SystemPromptContext {
   /** 工作区记忆运行期引导（协作画像是否已建立等） */
   memoryGuidance?: import('./agent-workspace-manager').WorkspaceMemoryGuidance
   /** 记忆复查邀请机会（距上次更新超过内部节奏且有新会话） */
+  productivityTools: ProductivityToolsSettings
   memoryRefreshOpportunity?: { memoryUpdatedAt?: number; newestSessionAt: number; newerSessionCount: number }
 }
 
@@ -98,6 +100,7 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
   const piDelegationModelInstruction = currentModelId
     ? `**派生子会话的模型**：当前 Agent 选择的模型 ID 是 \`${currentModelId}\`。调用 collaboration 派生子会话时，如果用户没有明确指定目标模型，必须在工具参数中显式传入 \`modelId: "${currentModelId}"\`，复用当前模型；不要自行从可用模型中挑选。只有用户明确要求其他模型时，才先查询可用模型并传入其指定的 \`modelId\`。`
     : '**派生子会话的模型**：若当前模型 ID 未提供，不要自行挑选其他模型；省略 `modelId`，由平台按父会话模型继承策略处理。'
+  const { todosEnabled, calendarEnabled, obsidianEnabled } = ctx.productivityTools ?? DEFAULT_PRODUCTIVITY_TOOLS_SETTINGS
   const workspacePaths = ctx.workspaceSlug
     ? buildWorkspacePromptPaths(ctx.workspaceSlug, ctx.sessionId)
     : undefined

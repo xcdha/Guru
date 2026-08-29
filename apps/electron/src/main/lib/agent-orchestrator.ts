@@ -1392,6 +1392,7 @@ export class AgentOrchestrator {
       // forkSourceDir 仅作为备用参考字段保留，不再影响 agentCwd。
 
       // 必须与 runtime 接收的附加目录保持一致；视觉助手据此限制允许外发的图片路径。
+      const productivityTools = appSettings.productivityTools
       const allAdditionalDirectories = collectAttachedDirectories({
         extraDirs: additionalDirectories,
         sessionMeta,
@@ -1465,7 +1466,10 @@ export class AgentOrchestrator {
               agentCwd,
               allowedRoots: builtinToolAllowedRoots,
               permissionMode: permissionModeOverride ?? sessionMeta?.permissionMode ?? GURU_DEFAULT_PERMISSION_MODE,
-              triggeredBy: input.triggeredBy
+              triggeredBy: input.triggeredBy,
+              productivityTools,
+              windowsShellAvailable: process.platform !== 'win32',
+              lastWindowsTerminalProfile: appSettings.lastWindowsTerminalProfile,
             })
             piBuiltinTools = result.tools
             return { collaborationAvailable: result.collaborationAvailable }
@@ -1958,7 +1962,8 @@ export class AgentOrchestrator {
           projectKnowledgeMaintenanceApproved: workspaceSlug ? isWorkspaceProjectKnowledgeMaintenanceApproved(workspaceSlug) : false,
           memoryGuidance: workspaceSlug && !automationContext && !input.triggeredBy ? getWorkspaceMemoryGuidance(workspaceSlug) : undefined,
           memoryRefreshOpportunity: workspaceSlug && !automationContext && !input.triggeredBy ? claimWorkspaceMemoryRefreshOpportunity(workspaceSlug) : undefined,
-          projectInstructionRoot: agentCwd
+          projectInstructionRoot: agentCwd,
+          productivityTools: appSettings.productivityTools,
         }) +
         (automationContext ? `\n\n## 定时任务执行上下文\n\n${automationContext}` : '') +
         (workContext

@@ -120,7 +120,7 @@ import { draftSessionIdsAtom } from '@/atoms/draft-session-atoms'
 import { hasEnvironmentIssuesAtom } from '@/atoms/environment'
 import { promptConfigAtom, selectedPromptIdAtom, conversationPromptIdAtom } from '@/atoms/system-prompt-atoms'
 import { interfaceVariantAtom } from '@/atoms/theme'
-import { sessionHoverPreviewEnabledAtom } from '@/atoms/ui-preferences'
+import { productivityToolsAtom, sessionHoverPreviewEnabledAtom } from '@/atoms/ui-preferences'
 import { newTaskProjectFlowOpenAtom } from '@/atoms/project-context-picker'
 import { searchDialogOpenAtom } from '@/atoms/search-dialog'
 import { useOpenSession } from '@/hooks/useOpenSession'
@@ -673,6 +673,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
   const setSelectedPromptId = useSetAtom(selectedPromptIdAtom)
   const interfaceVariant = useAtomValue(interfaceVariantAtom)
   const isClassic = interfaceVariant === 'classic'
+  const productivityTools = useAtomValue(productivityToolsAtom)
 
   // Agent 模式状态
   const [agentSessions, setAgentSessions] = useAtom(agentSessionsAtom)

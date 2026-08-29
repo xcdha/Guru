@@ -44,6 +44,8 @@ import {
   updateRichTextRenderingEnabled,
   updateSessionHoverPreviewEnabled,
   updateStickyUserMessageEnabled,
+  productivityToolsAtom,
+  updateProductivityTools,
 } from "@/atoms/ui-preferences";
 import { thinkingExpandedAtom } from "@/atoms/chat-atoms";
 import { cn } from "@/lib/utils";
@@ -53,6 +55,7 @@ import type {
   NotificationSoundId,
   NotificationSoundType,
   NotificationSoundSettings,
+  ProductivityToolsSettings,
 } from "@/types/settings";
 import type { AgentThinkingLevel } from "@guru/shared";
 import {
@@ -69,6 +72,7 @@ export function GeneralSettings(): React.ReactElement {
   const [notificationsEnabled, setNotificationsEnabled] = useAtom(
     notificationsEnabledAtom,
   );
+  const [productivityTools, setProductivityTools] = useAtom(productivityToolsAtom)
   const [notificationSoundEnabled, setNotificationSoundEnabled] = useAtom(
     notificationSoundEnabledAtom,
   );
@@ -111,6 +115,19 @@ export function GeneralSettings(): React.ReactElement {
       })
       .catch(console.error);
   }, []);
+
+  const handleProductivityToolsChange = async (updates: Partial<ProductivityToolsSettings>): Promise<void> => {
+    const previous = productivityTools
+    const next = { ...previous, ...updates }
+    setProductivityTools(next)
+    try {
+      await updateProductivityTools(next)
+    } catch {
+      setProductivityTools(previous)
+    }
+  }
+
+  /** 更新 Git/PR 推广标识开关 */
 
   /** 更新归档天数 */
   const handleArchiveDaysChange = async (value: string): Promise<void> => {
@@ -309,6 +326,24 @@ export function GeneralSettings(): React.ReactElement {
           <SettingsRow label="语言" description="更多语言支持即将推出">
             <span className="text-[13px] text-foreground/40">简体中文</span>
           </SettingsRow>
+          <SettingsToggle
+            label="Todo"
+            description="显示 Todo 入口，并允许 Agent 使用 Todo 相关工具"
+            checked={productivityTools.todosEnabled}
+            onCheckedChange={(checked) => { void handleProductivityToolsChange({ todosEnabled: checked }) }}
+          />
+          <SettingsToggle
+            label="日程"
+            description="显示日程入口，并允许 Agent 使用日程相关工具"
+            checked={productivityTools.calendarEnabled}
+            onCheckedChange={(checked) => { void handleProductivityToolsChange({ calendarEnabled: checked }) }}
+          />
+          <SettingsToggle
+            label="Obsidian"
+            description="显示 Obsidian 入口，并允许 Agent 使用已配置的 Vault"
+            checked={productivityTools.obsidianEnabled}
+            onCheckedChange={(checked) => { void handleProductivityToolsChange({ obsidianEnabled: checked }) }}
+          />
           <SettingsToggle
             label="桌面通知"
             description="Agent 完成任务或需要操作时发送通知"
