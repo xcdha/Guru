@@ -3345,24 +3345,28 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
         <div className={cn('w-full flex-shrink-0 titlebar-drag-region', isMac ? 'h-[50px]' : 'h-2')} />
 
 
-        <div className="my-3 h-px w-8 bg-border/70" />
+        <div className="my-1 h-px w-6 bg-border/70" />
 
         {/* 模式切换 */}
-        <div className="flex flex-col items-center gap-1.5">
+        <div className="flex flex-col items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 aria-label="切换到 Chat 模式"
                 onClick={() => handleRailModeSwitch('chat')}
-                className={cn(
-                  'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag',
-                  mode === 'chat'
-                    ? 'bg-primary/10 text-foreground shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
-                    : 'text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/75'
-                )}
+                className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
               >
-                <MessageSquare size={17} />
+                <span
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,box-shadow] duration-150',
+                    mode === 'chat'
+                      ? 'bg-primary/10 text-foreground shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
+                      : 'text-foreground/45 group-hover:bg-foreground/[0.06] group-hover:text-foreground/75',
+                  )}
+                >
+                  <MessageSquare size={15} />
+                </span>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Chat 模式</TooltipContent>
@@ -3373,14 +3377,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
               type="button"
               aria-label="切换到 Project 模式（悬停查看工作区）"
               onClick={() => handleRailModeSwitch('agent')}
-              className={cn(
-                'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag',
-                mode === 'agent'
-                  ? 'bg-primary/10 text-foreground shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
-                  : 'text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/75'
-              )}
+              className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
             >
-              <Bot size={18} />
+              <span
+                className={cn(
+                  'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,box-shadow] duration-150',
+                  mode === 'agent'
+                    ? 'bg-primary/10 text-foreground shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
+                    : 'text-foreground/45 group-hover:bg-foreground/[0.06] group-hover:text-foreground/75',
+                )}
+              >
+                <Bot size={16} />
+              </span>
             </button>
           </CollapsedWorkspacePopover>
 
@@ -3390,9 +3398,11 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                 type="button"
                 aria-label="搜索"
                 onClick={() => setSearchDialogOpen(true)}
-                className="size-10 flex items-center justify-center rounded-[12px] text-foreground/45 hover:bg-foreground/[0.08] hover:text-foreground/80 transition-colors duration-fast titlebar-no-drag"
+                className="group flex size-10 items-center justify-center p-1 titlebar-no-drag"
               >
-                <Search size={16} />
+                <span className="flex size-8 items-center justify-center rounded-[10px] text-foreground/45 transition-[background-color,color] duration-150 group-hover:bg-foreground/[0.06] group-hover:text-foreground/75">
+                  <Search size={15} />
+                </span>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">搜索</TooltipContent>
@@ -3400,16 +3410,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
         </div>
 
         {/* 高频操作 */}
-        <div className="mt-1.5 flex flex-col items-center gap-1.5">
+        <div className="mt-1.5 flex flex-col items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
                 aria-label={mode === 'agent' ? '新建 Agent 会话' : '新建 Chat 对话'}
                 onClick={mode === 'agent' ? handleNewAgentSession : handleNewConversation}
-                className="size-10 flex items-center justify-center rounded-[12px] text-foreground/70 sidebar-control-surface hover:text-foreground transition-[background-color,color] duration-fast titlebar-no-drag"
+                className="group flex size-10 items-center justify-center p-1 titlebar-no-drag"
               >
-                <CirclePlus size={16} />
+                <span className="flex size-8 items-center justify-center rounded-[10px] text-foreground/65 transition-[background-color,color] duration-150 group-hover:bg-foreground/[0.07] group-hover:text-foreground">
+                  <CirclePlus size={16} />
+                </span>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
@@ -3424,9 +3436,11 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label="新建任务"
                   onClick={handleNewTask}
-                  className="size-10 flex items-center justify-center rounded-[12px] text-foreground/70 sidebar-control-surface hover:text-foreground transition-[background-color,color] duration-fast titlebar-no-drag"
+                  className="group flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <ClipboardList size={16} />
+                  <span className="flex size-8 items-center justify-center rounded-[10px] text-foreground/65 transition-[background-color,color] duration-150 group-hover:bg-foreground/[0.07] group-hover:text-foreground">
+                    <ClipboardList size={16} />
+                  </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">
@@ -3442,18 +3456,22 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label={`看板，${activeTaskCount} 个未完成`}
                   onClick={handleOpenTaskBoard}
-                  className={cn(
-                    'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                    codeMainView === 'tasks' && activeView === 'conversations'
-                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                  )}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <LayoutDashboard size={16} />
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                      codeMainView === 'tasks' && activeView === 'conversations'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                    )}
+                  >
+                    <LayoutDashboard size={16} />
+                  </span>
                   {activeTaskCount > 0 && (
                     <span
                       className={cn(
-                        'absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
+                        'absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                         codeMainView === 'tasks' && activeView === 'conversations'
                           ? 'bg-primary-foreground text-primary'
                           : 'bg-primary text-primary-foreground',
@@ -3476,18 +3494,22 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label="Yoda 画布"
                   onClick={handleOpenExcalidraw}
-                  className={cn(
-                    'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                    activeView === 'excalidraw-gallery' || activeView === 'excalidraw-editor'
-                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                  )}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <PenTool size={16} />
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                      activeView === 'excalidraw-gallery' || activeView === 'excalidraw-editor'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                    )}
+                  >
+                    <PenTool size={16} />
+                  </span>
                   {excalidrawCount > 0 && (
                     <span
                       className={cn(
-                        'absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
+                        'absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                         activeView === 'excalidraw-gallery' || activeView === 'excalidraw-editor'
                           ? 'bg-primary-foreground text-primary'
                           : 'bg-primary text-primary-foreground',
@@ -3508,18 +3530,22 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                 type="button"
                 aria-label={`计划，${automationCount} 个任务已创建`}
                 onClick={handleOpenPlanning}
-                className={cn(
-                  'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                  activeView === 'planning'
-                    ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                    : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                )}
+                className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
               >
-                <CalendarDays size={16} />
+                <span
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                    activeView === 'planning'
+                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                  )}
+                >
+                  <CalendarDays size={16} />
+                </span>
                 {automationCount > 0 && (
                   <span
                     className={cn(
-                      'absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
+                      'absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums',
                       activeView === 'planning'
                         ? 'bg-primary-foreground text-primary'
                         : 'bg-primary text-primary-foreground',
@@ -3543,14 +3569,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label="Yoda 插件"
                   onClick={() => handleOpenSkills()}
-                  className={cn(
-                    'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                    activeView === 'agent-skills'
-                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                  )}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <Blocks size={16} />
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                      activeView === 'agent-skills'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                    )}
+                  >
+                    <Blocks size={16} />
+                  </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">Yoda 插件</TooltipContent>
@@ -3565,14 +3595,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label="消息"
                   onClick={handleOpenMessaging}
-                  className={cn(
-                    'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                    activeView === 'messaging'
-                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                  )}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <MessagesSquare size={16} />
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                      activeView === 'messaging'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                    )}
+                  >
+                    <MessagesSquare size={16} />
+                  </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">消息</TooltipContent>
@@ -3587,14 +3621,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   type="button"
                   aria-label="Yoda 知识库"
                   onClick={handleOpenRepoWiki}
-                  className={cn(
-                    'relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag border',
-                    activeView === 'repo-wiki'
-                      ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border/45 bg-foreground/[0.025] text-foreground/45 hover:border-border/70 hover:bg-foreground/[0.045] hover:text-primary',
-                  )}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
                 >
-                  <Library size={16} />
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color,box-shadow] duration-150 border',
+                      activeView === 'repo-wiki'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/70 group-hover:bg-foreground/[0.045] group-hover:text-primary',
+                    )}
+                  >
+                    <Library size={16} />
+                  </span>
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">Yoda 知识库（待开发）</TooltipContent>
@@ -3603,11 +3641,11 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
 
         </div>
 
-        <div className="my-3 h-px w-8 bg-border/70" />
+        <div className="my-1 h-px w-6 bg-border/70" />
 
         {/* 最近/关键会话入口 */}
         <div className="flex-1 min-h-0 w-full overflow-y-auto scrollbar-thin">
-          <div className="flex flex-col items-center gap-1.5 pb-2">
+          <div className="flex flex-col items-center gap-0.5 pb-2">
             {railRecentItems.map((item) => (
               <RailRecentButton
                 key={`${item.type}-${item.id}`}
@@ -3625,14 +3663,14 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
         </div>
 
         {/* 更新入口 + 用户头像（点击打开设置） */}
-        <div className="flex flex-col items-center gap-1.5 pt-3 pb-3">
+        <div className="flex flex-col items-center gap-0.5 pt-2 pb-2">
           {hasUpdate && (
             <SidebarUpdateButton
               status={updateStatus}
               onClick={handleUpdateButtonClick}
               tooltipSide="right"
-              className="size-10 flex items-center justify-center rounded-[12px]"
-              readyDotClassName="absolute top-0 right-0 w-2 h-2 rounded-full bg-primary"
+              className="group flex size-10 items-center justify-center p-1"
+              readyDotClassName="absolute right-1 top-1 size-2 rounded-full bg-primary"
             />
           )}
           <Tooltip>
@@ -3641,11 +3679,13 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                 type="button"
                 aria-label="打开设置"
                 onClick={handleOpenSettings}
-                className="relative size-10 flex items-center justify-center rounded-[12px] transition-colors titlebar-no-drag hover:bg-foreground/5"
+                className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
               >
-                <UserAvatar avatar={userProfile.avatar} size={28} />
+                <span className="flex size-8 items-center justify-center rounded-[10px] transition-colors duration-150 group-hover:bg-foreground/[0.06]">
+                  <UserAvatar avatar={userProfile.avatar} size={24} />
+                </span>
                 {hasEnvironmentIssues && (
-                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-destructive" />
+                  <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
                 )}
               </button>
             </TooltipTrigger>
@@ -3659,7 +3699,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
           unseen={hasUnseenReleaseNotes}
           recentNotes={releaseNotesRecent}
           onMarkSeen={markReleaseNotesSeen}
-          triggerClassName="flex size-10 items-center justify-center rounded-[12px] text-foreground/45 transition-colors titlebar-no-drag hover:bg-foreground/5 hover:text-foreground/80"
+          triggerClassName="group flex size-10 items-center justify-center p-1 text-foreground/45 transition-colors titlebar-no-drag hover:text-foreground/80"
           tooltipSide="right"
           side="right"
           align="end"
