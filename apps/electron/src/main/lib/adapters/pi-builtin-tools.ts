@@ -65,6 +65,7 @@ import {
   updatePlanningTag,
   deletePlanningTag,
   listActivePlanningReminders,
+  getPlanningReminder,
   createPlanningReminder,
   updatePlanningReminder,
   deletePlanningReminder,
@@ -88,6 +89,7 @@ import {
   automationCreateToolParameters,
   discardInapplicableAutomationScheduleFields,
 } from './automation-tool-schema'
+import type { ProductivityToolsSettings } from '../../../types'
 
 type PiSdk = typeof import('@earendil-works/pi-coding-agent')
 
@@ -108,6 +110,10 @@ export interface PiBuiltinToolsContext {
   allowedRoots?: string[]
   permissionMode?: GuruPermissionMode
   triggeredBy?: 'user' | 'automation' | 'delegation' | 'work'
+  /** Windows 设备是否已有可供 Pi Bash 使用的 Git Bash 或 WSL。 */
+  windowsShellAvailable?: boolean
+  /** 用户关闭的生产力能力不能注入给 Agent。 */
+  productivityTools?: ProductivityToolsSettings
 }
 
 function jsonToolResult(payload: unknown): AgentToolResult<unknown> {
@@ -552,6 +558,27 @@ function buildAutomationTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
 
 
 function buildPlanningTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinition[] {
+  const todosEnabled = ctx.productivityTools?.todosEnabled ?? true
+  const calendarEnabled = ctx.productivityTools?.calendarEnabled ?? true
+  const planningGroupScopeSchema = todosEnabled && calendarEnabled
+    ? Type.Union([Type.Literal('todo'), Type.Literal('calendar')])
+    : todosEnabled ? Type.Literal('todo') : Type.Literal('calendar')
+  const planningReminderTargetTypeSchema = todosEnabled && calendarEnabled
+    ? Type.Union([Type.Literal('todo'), Type.Literal('calendar_event')])
+    : todosEnabled ? Type.Literal('todo') : Type.Literal('calendar_event')
+  const assertPlanningScopeEnabled = (scope: 'todo' | 'calendar'): void => {
+    if ((scope === 'todo' && !todosEnabled) || (scope === 'calendar' && !calendarEnabled)) {
+      throw new Error(`${scope === 'todo' ? 'Todo' : '日程'}功能已关闭`)
+    }
+  }
+  const assertPlanningReminderTargetEnabled = (targetType: 'todo' | 'calendar_event'): void => {
+    assertPlanningScopeEnabled(targetType === 'todo' ? 'todo' : 'calendar')
+  }
+  const assertPlanningReminderEnabled = (id: string): void => {
+    const reminder = getPlanningReminder(id)
+    if (!reminder) throw new Error('提醒不存在')
+    assertPlanningReminderTargetEnabled(reminder.targetType)
+  }
   const optionalPlanningFields = {
     notes: Type.Optional(Type.String({ description: '补充说明' })),
     workspaceId: Type.Optional(Type.String({ description: '所属工作区 ID；不传默认当前工作区' })),
@@ -717,18 +744,20 @@ function buildPlanningTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinit
     sdk.defineTool({
       name: 'mcp__planning__list_groups', label: '列出分组',
       description: '列出指定范围的 Todo 或日程分组。创建或归入分组前优先调用，以复用该范围内的现有分组。仅 Pi Agent 可用。',
-      parameters: Type.Object({ scope: Type.Union([Type.Literal('todo'), Type.Literal('calendar')]) }),
+      parameters: Type.Object({ scope: planningGroupScopeSchema }),
       async execute(_id: string, params: unknown) {
         const scope = (params as { scope: 'todo' | 'calendar' }).scope
+        assertPlanningScopeEnabled(scope)
         return jsonToolResult({ groups: listPlanningGroups(scope) })
       },
     }),
     sdk.defineTool({
       name: 'mcp__planning__create_group', label: '创建分组',
       description: '创建 Todo 或日程范围内的独立分组。只在用户明确提出新分组或该范围内现有分组不适用时使用。仅 Pi Agent 可用。',
-      parameters: Type.Object({ scope: Type.Union([Type.Literal('todo'), Type.Literal('calendar')]), name: Type.String(), color: Type.Optional(Type.String()), sortOrder: Type.Optional(Type.Number()) }),
+      parameters: Type.Object({ scope: planningGroupScopeSchema, name: Type.String(), color: Type.Optional(Type.String()), sortOrder: Type.Optional(Type.Number()) }),
       async execute(_id: string, params: unknown) {
         const args = params as { scope: 'todo' | 'calendar'; name: string; color?: string; sortOrder?: number }
+        assertPlanningScopeEnabled(args.scope)
         const group = createPlanningGroup({ scope: args.scope, name: assertNonBlank(args.name, 'name'), color: args.color, sortOrder: args.sortOrder })
         broadcastPlanningChanged(args.scope === 'todo' ? ['todo_groups', 'todos', 'reminders'] : ['calendar_groups', 'calendar_events', 'reminders']); return jsonToolResult({ group })
       },
@@ -736,10 +765,11 @@ function buildPlanningTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinit
     sdk.defineTool({
       name: 'mcp__planning__update_group', label: '更新分组',
       description: '更新指定范围内的分组，不能借此移动分组范围。仅 Pi Agent 可用。',
-      parameters: Type.Object({ id: Type.String(), scope: Type.Union([Type.Literal('todo'), Type.Literal('calendar')]), name: Type.Optional(Type.String()), color: Type.Optional(Type.Union([Type.String(), Type.Null()])), sortOrder: Type.Optional(Type.Number()) }),
+      parameters: Type.Object({ id: Type.String(), scope: planningGroupScopeSchema, name: Type.Optional(Type.String()), color: Type.Optional(Type.Union([Type.String(), Type.Null()])), sortOrder: Type.Optional(Type.Number()) }),
       async execute(_id: string, params: unknown) {
         const args = params as Record<string, unknown>
         const scope = args.scope as 'todo' | 'calendar'
+        assertPlanningScopeEnabled(scope)
         const group = updatePlanningGroup({ id: assertNonBlank(args.id as string, 'id'), scope, name: args.name as string | undefined, color: args.color as string | null | undefined, sortOrder: args.sortOrder as number | undefined })
         if (!group) throw new Error('分组不存在'); broadcastPlanningChanged(scope === 'todo' ? ['todo_groups', 'todos', 'reminders'] : ['calendar_groups', 'calendar_events', 'reminders']); return jsonToolResult({ group })
       },
@@ -747,10 +777,11 @@ function buildPlanningTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinit
     sdk.defineTool({
       name: 'mcp__planning__delete_group', label: '删除分组',
       description: '删除指定范围内的分组，并仅清除该范围关联对象的分组字段。只在用户明确要求删除时使用。仅 Pi Agent 可用。',
-      parameters: Type.Object({ id: Type.String(), scope: Type.Union([Type.Literal('todo'), Type.Literal('calendar')]) }),
+      parameters: Type.Object({ id: Type.String(), scope: planningGroupScopeSchema }),
       async execute(_id: string, params: unknown) {
         assertPlanningDeleteAllowed(ctx)
         const args = params as { id: string; scope: 'todo' | 'calendar' }
+        assertPlanningScopeEnabled(args.scope)
         const deleted = deletePlanningGroup(args.scope, assertNonBlank(args.id, 'id'))
         if (deleted) broadcastPlanningChanged(args.scope === 'todo' ? ['todo_groups', 'todos', 'reminders'] : ['calendar_groups', 'calendar_events', 'reminders'])
         return jsonToolResult({ deleted })
@@ -784,37 +815,43 @@ function buildPlanningTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinit
       name: 'mcp__planning__list_active_reminders', label: '列出到期提醒',
       description: '列出当前已到期且未确认的常驻提醒。用于帮助用户处理提醒，不用于扫描全部历史。仅 Pi Agent 可用。',
       parameters: Type.Object({}),
-      async execute() { return jsonToolResult({ reminders: listActivePlanningReminders() }) },
+      async execute() {
+        return jsonToolResult({
+          reminders: listActivePlanningReminders().filter((reminder) => (
+            reminder.targetType === 'todo' ? todosEnabled : calendarEnabled
+          )),
+        })
+      },
     }),
     sdk.defineTool({
       name: 'mcp__planning__create_reminder', label: '创建提醒',
       description: '为 Todo 或日程创建指定时点的提醒。仅在用户要求提醒且时点明确时使用。仅 Pi Agent 可用。',
-      parameters: Type.Object({ targetType: Type.Union([Type.Literal('todo'), Type.Literal('calendar_event')]), targetId: Type.String(), triggerAt: Type.Number({ description: '提醒触发 Unix 毫秒时间戳' }) }),
-      async execute(_id: string, params: unknown) { const args = params as { targetType: 'todo' | 'calendar_event'; targetId: string; triggerAt: number }; const reminder = createPlanningReminder({ targetType: args.targetType, targetId: assertNonBlank(args.targetId, 'targetId'), triggerAt: args.triggerAt }); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
+      parameters: Type.Object({ targetType: planningReminderTargetTypeSchema, targetId: Type.String(), triggerAt: Type.Number({ description: '提醒触发 Unix 毫秒时间戳' }) }),
+      async execute(_id: string, params: unknown) { const args = params as { targetType: 'todo' | 'calendar_event'; targetId: string; triggerAt: number }; assertPlanningReminderTargetEnabled(args.targetType); const reminder = createPlanningReminder({ targetType: args.targetType, targetId: assertNonBlank(args.targetId, 'targetId'), triggerAt: args.triggerAt }); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
     }),
     sdk.defineTool({
       name: 'mcp__planning__update_reminder', label: '更新提醒时间',
       description: '修改未确认提醒的触发时间。仅 Pi Agent 可用。',
       parameters: Type.Object({ id: Type.String(), triggerAt: Type.Number({ description: '新的提醒触发 Unix 毫秒时间戳' }) }),
-      async execute(_id: string, params: unknown) { const args = params as { id: string; triggerAt: number }; const reminder = updatePlanningReminder(assertNonBlank(args.id, 'id'), args.triggerAt); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
+      async execute(_id: string, params: unknown) { const args = params as { id: string; triggerAt: number }; const id = assertNonBlank(args.id, 'id'); assertPlanningReminderEnabled(id); const reminder = updatePlanningReminder(id, args.triggerAt); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
     }),
     sdk.defineTool({
       name: 'mcp__planning__acknowledge_reminder', label: '确认提醒',
       description: '确认并关闭一个到期提醒，不会删除 Todo 或日程。仅在用户明确要求关闭提醒时使用。仅 Pi Agent 可用。',
       parameters: Type.Object({ id: Type.String() }),
-      async execute(_id: string, params: unknown) { const reminder = acknowledgePlanningReminder(assertNonBlank((params as { id: string }).id, 'id')); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
+      async execute(_id: string, params: unknown) { const id = assertNonBlank((params as { id: string }).id, 'id'); assertPlanningReminderEnabled(id); const reminder = acknowledgePlanningReminder(id); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
     }),
     sdk.defineTool({
       name: 'mcp__planning__snooze_reminder', label: '推迟提醒',
       description: '将未确认提醒推迟指定分钟数。仅 Pi Agent 可用。',
       parameters: Type.Object({ id: Type.String(), minutes: Type.Number({ description: '推迟分钟数，1 到 10080' }) }),
-      async execute(_id: string, params: unknown) { const args = params as { id: string; minutes: number }; const reminder = snoozePlanningReminder(assertNonBlank(args.id, 'id'), args.minutes); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
+      async execute(_id: string, params: unknown) { const args = params as { id: string; minutes: number }; const id = assertNonBlank(args.id, 'id'); assertPlanningReminderEnabled(id); const reminder = snoozePlanningReminder(id, args.minutes); if (!reminder) throw new Error('提醒不存在或已处理'); broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ reminder }) },
     }),
     sdk.defineTool({
       name: 'mcp__planning__delete_reminder', label: '删除提醒',
       description: '删除提醒记录。只在用户明确要求彻底删除提醒时使用。仅 Pi Agent 可用。',
       parameters: Type.Object({ id: Type.String() }),
-      async execute(_id: string, params: unknown) { assertPlanningDeleteAllowed(ctx); const deleted = deletePlanningReminder(assertNonBlank((params as { id: string }).id, 'id')); if (deleted) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ deleted }) },
+      async execute(_id: string, params: unknown) { assertPlanningDeleteAllowed(ctx); const id = assertNonBlank((params as { id: string }).id, 'id'); assertPlanningReminderEnabled(id); const deleted = deletePlanningReminder(id); if (deleted) broadcastPlanningChanged(['todos', 'calendar_events', 'reminders']); return jsonToolResult({ deleted }) },
     }),
   ] as unknown as ToolDefinition[]
 }
@@ -1105,8 +1142,15 @@ export async function buildPiBuiltinTools(
   }
 
   // Planning（Todo/日程/分组/标签/提醒）不受 builtin MCP 开关控制，始终对 Pi Agent 可用。
+  // 任务/日程是 Pi native customTools；关闭的能力不会出现在本轮 Agent 工具集中。
   try {
-    tools.push(...buildPlanningTools(sdk, ctx))
+    const productivityTools = ctx.productivityTools
+    const planningTools = buildPlanningTools(sdk, ctx).filter((tool) => {
+      if (tool.name.includes('_todo')) return productivityTools?.todosEnabled ?? true
+      if (tool.name.includes('_calendar')) return productivityTools?.calendarEnabled ?? true
+      return (productivityTools?.todosEnabled ?? true) || (productivityTools?.calendarEnabled ?? true)
+    })
+    tools.push(...planningTools)
   } catch (error) {
     console.error('[Pi 桥接] 注入 planning 工具失败:', error)
   }

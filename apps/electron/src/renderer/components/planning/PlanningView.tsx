@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { PLANNING_CONFLICT_ERROR } from '@guru/shared'
 import type { PlanningGroup, Todo } from '@guru/shared'
 import { cn } from '@/lib/utils'
+import { productivityToolsAtom } from '@/atoms/ui-preferences'
 import { automationsAtom, automationFormAtom, createEmptyDraft } from '@/atoms/automation-atoms'
 import { AutomationsView } from '@/components/automation/AutomationsView'
 import { CalendarWorkspace } from '@/components/planning/CalendarWorkspace'
@@ -50,6 +51,18 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
   const [tab, setTab] = useAtom(planningTabAtom)
   const [workspaceScope, setWorkspaceScope] = useAtom(planningWorkspaceScopeAtom)
   const isWindows = React.useMemo(() => detectIsWindows(), [])
+  const productivityTools = useAtomValue(productivityToolsAtom)
+  const isTabEnabled = React.useCallback((candidate: PlanningTab): boolean => (
+    candidate === 'automations'
+    || (candidate === 'todos' && productivityTools.todosEnabled)
+    || (candidate === 'calendar' && productivityTools.calendarEnabled)
+  ), [productivityTools.calendarEnabled, productivityTools.todosEnabled])
+  const requestedTab = tab
+  const visibleTab = isTabEnabled(requestedTab) ? requestedTab : 'automations'
+  const availableTabs = React.useMemo(() => TABS.filter((item) => isTabEnabled(item.id)), [isTabEnabled])
+  React.useEffect(() => {
+    if (visibleTab !== tab) setTab(visibleTab)
+  }, [setTab, tab, visibleTab])
   const automations = useAtomValue(automationsAtom)
   const setAutomationForm = useSetAtom(automationFormAtom)
   const requestTodoCreate = useSetAtom(planningTodoCreateRequestAtom)
@@ -143,7 +156,7 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
       </header>
       <div className={cn('titlebar-no-drag flex w-full items-center justify-between gap-2', standalone ? 'px-5' : 'px-6 sm:px-8 xl:px-10')}>
         <nav className="inline-flex rounded-xl bg-muted/60 p-1 shadow-inner" aria-label="任务日程视图">
-          {TABS.map((item) => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn('min-h-9 rounded-lg px-3 text-sm transition-colors', tab === item.id ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{item.label}</button>)}
+          {availableTabs.map((item) => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn('min-h-9 rounded-lg px-3 text-sm transition-colors', tab === item.id ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{item.label}</button>)}
         </nav>
         <nav className="inline-flex rounded-xl bg-muted/60 p-1 shadow-inner" aria-label="工作区范围">
           {(['current', 'all'] as const).map((scope) => (
