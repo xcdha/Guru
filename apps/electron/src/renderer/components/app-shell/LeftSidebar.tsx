@@ -128,6 +128,7 @@ import { useCreateSession } from '@/hooks/useCreateSession'
 import { useSyncActiveTabSideEffects } from '@/hooks/useSyncActiveTabSideEffects'
 import { NewTaskProjectFlowDialog } from './NewTaskProjectFlowDialog'
 import { CollapsedWorkspacePopover } from '@/components/agent/CollapsedWorkspacePopover'
+import { ObsidianIcon } from '@/components/obsidian/obsidian-brand'
 import { MoveSessionDialog } from '@/components/agent/MoveSessionDialog'
 import {
   SessionMiniMapPopover,
@@ -1060,6 +1061,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
   }, [activeView, setActiveView, setAgentSkillsTab])
 
   /** 打开/关闭 Yoda 知识库 视图（Project 模式知识库入口） */
+  /** 开/关 Yoda 知识库 视图（Project 模式知识库入口） */
   const handleOpenRepoWiki = React.useCallback((): void => {
     if (activeView === 'repo-wiki') {
       setActiveView('conversations')
@@ -1067,6 +1069,15 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
     }
     setActiveView('repo-wiki')
   }, [activeView, setActiveView])
+
+  /** Obsidian 在 Chat 中占用主内容区，在有 Agent 会话时复用右侧项目级工作区。 */
+  const handleOpenVault = React.useCallback((): void => {
+    if (mode !== 'agent' || !currentAgentSessionId) {
+      setActiveView('vault')
+      return
+    }
+    setActiveView('vault')
+  }, [currentAgentSessionId, mode, setActiveView])
 
   /** 打开/关闭 消息 视图（IM 集成：飞书 / 微信 / 即将上线渠道，仅 Project 模式） */
   const handleOpenMessaging = React.useCallback((): void => {

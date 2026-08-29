@@ -7,7 +7,7 @@
 
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS, SESSION_COMMAND_CHANNEL, SESSION_GROUP_IPC_CHANNELS, EXPERT_IPC_CHANNELS } from '@guru/shared/channels'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@guru/shared'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, VAULT_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@guru/shared'
 import type { TaskAggregateSummary, TaskMetadataPatch, TaskWorkflow } from '@guru/shared/tasks'
 import type { StartTodoAgentInput, StartTodoAgentResult, TodoAgentSessionActivation, PlanningWorkspaceScope } from '@guru/shared'
 import { LABEL_IPC_CHANNELS } from '@guru/shared/channels'
@@ -145,6 +145,15 @@ import type {
   AgentQueuedMessageSnapshot,
   AgentQueuedMessageStatus,
   PendingRequestsSnapshot,
+  VaultCandidate,
+  VaultDeleteInput,
+  VaultFileEntry,
+  VaultFocus,
+  VaultReadResult,
+  VaultRenameInput,
+  VaultSummary,
+  VaultWriteInput,
+  VaultWriteResult,
   Automation,
   CreateAutomationInput,
   UpdateAutomationInput,
@@ -651,6 +660,24 @@ export interface ElectronAPI {
   copyImageToClipboard: (dataUrl: string) => Promise<{ success: boolean; message?: string }>
 
   // ===== Excalidraw 画布 =====
+  // ===== 用户授权的 Markdown Vault =====
+
+  getVaultConfig: () => Promise<VaultSummary | null>
+  selectDefaultVault: () => Promise<VaultSummary>
+  listVaultCandidates: () => Promise<VaultCandidate[]>
+  selectVault: (options?: { inboxPath?: string; allowAgentWrites?: boolean }) => Promise<VaultSummary | null>
+  authorizeDiscoveredVault: (rootPath: string, options?: { inboxPath?: string; allowAgentWrites?: boolean }) => Promise<VaultSummary>
+  listVaultFiles: () => Promise<VaultFileEntry[]>
+  readVaultFile: (relativePath: string) => Promise<VaultReadResult>
+  writeVaultFile: (input: VaultWriteInput) => Promise<VaultWriteResult>
+  createUntitledVaultFile: () => Promise<VaultWriteResult>
+  createUntitledVaultFileInFolder: (folderPath: string) => Promise<VaultWriteResult>
+  createVaultFolder: (relativePath: string) => Promise<void>
+  renameVaultFile: (input: VaultRenameInput) => Promise<VaultReadResult>
+  deleteVaultFile: (input: VaultDeleteInput) => Promise<void>
+  setVaultUserContext: (sessionId: string, focus: VaultFocus | null, open?: boolean) => Promise<void>
+
+  // ===== 应用图标切换 =====
 
   /** 列出 Workspace 下所有画板文件（elements 为缩略图用的精简元素快照，不含内嵌图片） */
   listExcalidrawFiles: (workspaceSlug: string) => Promise<Array<{ slug: string; title: string; elementCount: number; background: string; mtime: number; error?: boolean; elements?: unknown[] }>>
@@ -2282,6 +2309,23 @@ const electronAPI: ElectronAPI = {
   saveExcalidrawFileSync: (workspaceSlug: string, slug: string | null, title: string, payload: object) => {
     return ipcRenderer.sendSync(EXCALIDRAW_IPC_CHANNELS.SAVE_SYNC, workspaceSlug, slug, title, payload)
   },
+
+  // 用户授权的 Markdown Vault
+  getVaultConfig: () => ipcRenderer.invoke(VAULT_IPC_CHANNELS.GET_CONFIG),
+  selectDefaultVault: () => ipcRenderer.invoke(VAULT_IPC_CHANNELS.SELECT_DEFAULT),
+  listVaultCandidates: () => ipcRenderer.invoke(VAULT_IPC_CHANNELS.LIST_CANDIDATES),
+  selectVault: (options?: { inboxPath?: string; allowAgentWrites?: boolean }) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.SELECT, options),
+  authorizeDiscoveredVault: (rootPath: string, options?: { inboxPath?: string; allowAgentWrites?: boolean }) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.AUTHORIZE_CANDIDATE, rootPath, options),
+  listVaultFiles: () => ipcRenderer.invoke(VAULT_IPC_CHANNELS.LIST_FILES),
+  readVaultFile: (relativePath: string) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.READ_FILE, relativePath),
+  writeVaultFile: (input: VaultWriteInput) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.WRITE_FILE, input),
+  createUntitledVaultFile: () => ipcRenderer.invoke(VAULT_IPC_CHANNELS.CREATE_UNTITLED_FILE),
+  createUntitledVaultFileInFolder: (folderPath: string) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.CREATE_UNTITLED_FILE_IN_FOLDER, folderPath),
+  createVaultFolder: (relativePath: string) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.CREATE_FOLDER, relativePath),
+  renameVaultFile: (input: VaultRenameInput) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.RENAME_FILE, input),
+  deleteVaultFile: (input: VaultDeleteInput) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.DELETE_FILE, input),
+  setVaultUserContext: (sessionId: string, focus: VaultFocus | null, open = true) => ipcRenderer.invoke(VAULT_IPC_CHANNELS.SET_USER_CONTEXT, sessionId, focus, open),
+
 
   // Dock/Launcher 角标
   setDockBadgeCount: (count: number) => {
