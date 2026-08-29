@@ -22,6 +22,7 @@ export type ActiveView = 'conversations' | 'planning' | 'agent-skills'
   | 'messaging'
   | 'discover'
   | 'excalidraw-gallery' | 'excalidraw-editor'
+  | 'vault'
 /** 插件中心子页：规范 Tab 见 PluginCenterTab；legacy mcp/api 仍可作为 atom 输入，由 normalizePluginCenterTab 归一化。 */
 export type AgentSkillsCapabilityTab = PluginCenterTab | 'mcp' | 'api'
 
@@ -30,3 +31,5 @@ export const activeViewAtom = atom<ActiveView>('conversations')
 
 /** 插件中心当前子页；默认总览，外部 legacy 入口仍可写入 mcp/api */
 export const agentSkillsTabAtom = atom<AgentSkillsCapabilityTab>('overview')
+
+export const pendingAgentSkillSlugAtom = atom<string | null>(null)

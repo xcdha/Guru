@@ -69,6 +69,7 @@ import { injectChromeDevtoolsMcpServer } from './builtin-mcp/chrome-devtools'
 import { isBuiltinMcpUserEnabled } from './builtin-mcp/settings'
 import { getBuiltinMcpName } from './builtin-mcp/baseline'
 import { buildPiBuiltinTools } from './adapters/pi-builtin-tools'
+import { getAgentVaultRoots, getVaultUserContext } from './vault-service'
 import { buildPiMcpTools } from './adapters/pi-mcp-tools'
 import type { AgentRuntimeEnv } from './agent-runtime-env'
 import { selectWindowsShell } from './windows-shell-selection'
@@ -78,6 +79,7 @@ import { resolvePiReasoningCapability } from './adapters/pi-model-registry'
 import { generateCodexTitle } from './adapters/pi-codex-title-generator'
 import { buildRegenerateTitlePrompt, createFallbackTitle, extractAssistantMessageText, extractGenuineUserMessageText, sanitizeGeneratedTitle, selectSpreadMessages, shouldRegenerateTitleAtUserMessageCount, stripContextWrappersForTitle, TITLE_PROMPT } from './title-generation'
 import { browserController } from './browser-controller'
+import { resolveRuntimeAdditionalDirectories } from './agent-orchestrator-vault-access'
 
 // ===== 类型定义 =====
 
@@ -802,6 +804,7 @@ export class AgentOrchestrator {
     userMessage: string,
     createdAt = Date.now(),
     uuid?: string,
+    vaultFocus?: import('@guru/shared').VaultFocusAttribution,
   ): string {
     const persistedUuid = uuid ?? randomUUID()
     const userSDKMsg: SDKMessage = {
@@ -811,7 +814,8 @@ export class AgentOrchestrator {
         content: [{ type: 'text', text: userMessage }]
       },
       parent_tool_use_id: null,
-      _createdAt: createdAt
+      _createdAt: createdAt,
+      ...(vaultFocus ? { _vaultFocus: vaultFocus } : {}),
     } as unknown as SDKMessage
     appendSDKMessages(sessionId, [userSDKMsg])
     return persistedUuid
@@ -910,6 +914,9 @@ export class AgentOrchestrator {
     const agentRuntime: import('@guru/shared').AgentRuntime = 'pi'
     const toolsDisabled = toolPolicy === 'none'
     const stderrChunks: string[] = []
+
+    // Capture the focus once per turn. Later UI focus changes must not rewrite this reply's attribution.
+    const initialVaultFocus = getVaultUserContext(sessionId)
     const streamStartedAt = input.startedAt ?? Date.now()
     let userMessagePersisted = false
     let initialUserMessageUuid: string | undefined
@@ -936,6 +943,11 @@ export class AgentOrchestrator {
         rawUserMessage ?? userMessage,
         Date.now(),
         userMessageUuid,
+        initialVaultFocus ? {
+          displayName: initialVaultFocus.displayName,
+          rootPath: initialVaultFocus.rootPath,
+          focus: initialVaultFocus.focus,
+        } : undefined,
       )
       userMessagePersisted = true
     }
@@ -1399,6 +1411,8 @@ export class AgentOrchestrator {
         workspaceSlug
       })
 
+      const vaultUserContext = getVaultUserContext(sessionId)
+
       // 视觉助手授权根：在附加目录基础上，把当前会话的实际工作目录（项目 workingDirectory）
       // 与会话专属 sandbox（用户上传附件所在）也纳入，但不动 allAdditionalDirectories
       // （它仍用于 additionalDirectories / prompt）。
@@ -1412,6 +1426,9 @@ export class AgentOrchestrator {
 
       // 9.6 直接信任已保存的 sdkSessionId，跳过 listSessions 预验证
       // （如 ~/.guru/agent-workspaces/workspace-xxx/sessionId）与 SDK 内部存储的路径哈希可能不匹配，
+
+      // 原因：listSessions({ dir }) 基于 cwd 路径哈希查找，但 session 级别的 cwd
+      // （如 ~/.proma/agent-workspaces/workspace-xxx/sessionId）与 SDK 内部存储的路径哈希可能不匹配，
       // 导致 listSessions 始终返回 0 个会话，误杀有效的 resume。
       // SDK 本身会优雅处理无效的 resume ID（回退为新会话），无需预验证。
       if (existingSdkSessionId) {
@@ -1517,9 +1534,8 @@ export class AgentOrchestrator {
         workspaceSlug,
         ...(sessionMeta?.projectId ? { projectId: sessionMeta.projectId } : {}),
         agentCwd,
-        ...(projectContext ? { projectContext } : {}),
-        ...(workspaceDefaultWorkingDirectory ? { workspaceDefaultWorkingDirectory } : {}),
-        userBrowserContext: browserController.getUserContext(sessionId)
+        userBrowserContext: browserController.getUserContext(sessionId),
+        userVaultContext: vaultUserContext,
       })
 
       // 11.4 注入仓库代码地图（repo map）：仅绑定 Project 的会话，且图谱工具开关
@@ -3157,9 +3173,12 @@ ${workContext}`
     const workspaceSlug = meta?.workspaceId ? getAgentWorkspace(meta.workspaceId)?.slug : undefined
 
     const userBrowserContext = browserController.getUserContext(sessionId)
+    const userVaultContext = getVaultUserContext(sessionId)
     // 运行中的 Agent 收到队列消息时也必须看到用户刚刚主动打开的页面。
     // 未打开浏览器时保持既有消息形态，避免给每条插队消息重复注入无关环境块。
-    let enrichedText = userBrowserContext ? `${buildDynamicContext({ userBrowserContext })}\n\n${text}` : text
+    let enrichedText = userBrowserContext || userVaultContext
+      ? `${buildDynamicContext({ userBrowserContext, userVaultContext })}\n\n${text}`
+      : text
     const referencedSessionsBlock = buildReferencedSessionsPrompt(sessionId, mentionedSessionIds, workspaceSlug)
     if (referencedSessionsBlock) {
       enrichedText = `${referencedSessionsBlock}\n\n${enrichedText}`
@@ -3214,6 +3233,13 @@ ${workContext}`
         },
         parent_tool_use_id: null,
         _createdAt: Date.now(),
+        ...(userVaultContext ? {
+          _vaultFocus: {
+            displayName: userVaultContext.displayName,
+            rootPath: userVaultContext.rootPath,
+            focus: userVaultContext.focus,
+          },
+        } : {}),
       } as unknown as SDKMessage
       appendSDKMessages(sessionId, [persistMsg])
       this.flushPendingUserSkillActivations(sessionId, uuid)

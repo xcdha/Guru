@@ -27,7 +27,6 @@ import {
   currentAgentWorkspaceIdAtom,
 } from '@/atoms/agent-atoms'
 import { tearOffPreviewToSplit } from '@/components/diff/preview-opener'
-import { tearOffScratchToSplit } from '@/components/scratch-pad/scratch-pad-opener'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { SidebarToggleButton } from '@/components/app-shell/SidebarToggleButton'
@@ -121,9 +120,6 @@ export function TabBar(): React.ReactElement {
     if (tab?.type === 'preview') {
       tearOffPreviewToSplit(store, tabId)
       return
-    }
-    if (tab?.type === 'scratch') {
-      tearOffScratchToSplit(store)
     }
   }, [store, tabs])
 
@@ -360,7 +356,7 @@ function TabBarInner({
   const handleDragStartWithTearOff = React.useCallback((tabId: string, e: React.PointerEvent) => {
     const tab = tabs.find((t) => t.id === tabId)
     // 仅 preview / scratch Tab 支持拖出转分屏
-    if (!tab || (tab.type !== 'preview' && tab.type !== 'scratch')) {
+    if (!tab || (tab.type !== 'preview')) {
       onDragStart(tabId, e)
       return
     }

@@ -42,7 +42,7 @@ import { activeSessionIdAtom } from '@/atoms/tab-atoms'
 import { activeViewAtom, agentSkillsTabAtom } from '@/atoms/active-view'
 import { settingsOpenAtom, settingsTabAtom } from '@/atoms/settings-tab'
 import { useOpenSession } from '@/hooks/useOpenSession'
-import { MarkdownRichEditor } from '@/components/diff/MarkdownRichEditor'
+import { LiveMarkdownEditor } from '@/components/markdown/LiveMarkdownEditor'
 import type {
   AutomationFeishuNotificationTarget,
   AutomationNotificationTarget,
@@ -734,12 +734,9 @@ export function AutomationFormView({ standalone = false }: { standalone?: boolea
                 id="automation-prompt"
                 className="relative min-h-0 flex-1 overflow-y-auto rounded-xl bg-foreground/[0.03] shadow-inner scrollbar-thin"
               >
-                <MarkdownRichEditor
+                <LiveMarkdownEditor
                   value={form.prompt}
-                  editing
                   onChange={(value) => update({ prompt: value })}
-                  onSave={() => undefined}
-                  onCancel={() => undefined}
                 />
                 {/* Runbook 空状态占位模板：对齐 Multica「自动化名称 / RUNBOOK 智能体每次运行时读取」的编辑区打样 */}
                 {!form.prompt.trim() && (

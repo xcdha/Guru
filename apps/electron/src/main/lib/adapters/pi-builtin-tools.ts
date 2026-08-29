@@ -91,6 +91,7 @@ import {
   discardInapplicableAutomationScheduleFields,
 } from './automation-tool-schema'
 import type { ProductivityToolsSettings } from '../../../types'
+import { getConfiguredVaultFileSystem, getVaultConfig } from '../vault-service'
 
 type PiSdk = typeof import('@earendil-works/pi-coding-agent')
 

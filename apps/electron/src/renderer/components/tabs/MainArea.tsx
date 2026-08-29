@@ -13,15 +13,11 @@ import {
   tabsAtom,
   activeTabIdAtom,
   activeTabAtom,
-  scratchPadPanelOpenAtom,
-  rightWorkspaceSplitRatioAtom,
 } from '@/atoms/tab-atoms'
 import { Panel } from '@/components/app-shell/Panel'
 import { WelcomeView } from '@/components/welcome/WelcomeView'
 import { previewPanelOpenMapAtom, previewSplitRatioAtom } from '@/atoms/preview-atoms'
 import { PreviewPanel } from '@/components/diff/PreviewPanel'
-import { ScratchPadPane } from '@/components/scratch-pad/ScratchPadView'
-import { closeScratchInSplit } from '@/components/scratch-pad/scratch-pad-opener'
 import { useTrackSessionView } from '@/hooks/useTrackSessionView'
 import { TabBar } from './TabBar'
 import { TabContent } from './TabContent'
@@ -32,6 +28,7 @@ import { RepoWikiView } from '@/components/repo-wiki/RepoWikiView'
 import { BotHubSettings } from '@/components/settings/BotHubSettings'
 import { DiscoverView } from '@/components/discover/DiscoverView'
 import { ExcalidrawView } from '@/components/excalidraw/ExcalidrawView'
+import { VaultView } from '@/components/vault/VaultView'
 import { FullscreenSidebarToggleBar } from '@/components/app-shell/FullscreenSidebarToggleBar'
 import { automationFormAtom } from '@/atoms/automation-atoms'
 import { activeViewAtom } from '@/atoms/active-view'
@@ -88,9 +85,7 @@ export function MainArea(): React.ReactElement {
   const [terminalOpenMap, setTerminalOpenMap] = useAtom(terminalPanelOpenMapAtom)
   const [terminalStateMap, setTerminalStateMap] = useAtom(terminalStateMapAtom)
   const [splitRatio, setSplitRatio] = useAtom(previewSplitRatioAtom)
-  const [rightWorkspaceRatio, setRightWorkspaceRatio] = useAtom(rightWorkspaceSplitRatioAtom)
   const previewDragging = React.useRef(false)
-  const rightWorkspaceDragging = React.useRef(false)
   const browserSessionId = activeTab?.type === 'agent' ? activeTab.sessionId : null
 
   // 原生 WebContentsView 不受 React DOM 卸载同步控制。Session 或主视图切换时先在
@@ -207,14 +202,6 @@ export function MainArea(): React.ReactElement {
     && !showBrowserPanel
     && !showBrowserClosing
   const previewSessionId = activeTab?.type === 'agent' ? activeTab.sessionId : null
-  const scratchPanelOpen = useAtomValue(scratchPadPanelOpenAtom)
-  const showScratchPanel =
-    activeTab?.type === 'agent'
-    && scratchPanelOpen
-    && activeView === 'conversations'
-    && !showBrowserPanel
-    && !showBrowserClosing
-
   const requestCloseBrowser = React.useCallback((sessionId: string) => {
     setBrowserClosingState({ sessionId, state: browserStateMap.get(sessionId) ?? null })
     setBrowserOpenMap((previous) => {
@@ -277,8 +264,7 @@ export function MainArea(): React.ReactElement {
 
   const showPreview = (previewOpen || closing) && previewSessionId && activeView === 'conversations'
   const showPreviewClosingOnly = closing && !previewOpen
-  const showPreviewPane = !!showPreview && !(showPreviewClosingOnly && showScratchPanel)
-  const showBothRightPanels = showPreviewPane && showScratchPanel
+  const showPreviewPane = !!showPreview && !showPreviewClosingOnly
 
   const handlePreviewDragStart = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -316,46 +302,6 @@ export function MainArea(): React.ReactElement {
     document.addEventListener('mouseup', onMouseUp)
   }, [splitRatio, setSplitRatio])
 
-  const handleRightWorkspaceDragStart = React.useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    rightWorkspaceDragging.current = true
-    const startX = e.clientX
-    const startRatio = rightWorkspaceRatio
-    const containerEl = (e.currentTarget as HTMLElement).closest('[data-right-workspace]') as HTMLElement | null
-    const containerWidth = containerEl?.clientWidth ?? 1
-    let rafId = 0
-
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'col-resize'
-    document.querySelectorAll('iframe').forEach((f) => { (f as HTMLElement).style.pointerEvents = 'none' })
-
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!rightWorkspaceDragging.current) return
-      if (rafId) return
-      rafId = requestAnimationFrame(() => {
-        rafId = 0
-        const delta = ev.clientX - startX
-        const newRatio = Math.max(0.3, Math.min(0.7, startRatio + delta / containerWidth))
-        setRightWorkspaceRatio(newRatio)
-      })
-    }
-    const onMouseUp = () => {
-      rightWorkspaceDragging.current = false
-      if (rafId) cancelAnimationFrame(rafId)
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
-      document.querySelectorAll('iframe').forEach((f) => { (f as HTMLElement).style.pointerEvents = '' })
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [rightWorkspaceRatio, setRightWorkspaceRatio])
-
-  const handleCloseScratchPanel = React.useCallback(() => {
-    closeScratchInSplit(store)
-  }, [store])
-
   React.useEffect(() => {
     if (tabs.length === 0) {
       console.warn('[FLASH-DEBUG] MainArea: tabs.length === 0, showing WelcomeView!', new Error().stack)
@@ -369,7 +315,7 @@ export function MainArea(): React.ReactElement {
   }, [tabs, activeTabId, setActiveTabId])
 
   // 关闭动画期间右侧面板脱离 flex 流，保持原宽度，只使用 transform/opacity 做退出动画。
-  const rightPanelClosing = showBrowserClosing || (closing && !showScratchPanel)
+  const rightPanelClosing = showBrowserClosing || closing
   const closingOverlayStyle: React.CSSProperties | undefined = rightPanelClosing
     ? {
         position: 'absolute',
@@ -384,16 +330,11 @@ export function MainArea(): React.ReactElement {
     : undefined
 
   // 左侧容器宽度：右侧工作区打开时固定占 splitRatio；关闭动画结束后再恢复全宽。
-  const showRightPanel = showBrowserPanel || showBrowserClosing || showScratchPanel || showPreviewPane
+  const showRightPanel = showBrowserPanel || showBrowserClosing || showPreviewPane
   const leftFlexStyle: React.CSSProperties = showRightPanel
     ? { flex: `0 0 calc(${splitRatio * 100}% - 6px)` }
     : { flex: '1 1 auto' }
-  const previewPaneStyle: React.CSSProperties = showBothRightPanels
-    ? { flex: `0 0 calc(${rightWorkspaceRatio * 100}% - 4px)` }
-    : { flex: '1 1 auto' }
-  const scratchPaneStyle: React.CSSProperties = showBothRightPanels
-    ? { flex: `0 0 calc(${(1 - rightWorkspaceRatio) * 100}% - 4px)` }
-    : { flex: '1 1 auto' }
+  const previewPaneStyle: React.CSSProperties = { flex: '1 1 auto' }
 
   return (
     <>
@@ -446,6 +387,9 @@ export function MainArea(): React.ReactElement {
               <DiscoverView />
             ) : activeView === 'excalidraw-gallery' || activeView === 'excalidraw-editor' ? (
               <ExcalidrawView />
+              ) : activeView === 'vault' ? (
+                // Obsidian Vault：用户授权的 Markdown 笔记库（替代 Scratch Pad）
+                <VaultView />
             ) : (
               <>
                 <TabBar />
@@ -508,17 +452,6 @@ export function MainArea(): React.ReactElement {
                 {showPreviewPane && previewSessionId && (
                   <div className="min-w-0 h-full overflow-hidden" style={previewPaneStyle}>
                     <PreviewPanel sessionId={previewSessionId} />
-                  </div>
-                )}
-                {showBothRightPanels && (
-                  <div
-                    className="w-[8px] cursor-col-resize bg-border/40 hover:bg-border/60 active:bg-border/80 transition-colors flex-shrink-0 self-stretch"
-                    onMouseDown={handleRightWorkspaceDragStart}
-                  />
-                )}
-                {showScratchPanel && (
-                  <div className="min-w-0 h-full overflow-hidden" style={scratchPaneStyle}>
-                    <ScratchPadPane onClose={handleCloseScratchPanel} />
                   </div>
                 )}
               </div>

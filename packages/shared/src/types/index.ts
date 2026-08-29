@@ -84,3 +84,5 @@ export * from '../protocol/channels'
 
 // CodeClaw 桌面助手相关类型
 export * from './codeclaw'
+
+export * from './vault'
