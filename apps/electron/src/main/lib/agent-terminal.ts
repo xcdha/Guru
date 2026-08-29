@@ -23,6 +23,7 @@ import {
   type TerminalResizeInput,
   type TerminalViewState,
   type TerminalWriteInput,
+  type TerminalProfile,
 } from '@guru/shared'
 import { chmodSync, existsSync, realpathSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
@@ -64,10 +65,30 @@ const WARMUP_IDLE_TIMEOUT_MS = 10 * 60 * 1000
 /** 空闲回收检查间隔。 */
 const IDLE_CHECK_INTERVAL_MS = 60 * 1000
 
-/** 解析默认 shell 路径（macOS 优先用户 SHELL，Windows 用 PowerShell）。 */
-function resolveShellPath(): { shell: string; args: string[] } {
+/** 解析默认 shell 路径（macOS 优先用户 SHELL，Windows 用 PowerShell）；支持 profile 覆盖。 */
+function resolveShellPath(profile?: TerminalProfile): { shell: string; args: string[] } {
   if (process.platform === 'win32') {
-    return { shell: 'powershell.exe', args: ['-NoLogo'] }
+    switch (profile) {
+      case 'pwsh': return { shell: 'pwsh.exe', args: ['-NoLogo', '-NoExit'] }
+      case 'powershell': return { shell: 'powershell.exe', args: ['-NoLogo'] }
+      case 'cmd': return { shell: 'cmd.exe', args: ['/K'] }
+      case 'git-bash': {
+        // 尝试常见 Git Bash 安装路径，找不到回退 PowerShell。
+        const candidates = [
+          'C:\\Program Files\\Git\\bin\\bash.exe',
+          'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
+          join(process.env.LOCALAPPDATA ?? '', 'Programs\\Git\\bin\\bash.exe'),
+        ]
+        for (const candidate of candidates) {
+          try {
+            if (existsSync(candidate)) return { shell: candidate, args: ['--login', '-i'] }
+          } catch { /* keep trying */ }
+        }
+        return { shell: 'powershell.exe', args: ['-NoLogo'] }
+      }
+      case 'wsl': return { shell: 'wsl.exe', args: ['--cd', '~'] }
+      default: return { shell: 'powershell.exe', args: ['-NoLogo'] }
+    }
   }
   const shell = process.env.SHELL?.trim() || '/bin/zsh'
   // 交互式登录 shell：读取用户 rc 文件，对齐系统终端体验
@@ -150,7 +171,7 @@ export class AgentTerminalController {
     // node-pty 原生模块：保持 lazy require，避免渲染进程/非终端场景加载
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const ptyModule = require('node-pty') as typeof import('node-pty')
-    const { shell, args } = resolveShellPath()
+    const { shell, args } = resolveShellPath(input.profile)
     const cols = Math.max(2, Math.floor(input.cols) || 80)
     const rows = Math.max(2, Math.floor(input.rows) || 24)
 
@@ -450,6 +471,8 @@ export function openAgentTerminal(input: {
   title?: string
   /** true = 无效 cwd 抛错（TerminalExecute）；false = 回退会话目录（TerminalOpen） */
   strict?: boolean
+  /** 请求的 shell profile（default 用平台默认） */
+  profile?: TerminalProfile
 }): AgentTerminalRecord {
   const cwd = resolveAgentTerminalCwd(input)
   const instanceId = agentTerminalInstanceCounter++
@@ -462,6 +485,7 @@ export function openAgentTerminal(input: {
     cols: 80,
     rows: 24,
     warmup: false,
+    profile: input.profile,
   })
   const record: AgentTerminalRecord = { sessionId: input.sessionId, terminalId, title, cwd, status: 'running' }
   agentTerminals.set(terminalId, record)
@@ -476,6 +500,7 @@ export function executeAgentTerminal(input: {
   sessionCwd?: string
   allowedRoots?: string[]
   title?: string
+  profile?: TerminalProfile
 }): AgentTerminalRecord {
   const command = input.command.trim()
   if (!command || command.length > 64 * 1024) throw new Error('终端命令为空或过长')

@@ -14,11 +14,12 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { extname, resolve, isAbsolute, join } from 'node:path'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
 import type { AgentToolResult } from '@earendil-works/pi-agent-core'
-import type { AgentRuntime, GuruPermissionMode } from '@guru/shared'
+import type { AgentRuntime, GuruPermissionMode, TerminalProfile } from '@guru/shared'
 import type {
   CreateAutomationInput,
   UpdateAutomationInput,
 } from '@guru/shared'
+import { AGENT_IPC_CHANNELS, getTerminalProfilesForPlatform, normalizePathForCompare, parseTerminalProfile } from '@guru/shared'
 import {
   createAutomation,
   deleteAutomation,
@@ -114,6 +115,8 @@ export interface PiBuiltinToolsContext {
   windowsShellAvailable?: boolean
   /** 用户关闭的生产力能力不能注入给 Agent。 */
   productivityTools?: ProductivityToolsSettings
+  /** Windows 省略 shell 时使用用户最后一次明确选择的 profile。 */
+  lastWindowsTerminalProfile?: TerminalProfile
 }
 
 function jsonToolResult(payload: unknown): AgentToolResult<unknown> {
@@ -1381,10 +1384,15 @@ function buildNanoBananaTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
 function buildAgentTerminalTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinition[] {
   const sessionCwd = ctx.agentCwd
 
-  const terminalInput = (args: Record<string, unknown>): { cwd?: string; title?: string } => {
+  const supportedTerminalProfiles = getTerminalProfilesForPlatform(process.platform)
+  const shellProfileDescription = process.platform === 'win32'
+    ? `Shell profile for the new terminal: ${supportedTerminalProfiles.join(' | ')}. default uses Windows PowerShell; pwsh, git-bash, and wsl select their respective Windows shell. Invalid values fail explicitly.`
+    : `Shell profile for the new terminal: ${supportedTerminalProfiles.join(' | ')}. default preserves the user's configured login shell; zsh and bash apply only to this terminal.`
+  const terminalInput = (args: Record<string, unknown>): { cwd?: string; title?: string; profile?: TerminalProfile } => {
     const cwd = typeof args.cwd === 'string' && args.cwd.trim() ? args.cwd.trim() : undefined
     const title = typeof args.title === 'string' && args.title.trim() ? args.title.trim() : undefined
-    return { cwd, title }
+    const profile = 'shell' in args ? parseTerminalProfile(args.shell) : undefined
+    return { cwd, title, profile }
   }
 
   return [
@@ -1396,6 +1404,7 @@ function buildAgentTerminalTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDe
       parameters: Type.Object({
         cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative initial directory within the current session\'s authorized roots.' })),
         title: Type.Optional(Type.String({ description: 'Short visible terminal title.' })),
+        shell: Type.Optional(Type.String({ description: `${shellProfileDescription} Used only when opening a new terminal.` })),
       }),
       async execute(_toolCallId: string, params: unknown) {
         const record = openAgentTerminal({ sessionId: ctx.sessionId, sessionCwd, allowedRoots: ctx.allowedRoots, ...terminalInput(params as Record<string, unknown>) })
@@ -1411,6 +1420,7 @@ function buildAgentTerminalTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDe
         command: Type.String({ description: 'Complete command to execute in the controlled shell. Do not prepend shell wrappers.' }),
         cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative directory within the current authorized roots.' })),
         title: Type.Optional(Type.String({ description: 'Short visible terminal title.' })),
+        shell: Type.Optional(Type.String({ description: `${shellProfileDescription} Used only when opening a new terminal.` })),
       }),
       async execute(_toolCallId: string, params: unknown) {
         const args = params as Record<string, unknown>

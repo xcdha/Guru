@@ -1469,6 +1469,7 @@ export class AgentOrchestrator {
               triggeredBy: input.triggeredBy,
               productivityTools,
               windowsShellAvailable: process.platform !== 'win32',
+              lastWindowsTerminalProfile: appSettings.lastWindowsTerminalProfile,
             })
             piBuiltinTools = result.tools
             return { collaborationAvailable: result.collaborationAvailable }
