@@ -6,6 +6,7 @@
  */
 
 import { atom } from 'jotai'
+import type { RightWorkspaceSplitState } from '@/lib/right-workspace-split'
 import type { Getter } from 'jotai'
 import type { Store } from 'jotai/vanilla/store'
 import { atomFamily } from 'jotai-family'
@@ -528,7 +529,6 @@ export const agentSidePanelOpenAtomFamily = atomFamily((sessionId: string) => at
 /** 侧面板宽度（全局共享，用户拖拽后持久化） */
 export const agentSidePanelWidthAtom = atomWithStorage<number>('guru-agent-sidepanel-width', 280)
 
-export type AgentSidePanelTab = 'files' | 'session' | 'workspace' | 'changes' | 'chat'
 
 export type AgentFileSourceFilter = 'session' | 'project'
 
@@ -537,6 +537,263 @@ export const agentDiffPanelTabAtom = atom<Map<string, AgentSidePanelTab>>(new Ma
 
 /** Files 面板内部来源筛选（per-session）：会话文件 / 项目文件。 */
 export const agentFileSourceFilterMapAtom = atom<Record<string, AgentFileSourceFilter>>({})
+
+/** 更新单个目录的展开状态，同时保留其他文件树与目录的状态。 */
+export function updateFileBrowserExpandedPath(
+  state: Map<string, Map<string, boolean>>,
+  stateKey: string,
+  path: string,
+  expanded: boolean,
+): Map<string, Map<string, boolean>> {
+  const current = state.get(stateKey)
+  if (current?.get(path) === expanded) return state
+
+  const nextPaths = new Map(current)
+  nextPaths.set(path, expanded)
+  const next = new Map(state)
+  next.set(stateKey, nextPaths)
+  return next
+}
+
+/** Files Tab 各滚动视图的 scrollTop，按会话和文件视图隔离。 */
+export const fileBrowserScrollTopMapAtom = atom<Map<string, number>>(new Map())
+
+/** 清理已删除会话遗留的文件树 UI 状态；保留 standalone FileBrowser 状态。 */
+export function pruneFileBrowserStateMap<T>(state: Map<string, T>, retainedSessionIds: ReadonlySet<string>): Map<string, T> {
+  let changed = false
+  const next = new Map(state)
+  for (const key of state.keys()) {
+    const separatorIndex = key.indexOf('\u0002')
+    const sessionId = separatorIndex >= 0 ? key.slice(0, separatorIndex) : key
+    if (sessionId !== 'standalone' && !retainedSessionIds.has(sessionId)) {
+      next.delete(key)
+      changed = true
+    }
+  }
+  return changed ? next : state
+}
+
+/**
+ * 工作区级组件：内容归属项目而非单个会话，但在当前会话的右侧工作区中呈现。
+ * 同一项目下的打开状态跨会话保留；关闭一个组件不会影响其他项目。
+ */
+export type WorkspaceComponentTab = 'todos' | 'calendar' | 'automations' | 'skills' | 'mcp' | 'memory' | 'vault'
+export const WORKSPACE_COMPONENT_TABS: readonly WorkspaceComponentTab[] = ['todos', 'calendar', 'automations', 'skills', 'mcp', 'memory', 'vault']
+
+export function isWorkspaceComponentTab(tab: AgentSidePanelTab | string): tab is WorkspaceComponentTab {
+  return (WORKSPACE_COMPONENT_TABS as readonly string[]).includes(tab)
+}
+
+/** 过滤旧版本或异常持久化数据，避免未知组件渲染成空的右侧 Tab。 */
+export function sanitizeWorkspaceComponentTabs(tabs: readonly string[]): WorkspaceComponentTab[] {
+  return tabs.every(isWorkspaceComponentTab)
+    ? tabs as WorkspaceComponentTab[]
+    : tabs.filter(isWorkspaceComponentTab)
+}
+
+/** 协作子 Agent 尚未提供标题时仍需有可见的 Tab 标签。 */
+export function getDelegationTabLabel(title: string | null | undefined): string {
+  return title?.trim() || '委派任务'
+}
+
+export type AgentSidePanelBaseTab = 'files' | 'session' | 'workspace' | 'changes' | 'chat' | 'temporary-agent' | WorkspaceComponentTab
+export type AgentSidePanelTab = AgentSidePanelBaseTab | `exploration:${string}` | `delegation:${string}` | `browser:${string}` | `preview:${string}` | `terminal:${string}`
+/** 工作区组件、每个 Pi 探索分支、协作子 Agent、浏览器网页和文件预览都处于右侧工作区顶栏。 */
+
+/** 用户主动进入这些项目级能力时，Agent 后续的改动提示不得抢走当前视图。 */
+export function isUserPriorityWorkspaceComponentTab(
+  tab: AgentSidePanelTab | 'browser' | 'preview' | undefined,
+): tab is Extract<WorkspaceComponentTab, 'skills' | 'memory'> {
+  return tab === 'skills' || tab === 'memory'
+}
+
+/** Pi `/tree` 探索分支在右侧工作区的展示信息。 */
+export interface AgentExplorationBranchTab {
+  /** Pi 原生 fork 生成的独立 Proma session。 */
+  sessionId: string
+  /** 作为分叉锚点的 Proma assistant message UUID。 */
+  sourceMessageId: string
+  /** 给用户看的分叉来源。 */
+  sourceLabel: string
+}
+
+/**
+ * 右侧探索分支：key 为主线 Agent sessionId，value 为从其 Pi session tree 分叉出的已打开分支。
+ * 仅管理右侧展示；branch artifact 本身持久化在普通 Agent session 中，关闭 Tab 不会删除它。
+ */
+export const agentSideTemporaryAgentMapAtom = atom<Map<string, AgentExplorationBranchTab[]>>(new Map())
+
+export function getExplorationSidePanelTab(branchSessionId: string): AgentSidePanelTab {
+  return `exploration:${branchSessionId}`
+}
+
+/** 已在右侧打开的协作子 Agent：key 为父会话 ID，value 为子会话 ID 列表。 */
+export const agentSideDelegationMapAtom = atom<Map<string, string[]>>(new Map())
+
+export function getDelegationSidePanelTab(childSessionId: string): AgentSidePanelTab {
+  return `delegation:${childSessionId}`
+}
+
+export function getDelegationSessionIdFromSidePanelTab(tab: AgentSidePanelTab | 'delegation'): string | null {
+  return tab.startsWith('delegation:') ? tab.slice('delegation:'.length) : null
+}
+
+export function isDelegationSidePanelTab(tab: AgentSidePanelTab | 'delegation'): tab is `delegation:${string}` {
+  return tab.startsWith('delegation:')
+}
+
+export function getExplorationSessionIdFromSidePanelTab(tab: AgentSidePanelTab | 'exploration'): string | null {
+  return tab.startsWith('exploration:') ? tab.slice('exploration:'.length) : null
+}
+
+export function isExplorationSidePanelTab(tab: AgentSidePanelTab | 'exploration'): tab is `exploration:${string}` {
+  return tab.startsWith('exploration:')
+}
+
+export function getBrowserSidePanelTab(tabId: string): AgentSidePanelTab {
+  return `browser:${tabId}`
+}
+
+export function getBrowserTabIdFromSidePanelTab(tab: AgentSidePanelTab | 'browser'): string | null {
+  return tab.startsWith('browser:') ? tab.slice('browser:'.length) : null
+}
+
+export function isBrowserSidePanelTab(tab: AgentSidePanelTab | 'browser' | 'preview'): tab is `browser:${string}` {
+  return tab.startsWith('browser:')
+}
+
+export function getPreviewSidePanelTab(previewId: string): AgentSidePanelTab {
+  return `preview:${previewId}`
+}
+
+export function getPreviewIdFromSidePanelTab(tab: AgentSidePanelTab | 'preview'): string | null {
+  return tab.startsWith('preview:') ? tab.slice('preview:'.length) : null
+}
+
+/** 终端仅在本次应用运行期存在，按 Agent 会话归属右侧工作区。 */
+export interface AgentTerminalTab {
+  terminalId: string
+  title: string
+  /** 用户从 Worktree 入口打开时，终端固定在对应根目录。 */
+  cwd?: string
+}
+
+export const agentTerminalTabsAtom = atom<Map<string, AgentTerminalTab[]>>(new Map())
+
+export function getTerminalSidePanelTab(terminalId: string): AgentSidePanelTab {
+  return `terminal:${terminalId}`
+}
+
+export function getTerminalIdFromSidePanelTab(tab: AgentSidePanelTab | 'terminal'): string | null {
+  return tab.startsWith('terminal:') ? tab.slice('terminal:'.length) : null
+}
+
+/**
+ * 项目级能力的右侧 Tab 打开状态按 Agent session 持久化。能力的数据仍归属于 workspace，
+ * 但同一 workspace 的后台会话不得改变彼此的右侧 Tab，避免抢走用户焦点。
+ */
+export const agentSessionComponentOpenMapAtom = atomWithStorage<Record<string, WorkspaceComponentTab[]>>(
+  'proma-agent-session-component-tabs',
+  {},
+  undefined,
+  { getOnInit: true },
+)
+
+export const agentSessionComponentTabsAtomFamily = atomFamily((sessionId: string) => atom(
+  (get) => get(agentSessionComponentOpenMapAtom)[sessionId] ?? [],
+  (_get, set, update: WorkspaceComponentTab[] | ((previous: WorkspaceComponentTab[]) => WorkspaceComponentTab[])) => {
+    set(agentSessionComponentOpenMapAtom, (previous) => {
+      const current = previous[sessionId] ?? []
+      const next = typeof update === 'function' ? update(current) : update
+      if (next === current) return previous
+      return { ...previous, [sessionId]: next }
+    })
+  },
+))
+
+/** 侧面板当前工作区：基础视图或某个浏览器网页（per-session Map）。 */
+
+/** 当前 renderer 运行期内的右侧双 Pane 状态；动态 Tab 失效时由 SidePanel 主动清理。 */
+export const agentSidePanelSplitMapAtom = atom<Map<string, RightWorkspaceSplitState>>(new Map())
+
+/** 双 Pane 分隔比例按 Session 持久化，但不持久化可能在重启后失效的动态 Tab ID。 */
+export const agentSidePanelSplitRatioMapAtom = atomWithStorage<Record<string, number>>(
+  'proma-agent-workspace-split-ratio-by-session',
+  {},
+  undefined,
+  { getOnInit: true },
+)
+
+/** Agent 历史中的 Skill 引用请求在 Skills Tab 内打开对应详情。 */
+export interface SkillDetailNavigationRequest {
+  skillSlug: string
+  /** 用于防止跨项目会话误打开同名 Skill。 */
+  workspaceSlug?: string
+}
+
+/** 历史引用导航属于会话级短暂 UI 状态，避免其他会话的 Skills 视图消费请求。 */
+export const skillDetailNavigationAtomFamily = atomFamily((sessionId: string) => atom<SkillDetailNavigationRequest | null>(null))
+
+/** 在当前 Agent 会话中打开并聚焦一个项目级组件。 */
+export const openWorkspaceComponentAtom = atom(
+  null,
+  (get, set, component: WorkspaceComponentTab) => {
+    const sessionId = get(currentAgentSessionIdAtom)
+    if (!sessionId) return
+    set(agentSessionComponentTabsAtomFamily(sessionId), (previous) => (
+      previous.includes(component) ? previous : [...previous, component]
+    ))
+    set(agentSidePanelOpenAtomFamily(sessionId), true)
+    set(agentDiffPanelTabAtom, (previous) => {
+      if (previous.get(sessionId) === component) return previous
+      const next = new Map(previous)
+      next.set(sessionId, component)
+      return next
+    })
+  },
+)
+
+/**
+ * Agent 改动项目级数据时，仅在产生改动的 session 展示对应 Tab。
+ * 若该 session 正在查看 Skills 或项目记忆，保留用户显式选择的焦点。
+ */
+export const revealChangedWorkspaceComponentAtom = atom(
+  null,
+  (get, set, { sessionId, component }: { sessionId: string; component: WorkspaceComponentTab }) => {
+    set(agentSessionComponentTabsAtomFamily(sessionId), (previous) => (
+      previous.includes(component) ? previous : [...previous, component]
+    ))
+
+    const activeTab = get(agentDiffPanelTabAtom).get(sessionId)
+    const preservesUserFocus = get(agentSidePanelOpenAtomFamily(sessionId))
+      && isUserPriorityWorkspaceComponentTab(activeTab)
+    if (preservesUserFocus) return
+
+    set(agentSidePanelOpenAtomFamily(sessionId), true)
+    set(agentDiffPanelTabAtom, (previous) => {
+      if (previous.get(sessionId) === component) return previous
+      const next = new Map(previous)
+      next.set(sessionId, component)
+      return next
+    })
+  },
+)
+
+/** 关闭当前 session 的一个组件；若它正被当前会话查看，回退到文件。 */
+export const closeWorkspaceComponentAtom = atom(
+  null,
+  (get, set, component: WorkspaceComponentTab) => {
+    const sessionId = get(currentAgentSessionIdAtom)
+    if (!sessionId) return
+    set(agentSessionComponentTabsAtomFamily(sessionId), (previous) => previous.filter((item) => item !== component))
+    set(agentDiffPanelTabAtom, (previous) => {
+      if (previous.get(sessionId) !== component) return previous
+      const next = new Map(previous)
+      next.set(sessionId, 'files')
+      return next
+    })
+  },
+)
 
 /** Diff 视图模式：'split' | 'unified'，默认使用统一预览 */
 export const agentDiffViewModeAtom = atom<'split' | 'unified'>('unified')

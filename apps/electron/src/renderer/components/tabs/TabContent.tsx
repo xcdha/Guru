@@ -11,7 +11,6 @@ import { tabsAtom } from '@/atoms/tab-atoms'
 import { ChatView } from '@/components/chat'
 import { AgentView } from '@/components/agent'
 import { PreviewTabContent } from '@/components/diff/PreviewTabContent'
-import { ScratchPadView } from '@/components/scratch-pad/ScratchPadView'
 import { GuideView } from '@/components/tutorial/GuideView'
 import { cn } from '@/lib/utils'
 import { TabErrorBoundary } from './TabErrorBoundary'
@@ -76,9 +75,6 @@ function TabContentView({ tabId }: TabContentProps): React.ReactElement {
     )
   }
 
-  if (tab.type === 'scratch') {
-    return <ScratchPadView />
-  }
 
   if (tab.type === 'tutorial') {
     return <TutorialTabContent />
