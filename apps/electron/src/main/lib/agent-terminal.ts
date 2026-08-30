@@ -507,10 +507,22 @@ export function executeAgentTerminal(input: {
   allowedRoots?: string[]
   title?: string
   profile?: TerminalProfile
-}): AgentTerminalRecord {
+  /** 复用已有终端：传入同会话且仍在运行的 terminalId 时，直接向该 pty 写入命令，不新开 Tab */
+  terminalId?: string
+}): AgentTerminalRecord & { reused?: boolean } {
   const command = input.command.trim()
   if (!command || command.length > 64 * 1024) throw new Error('终端命令为空或过长')
   const title = input.title?.trim() || `Agent · ${command.replace(/\s+/g, ' ').slice(0, 48)}`
+  // 复用分支：terminalId 属于本会话、pty 仍在运行，且 cwd 一致时直接写入命令
+  const existing = input.terminalId ? agentTerminals.get(input.terminalId) : undefined
+  if (existing && existing.sessionId === input.sessionId && existing.status === 'running') {
+    const state = agentTerminalController.getState(existing.terminalId)
+    if (state && (!input.cwd || existing.cwd === input.cwd)) {
+      existing.title = title
+      agentTerminalController.write({ terminalId: existing.terminalId, data: `${command}\r` })
+      return { ...existing, reused: true }
+    }
+  }
   const record = openAgentTerminal({ ...input, title, strict: true })
   agentTerminalController.write({ terminalId: record.terminalId, data: `${command}\r` })
   return record
