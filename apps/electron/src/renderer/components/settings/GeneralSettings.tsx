@@ -100,6 +100,7 @@ export function GeneralSettings(): React.ReactElement {
   const [nameInput, setNameInput] = React.useState(userProfile.userName);
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
   const [archiveAfterDays, setArchiveAfterDays] = React.useState<number>(7);
+  const [autoRevealAgentTerminal, setAutoRevealAgentTerminal] = React.useState(true);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 加载归档天数 / 默认思考深度
@@ -108,6 +109,7 @@ export function GeneralSettings(): React.ReactElement {
       .getSettings()
       .then((settings) => {
         setArchiveAfterDays(settings.archiveAfterDays ?? 7);
+        setAutoRevealAgentTerminal(settings.autoRevealAgentTerminal ?? true);
         setDefaultThinkingLevel(
           settings.defaultThinkingLevel ?? DEFAULT_AGENT_THINKING_LEVEL,
         );
@@ -128,6 +130,16 @@ export function GeneralSettings(): React.ReactElement {
   }
 
   /** 更新 Git/PR 推广标识开关 */
+
+  /** 切换 AI 自动弹出终端 */
+  const handleAutoRevealAgentTerminalChange = async (checked: boolean): Promise<void> => {
+    setAutoRevealAgentTerminal(checked);
+    try {
+      await window.electronAPI.updateSettings({ autoRevealAgentTerminal: checked });
+    } catch (error) {
+      console.error("[通用设置] 更新自动弹出终端失败:", error);
+    }
+  };
 
   /** 更新归档天数 */
   const handleArchiveDaysChange = async (value: string): Promise<void> => {
@@ -344,7 +356,14 @@ export function GeneralSettings(): React.ReactElement {
             checked={productivityTools.obsidianEnabled}
             onCheckedChange={(checked) => { void handleProductivityToolsChange({ obsidianEnabled: checked }) }}
           />
+          
           <SettingsToggle
+            label="AI 自动弹出终端"
+            description="AI 执行终端命令时自动弹出可见终端面板；关闭后命令仍会执行但不自动弹出，可手动点击终端按钮查看"
+            checked={autoRevealAgentTerminal}
+            onCheckedChange={(checked) => { void handleAutoRevealAgentTerminalChange(checked) }}
+          />
+<SettingsToggle
             label="桌面通知"
             description="Agent 完成任务或需要操作时发送通知"
             checked={notificationsEnabled}
