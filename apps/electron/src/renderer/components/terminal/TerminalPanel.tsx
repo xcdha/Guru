@@ -93,10 +93,22 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
   }, [sessionId, stateMap])
 
   // 面板挂载时创建第一个终端实例
-  const [terminals, setTerminals] = React.useState<TerminalInstance[]>(() => [
-    { terminalId: buildTerminalId(sessionId, 0), instanceId: 0 },
-  ])
-  const [activeTerminalId, setActiveTerminalId] = React.useState<string>(() => buildTerminalId(sessionId, 0))
+    // 初始化时创建一个终端实例；若 stateMap 已有 Agent 终端（面板因 Agent 命令才打开），则不创建默认空实例 Terminal 1
+  const initialTerminals = React.useMemo<TerminalInstance[]>(() => {
+    const prefix = `${sessionId}#`
+    const agentEntries: TerminalInstance[] = []
+    for (const [terminalId, state] of stateMap) {
+      if (!terminalId.startsWith(prefix)) continue
+      const instanceId = Number(terminalId.split('#').pop() ?? 0)
+      if (instanceId >= 1000) agentEntries.push({ terminalId, instanceId, title: state.title })
+    }
+    if (agentEntries.length > 0) return agentEntries
+    return [{ terminalId: buildTerminalId(sessionId, 0), instanceId: 0 }]
+  }, [sessionId, stateMap])
+  const [terminals, setTerminals] = React.useState<TerminalInstance[]>(initialTerminals)
+  const [activeTerminalId, setActiveTerminalId] = React.useState<string>(
+    () => initialTerminals[0]?.terminalId ?? buildTerminalId(sessionId, 0),
+  )
 
   // 面板关闭：销毁该会话全部 pty + 清理全局状态
   const close = React.useCallback(async () => {
