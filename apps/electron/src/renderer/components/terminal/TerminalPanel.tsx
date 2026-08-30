@@ -40,6 +40,21 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
   const draggingRef = React.useRef(false)
   const nextInstanceIdRef = React.useRef(0)
 
+  // 听主进程 STATE_CHANGED：Agent 执行 TerminalExecute/TerminalOpen 时自动加入并切换到该终端实例
+  React.useEffect(() => {
+    const subscribe = (window.electronAPI as Partial<typeof window.electronAPI>).onAgentTerminalStateChanged
+    if (typeof subscribe !== 'function') return
+    return subscribe((event: { state: import('@guru/shared').TerminalViewState }) => {
+      if (event.state.sessionId !== sessionId) return
+      setTerminals((previous) => {
+        if (previous.some((t) => t.terminalId === event.state.terminalId)) return previous
+        const instanceId = Number(event.state.terminalId.split('#').pop() ?? 0)
+        return [...previous, { terminalId: event.state.terminalId, instanceId }]
+      })
+      setActiveTerminalId(event.state.terminalId)
+    })
+  }, [sessionId])
+
   // 面板挂载时创建第一个终端实例
   const [terminals, setTerminals] = React.useState<TerminalInstance[]>(() => [
     { terminalId: buildTerminalId(sessionId, 0), instanceId: 0 },
