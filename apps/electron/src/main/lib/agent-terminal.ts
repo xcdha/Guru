@@ -70,8 +70,8 @@ const IDLE_CHECK_INTERVAL_MS = 60 * 1000
 function resolveShellPath(profile?: TerminalProfile): { shell: string; args: string[] } {
   if (process.platform === 'win32') {
     switch (profile) {
-      case 'pwsh': return { shell: 'pwsh.exe', args: ['-NoLogo', '-NoExit'] }
-      case 'powershell': return { shell: 'powershell.exe', args: ['-NoLogo'] }
+      case 'pwsh': return { shell: 'pwsh.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
+      case 'powershell': return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
       case 'cmd': return { shell: 'cmd.exe', args: ['/K'] }
       case 'git-bash': {
         // 尝试常见 Git Bash 安装路径，找不到回退 PowerShell。
@@ -88,7 +88,7 @@ function resolveShellPath(profile?: TerminalProfile): { shell: string; args: str
         return { shell: 'powershell.exe', args: ['-NoLogo'] }
       }
       case 'wsl': return { shell: 'wsl.exe', args: ['--cd', '~'] }
-      default: return { shell: 'powershell.exe', args: ['-NoLogo'] }
+      default: return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
     }
   }
   const shell = process.env.SHELL?.trim() || '/bin/zsh'
