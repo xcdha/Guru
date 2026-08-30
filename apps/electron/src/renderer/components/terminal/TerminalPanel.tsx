@@ -55,6 +55,28 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
     })
   }, [sessionId])
 
+  // 面板挂载时：从全局 stateMap 补全已存在的 Agent 终端实例（STATE_CHANGED 事件可能已在面板挂载前发生）
+  React.useEffect(() => {
+    const prefix = `${sessionId}#`
+    const agentEntries: TerminalInstance[] = []
+    for (const [terminalId, state] of stateMap) {
+      if (!terminalId.startsWith(prefix)) continue
+      const instanceId = Number(terminalId.split('#').pop() ?? 0)
+      if (instanceId >= 1000) agentEntries.push({ terminalId, instanceId })
+    }
+    if (agentEntries.length === 0) return
+    setTerminals((previous) => {
+      const existing = new Set(previous.map((t) => t.terminalId))
+      const additions = agentEntries.filter((t) => !existing.has(t.terminalId))
+      return additions.length > 0 ? [...previous, ...additions] : previous
+    })
+    // 如果当前活跃是默认空实例（0）且存在 Agent 实例，切换到 Agent 实例
+    setActiveTerminalId((current) => {
+      if (current !== buildTerminalId(sessionId, 0)) return current
+      return agentEntries.at(-1)!.terminalId
+    })
+  }, [sessionId, stateMap])
+
   // 面板挂载时创建第一个终端实例
   const [terminals, setTerminals] = React.useState<TerminalInstance[]>(() => [
     { terminalId: buildTerminalId(sessionId, 0), instanceId: 0 },
