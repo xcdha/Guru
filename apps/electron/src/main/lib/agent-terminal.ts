@@ -316,9 +316,8 @@ export class AgentTerminalController {
   drainBuffer(terminalId: string): string {
     const entry = this.entries.get(terminalId)
     if (!entry) return ''
-    const buffered = entry.buffer
-    entry.buffer = ''
-    return buffered
+    // 保留缓冲区而不清空：面板隐藏后重新打开时能看到历史输出，而非白屏
+    return entry.buffer
   }
 
   /** Agent 回读终端输出（TerminalRead 工具用，带 offset 分页）。 */
