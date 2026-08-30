@@ -1494,7 +1494,9 @@ function createPromaPowerShellToolOptions(runtimeEnv: AgentRuntimeEnv | undefine
   if (!runtimeEnv) return undefined
   return {
     spawnHook: ({ command, cwd, env }) => ({
-      command,
+      // Windows PowerShell 默认 GBK 输出，在命令前先设置 UTF-8 以免中文乱码
+      command: `[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null
+${command}`,
       cwd,
       env: mergeRuntimeEnv(env, runtimeEnv.env),
     }),
