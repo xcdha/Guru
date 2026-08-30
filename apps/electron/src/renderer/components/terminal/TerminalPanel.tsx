@@ -21,6 +21,8 @@ const MAX_HEIGHT = 600
 interface TerminalInstance {
   terminalId: string
   instanceId: number
+  /** 可选标题（Agent 终端为执行的命令） */
+  title?: string
 }
 
 function buildTerminalId(sessionId: string, instanceId: number): string {
@@ -62,7 +64,7 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
       setTerminals((previous) => {
         if (previous.some((t) => t.terminalId === event.state.terminalId)) return previous
         const instanceId = Number(event.state.terminalId.split('#').pop() ?? 0)
-        return [...previous, { terminalId: event.state.terminalId, instanceId }]
+        return [...previous, { terminalId: event.state.terminalId, instanceId, title: event.state.title }]
       })
       setActiveTerminalId(event.state.terminalId)
     })
@@ -75,7 +77,7 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
     for (const [terminalId, state] of stateMap) {
       if (!terminalId.startsWith(prefix)) continue
       const instanceId = Number(terminalId.split('#').pop() ?? 0)
-      if (instanceId >= 1000) agentEntries.push({ terminalId, instanceId })
+      if (instanceId >= 1000) agentEntries.push({ terminalId, instanceId, title: state.title })
     }
     if (agentEntries.length === 0) return
     setTerminals((previous) => {
@@ -198,13 +200,20 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
               )}
             >
-              <button
-                type="button"
-                className="min-w-0"
-                onClick={() => setActiveTerminalId(terminal.terminalId)}
-              >
-                <span className="truncate">{getTerminalTabLabel(terminal.instanceId)}</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="min-w-0"
+                    onClick={() => setActiveTerminalId(terminal.terminalId)}
+                  >
+                    <span className="truncate">{getTerminalTabLabel(terminal.instanceId)}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{terminal.title ?? getTerminalTabLabel(terminal.instanceId)}</p>
+                </TooltipContent>
+              </Tooltip>
               {terminals.length > 1 && (
                 <button
                   type="button"
