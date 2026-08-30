@@ -27,6 +27,19 @@ function buildTerminalId(sessionId: string, instanceId: number): string {
   return `${sessionId}#${instanceId}`
 }
 
+/** 判断终端实例是否由 Agent 创建（instanceId >= 1000 为 Agent 专用空间） */
+function isAgentTerminalInstance(instanceId: number): boolean {
+  return instanceId >= 1000
+}
+
+/** 终端 tab 显示名：Agent 终端显示 "Agent N"，手动终端显示 "Terminal N" */
+function getTerminalTabLabel(instanceId: number): string {
+  if (isAgentTerminalInstance(instanceId)) {
+    return `Agent ${instanceId - 999}`
+  }
+  return `Terminal ${instanceId + 1}`
+}
+
 interface TerminalPanelProps {
   sessionId: string
   onClose: () => void
@@ -190,7 +203,7 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
                 className="min-w-0"
                 onClick={() => setActiveTerminalId(terminal.terminalId)}
               >
-                <span className="truncate">Terminal {terminal.instanceId + 1}</span>
+                <span className="truncate">{getTerminalTabLabel(terminal.instanceId)}</span>
               </button>
               {terminals.length > 1 && (
                 <button
