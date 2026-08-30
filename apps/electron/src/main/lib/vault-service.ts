@@ -469,13 +469,13 @@ function vaultSummary(config: VaultConfig): VaultSummary {
 
 function configureVaultAt(rootPath: string, configPath: string, options: { inboxPath?: string; allowAgentWrites?: boolean } = {}): VaultSummary {
   const root = assertVaultRoot(rootPath)
-  const inboxPath = options.inboxPath?.trim() || 'Proma Inbox'
+  const inboxPath = options.inboxPath?.trim() || 'Guru Inbox'
   const normalizedInboxPath = normalizeRelativeMarkdownPath(join(inboxPath, 'placeholder.md')).replace(/\/placeholder\.md$/, '')
   const managedRootPath = resolveDefaultVaultDir(dirname(configPath))
   const isManagedRoot = existsSync(managedRootPath) && root === realpathSync(managedRootPath)
   const config: VaultConfig = {
     rootPath: root,
-    displayName: isManagedRoot ? 'Proma Vault' : basename(root) || 'Vault',
+    displayName: isManagedRoot ? 'Guru Vault' : basename(root) || 'Vault',
     inboxPath: normalizedInboxPath,
     allowAgentWrites: options.allowAgentWrites === true,
     configuredAt: Date.now(),
@@ -490,7 +490,7 @@ export function configureVault(rootPath: string, options: { inboxPath?: string; 
 
 
 export function selectDefaultVault(): VaultSummary {
-  return configureVault(getDefaultVaultDir(), { inboxPath: 'Proma Inbox', allowAgentWrites: false })
+  return configureVault(getDefaultVaultDir(), { inboxPath: 'Guru Inbox', allowAgentWrites: false })
 }
 
 
@@ -535,14 +535,14 @@ export function discoverVaultCandidates(): VaultCandidate[] {
     managedRoot = null
   }
   const candidates: VaultCandidate[] = managedRoot
-    ? [{ path: managedRoot, displayName: 'Proma Vault', isObsidianVault: existsSync(join(managedRoot, '.obsidian')), isPromaManaged: true }]
+    ? [{ path: managedRoot, displayName: 'Guru Vault', isObsidianVault: existsSync(join(managedRoot, '.obsidian')), isGuruManaged: true }]
     : []
   return [...candidates, ...discoverObsidianVaultCandidates()]
 }
 
 /**
  * All valid Vault roots are ambient local-file permissions for an Agent run.
- * Obsidian's registry is the source of truth; the selected Proma Vault is also
+ * Obsidian's registry is the source of truth; the selected Guru Vault is also
  * retained for users that have not installed Obsidian.
  */
 export function getAgentVaultRoots(): string[] {
@@ -589,7 +589,7 @@ export function discoverObsidianVaultCandidates(): VaultCandidate[] {
             path: root,
             displayName: basename(root) || 'Vault',
             isObsidianVault: existsSync(join(root, '.obsidian')),
-            isPromaManaged: false,
+            isGuruManaged: false,
           })
         } catch {
           // A stale Obsidian registry entry is only a suggestion and can be ignored.
