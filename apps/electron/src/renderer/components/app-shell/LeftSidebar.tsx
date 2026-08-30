@@ -3650,6 +3650,31 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
               <TooltipContent side="right">Yoda 知识库（待开发）</TooltipContent>
             </Tooltip>
           )}
+          {/* Obsidian Vault：用户授权的 Markdown 笔记库 */}
+          {mode === 'agent' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Obsidian"
+                  onClick={handleOpenVault}
+                  className="group relative flex size-10 items-center justify-center p-1 titlebar-no-drag"
+                >
+                  <span
+                    className={cn(
+                      'flex size-8 items-center justify-center rounded-[10px] transition-[background-color,color,border-color]',
+                      activeView === 'vault'
+                        ? 'border-primary/80 bg-primary text-primary-foreground shadow-sm'
+                        : 'border-border/45 bg-foreground/[0.025] text-foreground/45 group-hover:border-border/80 group-hover:bg-foreground/[0.06] group-hover:text-foreground/80',
+                    )}
+                  >
+                    <ObsidianIcon size={16} />
+                  </span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Obsidian</TooltipContent>
+            </Tooltip>
+          )}
 
         </div>
 
@@ -4111,11 +4136,27 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                     ? 'bg-accent-foreground/[0.10] text-foreground'
                     : 'text-foreground/60 hover:bg-accent-foreground/[0.08] hover:text-foreground'
                 )}
+
+            
               >
                 <Library size={13} className="shrink-0 text-foreground/45" />
                 <span className="min-w-0 flex-1 truncate text-left">知识库</span>
               </button>
             )}
+            {/* Obsidian Vault：用户授权的 Markdown 笔记库 */}
+            <button
+              type="button"
+              onClick={handleOpenVault}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-[12.5px] transition-colors',
+                activeView === 'vault'
+                  ? 'bg-accent-foreground/[0.10] text-foreground'
+                  : 'text-foreground/60 hover:bg-accent-foreground/[0.08] hover:text-foreground',
+              )}
+            >
+              <ObsidianIcon size={13} className="shrink-0 text-foreground/45" />
+              <span className="min-w-0 flex-1 truncate text-left">Obsidian</span>
+            </button>
           </div>
         </SidebarModule>
       </div>
