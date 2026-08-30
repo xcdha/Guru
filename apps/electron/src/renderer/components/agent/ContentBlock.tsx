@@ -16,9 +16,12 @@ import {
   Loader2,
   Brain,
   MessageSquareText,
+  Terminal,
 } from 'lucide-react'
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
+import { activeSessionIdAtom } from '@/atoms/tab-atoms'
+import { terminalPanelOpenMapAtom } from '@/atoms/terminal-atoms'
 import { cn } from '@/lib/utils'
 import { MarkdownStreamingContext, MessageResponse } from '@/components/ai-elements/message'
 import { getToolIcon, extractFilePath } from './tool-utils'
@@ -39,6 +42,23 @@ import type {
   SDKToolResultBlock,
   SDKSystemMessage,
 } from '@guru/shared'
+
+// ===== 发送命令到终端 =====
+
+/** 渲染层自增的 Agent 终端实例 ID（与主进程 Agent 专用空间一致，>= 1000） */
+let agentTerminalInstanceSeq = 1000
+
+/** 判断是否为命令类工具（可“在终端运行”） */
+function isCommandTool(toolName: string): boolean {
+  return toolName === 'Bash' || toolName === 'powershell' || toolName === 'PowerShell' || toolName === 'TerminalExecute'
+}
+
+/** 从工具输入中提取要执行的命令 */
+function extractCommand(input: Record<string, unknown>): string | null {
+  const raw = input.command ?? input.cmd
+  if (typeof raw === 'string' && raw.trim()) return raw.trim()
+  return null
+}
 
 // ===== useToolResult Hook =====
 
@@ -373,6 +393,33 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     filePath
   )
 
+  // ===== 在终端运行（命令类工具） =====
+  const activeSessionId = useAtomValue(activeSessionIdAtom)
+  const setTerminalPanelOpen = useSetAtom(terminalPanelOpenMapAtom)
+  const commandToRun = isCommandTool(block.name) ? extractCommand(block.input) : null
+  const [terminalRunState, setTerminalRunState] = React.useState<'idle' | 'running' | 'error'>('idle')
+  const handleRunInTerminal = React.useCallback(async () => {
+    if (!commandToRun || !activeSessionId || terminalRunState === 'running') return
+    const openApi = (window.electronAPI as Partial<typeof window.electronAPI>).openAgentTerminal
+    const writeApi = (window.electronAPI as Partial<typeof window.electronAPI>).writeAgentTerminal
+    if (typeof openApi !== 'function' || typeof writeApi !== 'function') return
+    setTerminalRunState('running')
+    try {
+      const instanceId = agentTerminalInstanceSeq++
+      const state = await openApi({ sessionId: activeSessionId, instanceId, cols: 80, rows: 24 })
+      await writeApi({ terminalId: state.terminalId, data: `${commandToRun}\r` })
+      // 打开终端面板（若已打开则保持；未打开则弹出）
+      setTerminalPanelOpen((previous) => {
+        const next = new Map(previous)
+        next.set(activeSessionId, true)
+        return next
+      })
+      setTerminalRunState('idle')
+    } catch {
+      setTerminalRunState('error')
+    }
+  }, [commandToRun, activeSessionId, terminalRunState, setTerminalPanelOpen])
+
   const delay = animate && index < 10 ? `${index * 30}ms` : '0ms'
 
   // Agent/Task: 提取 prompt 用于气泡展示
@@ -534,6 +581,34 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
           {taskListSummary && (
             <span className="flex min-w-0 max-w-[40%] overflow-hidden items-center gap-1.5">
               <TaskListCollapsedSummary tasks={taskListSummary} />
+            </span>
+          )}
+
+          {commandToRun && (
+            <span className="shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                title={`在终端运行: ${commandToRun}`}
+                aria-label="在终端运行"
+                onClick={() => void handleRunInTerminal()}
+                disabled={terminalRunState === 'running'}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors',
+                  terminalRunState === 'error'
+                    ? 'text-destructive/80 hover:bg-destructive/10'
+                    : 'text-muted-foreground/50 hover:bg-muted/60 hover:text-foreground',
+                  'disabled:opacity-60',
+                )}
+              >
+                {terminalRunState === 'running' ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Terminal className="size-3" />
+                )}
+                <span className="hidden group-hover:inline">
+                  {terminalRunState === 'error' ? '失败' : '在终端运行'}
+                </span>
+              </button>
             </span>
           )}
 
