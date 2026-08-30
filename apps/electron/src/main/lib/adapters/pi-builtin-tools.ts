@@ -1415,20 +1415,22 @@ function buildAgentTerminalTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDe
     sdk.defineTool({
       name: 'TerminalExecute',
       label: '在可见终端执行命令',
-      description: 'Run one command in a new visible Agent-owned terminal. The user can see and interrupt it. Terminal output is not automatically returned to the Agent; only the command-start receipt is returned.',
-      promptSnippet: 'Execute one command only when it serves the user request. It is visibly run in the Agent workspace and may require permission approval.',
+      description: 'Run one command in a visible Agent-owned terminal Tab. Prefer terminalId to reuse a safe matching current-session terminal; omit it only when no terminal can be reused. The user can see and interrupt it. Call TerminalRead with the returned terminal ID when you need to inspect its output; output is never pushed into this tool result.',
+      promptSnippet: 'Use the visible terminal only for user-attended commands that benefit from execution visibility. Before every visible terminal command, call TerminalList and prefer a current-session running terminal with a matching cwd whose previous command you observed finish; pass its terminalId to avoid opening another Tab. Omit terminalId only when no safe candidate exists, the cwd or shell must differ, or the user needs a separately visible concurrent session. Do not reuse an interactive, long-running, or unverified-busy terminal. Use TerminalRead to confirm completion or inspect results; do not assume output is returned automatically.',
       parameters: Type.Object({
         command: Type.String({ description: 'Complete command to execute in the controlled shell. Do not prepend shell wrappers.' }),
-        cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative directory within the current authorized roots.' })),
-        title: Type.Optional(Type.String({ description: 'Short visible terminal title.' })),
+        terminalId: Type.Optional(Type.String({ description: 'Preferred when a matching safe current-session terminal is available. First inspect candidates with TerminalList; do not reuse an interactive, long-running, or unverified-busy terminal.' })),
+        cwd: Type.Optional(Type.String({ description: 'Absolute or Agent-CWD-relative directory within the current authorized roots. Used only when opening a new terminal.' })),
+        title: Type.Optional(Type.String({ description: 'Short visible terminal title. Used only when opening a new terminal.' })),
         shell: Type.Optional(Type.String({ description: `${shellProfileDescription} Used only when opening a new terminal.` })),
       }),
       async execute(_toolCallId: string, params: unknown) {
         const args = params as Record<string, unknown>
         const command = typeof args.command === 'string' ? args.command.trim() : ''
         if (!command) throw new Error('command 必填')
-        const record = executeAgentTerminal({ sessionId: ctx.sessionId, command, sessionCwd, allowedRoots: ctx.allowedRoots, ...terminalInput(args) })
-        return jsonToolResult({ terminal: record, commandStarted: true, outputSharedWithAgent: false })
+        const terminalId = typeof args.terminalId === 'string' && args.terminalId.trim() ? args.terminalId.trim() : undefined
+        const record = executeAgentTerminal({ sessionId: ctx.sessionId, command, sessionCwd, allowedRoots: ctx.allowedRoots, ...terminalInput(args), terminalId })
+        return jsonToolResult({ terminal: record, commandStarted: true, reused: record.reused === true, outputSharedWithAgent: false })
       },
     }),
     sdk.defineTool({
