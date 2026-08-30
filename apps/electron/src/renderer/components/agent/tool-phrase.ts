@@ -165,6 +165,14 @@ export function getToolPhrase(toolName: string, input: Record<string, unknown>):
       return phrase('执行命令')
     }
 
+    case 'powershell': {
+      const cmd = input.command
+      if (typeof cmd === 'string') {
+        return phrase(`执行 ${truncate(cmd, 80)}`)
+      }
+      return phrase('执行命令')
+    }
+
     case 'Grep': {
       const pattern = input.pattern
       if (typeof pattern === 'string') {
@@ -480,8 +488,8 @@ function phrase(label: string): ToolPhrase {
 export function getToolResultSummary(toolName: string, result: string | undefined, isError = false): string | null {
     if (isError) return '失败'
   if (toolName === 'Bash' || toolName === 'powershell' || toolName === 'PowerShell') {
-    // shell 命令空输出也是成功完成（如 cd），显示完成状态
-    return '已完成'
+    // shell 命令有输出时显示完成状态；空输出（如 cd）不显示状态标签
+    return result?.trim() ? '已完成' : null
   }
   if (!result?.trim()) return null
 
