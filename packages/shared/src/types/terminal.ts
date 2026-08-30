@@ -20,6 +20,8 @@ export interface TerminalViewState {
   sessionId: string
   /** 会话内实例序号（从 0 递增），用于 tab 标签排序 */
   instanceId: number
+  /** 可选标题（Agent 终端为执行的命令） */
+  title?: string
   /** pty 启动目录（与 Agent 执行 cwd 一致） */
   cwd: string
   /** shell 可执行文件路径（如 /bin/zsh） */
@@ -45,6 +47,8 @@ export interface TerminalOpenInput {
   cols: number
   rows: number
   /** 请求的 shell profile（default 用平台默认 shell；可选 pwsh/powershell/cmd/git-bash/wsl/bash/zsh） */
+  /** 可选标题（Agent 终端用于展示执行的命令） */
+  title?: string
   profile?: TerminalProfile
   /**
    * 预启动标记：会话激活时后台预热 shell（不推送 STATE_CHANGED，避免误触发面板）；

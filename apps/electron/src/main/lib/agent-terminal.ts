@@ -41,6 +41,7 @@ interface TerminalEntry {
   terminalId: string
   sessionId: string
   instanceId: number
+  title?: string
   cwd: string
   shell: string
   pty: IPty
@@ -156,6 +157,9 @@ export class AgentTerminalController {
     const terminalId = buildTerminalId(input.sessionId, input.instanceId)
     const existing = this.entries.get(terminalId)
     if (existing) {
+      if (input.title && existing.title !== input.title) existing.title = input.title
+    }
+    if (existing) {
       if (existing.running && existing.cwd === input.cwd) {
         // 面板重开/切换 tab 时复用正在运行的 pty（shell 状态不丢失）
         if (!input.warmup) existing.panelOpened = true
@@ -209,6 +213,7 @@ export class AgentTerminalController {
       terminalId,
       sessionId: input.sessionId,
       instanceId: input.instanceId,
+      title: input.title,
       cwd: input.cwd,
       shell,
       pty,
@@ -363,6 +368,7 @@ export class AgentTerminalController {
       terminalId: entry.terminalId,
       sessionId: entry.sessionId,
       instanceId: entry.instanceId,
+      title: entry.title,
       cwd: entry.cwd,
       shell: entry.shell,
       pid: entry.running ? entry.pty.pid : null,
@@ -486,6 +492,7 @@ export function openAgentTerminal(input: {
     rows: 24,
     warmup: false,
     profile: input.profile,
+    title: input.title,
   })
   const record: AgentTerminalRecord = { sessionId: input.sessionId, terminalId, title, cwd, status: 'running' }
   agentTerminals.set(terminalId, record)

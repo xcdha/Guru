@@ -21,10 +21,25 @@ const MAX_HEIGHT = 600
 interface TerminalInstance {
   terminalId: string
   instanceId: number
+  /** 可选标题（Agent 终端为执行的命令） */
+  title?: string
 }
 
 function buildTerminalId(sessionId: string, instanceId: number): string {
   return `${sessionId}#${instanceId}`
+}
+
+/** 判断终端实例是否由 Agent 创建（instanceId >= 1000 为 Agent 专用空间） */
+function isAgentTerminalInstance(instanceId: number): boolean {
+  return instanceId >= 1000
+}
+
+/** 终端 tab 显示名：Agent 终端显示 "Agent N"，手动终端显示 "Terminal N" */
+function getTerminalTabLabel(instanceId: number): string {
+  if (isAgentTerminalInstance(instanceId)) {
+    return `Agent ${instanceId - 999}`
+  }
+  return `Terminal ${instanceId + 1}`
 }
 
 interface TerminalPanelProps {
@@ -39,6 +54,43 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
   const stateMap = useAtomValue(terminalStateMapAtom)
   const draggingRef = React.useRef(false)
   const nextInstanceIdRef = React.useRef(0)
+
+  // 听主进程 STATE_CHANGED：Agent 执行 TerminalExecute/TerminalOpen 时自动加入并切换到该终端实例
+  React.useEffect(() => {
+    const subscribe = (window.electronAPI as Partial<typeof window.electronAPI>).onAgentTerminalStateChanged
+    if (typeof subscribe !== 'function') return
+    return subscribe((event: { state: import('@guru/shared').TerminalViewState }) => {
+      if (event.state.sessionId !== sessionId) return
+      setTerminals((previous) => {
+        if (previous.some((t) => t.terminalId === event.state.terminalId)) return previous
+        const instanceId = Number(event.state.terminalId.split('#').pop() ?? 0)
+        return [...previous, { terminalId: event.state.terminalId, instanceId, title: event.state.title }]
+      })
+      setActiveTerminalId(event.state.terminalId)
+    })
+  }, [sessionId])
+
+  // 面板挂载时：从全局 stateMap 补全已存在的 Agent 终端实例（STATE_CHANGED 事件可能已在面板挂载前发生）
+  React.useEffect(() => {
+    const prefix = `${sessionId}#`
+    const agentEntries: TerminalInstance[] = []
+    for (const [terminalId, state] of stateMap) {
+      if (!terminalId.startsWith(prefix)) continue
+      const instanceId = Number(terminalId.split('#').pop() ?? 0)
+      if (instanceId >= 1000) agentEntries.push({ terminalId, instanceId, title: state.title })
+    }
+    if (agentEntries.length === 0) return
+    setTerminals((previous) => {
+      const existing = new Set(previous.map((t) => t.terminalId))
+      const additions = agentEntries.filter((t) => !existing.has(t.terminalId))
+      return additions.length > 0 ? [...previous, ...additions] : previous
+    })
+    // 如果当前活跃是默认空实例（0）且存在 Agent 实例，切换到 Agent 实例
+    setActiveTerminalId((current) => {
+      if (current !== buildTerminalId(sessionId, 0)) return current
+      return agentEntries.at(-1)!.terminalId
+    })
+  }, [sessionId, stateMap])
 
   // 面板挂载时创建第一个终端实例
   const [terminals, setTerminals] = React.useState<TerminalInstance[]>(() => [
@@ -148,13 +200,20 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
               )}
             >
-              <button
-                type="button"
-                className="min-w-0"
-                onClick={() => setActiveTerminalId(terminal.terminalId)}
-              >
-                <span className="truncate">Terminal {terminal.instanceId + 1}</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="min-w-0"
+                    onClick={() => setActiveTerminalId(terminal.terminalId)}
+                  >
+                    <span className="truncate">{getTerminalTabLabel(terminal.instanceId)}</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>{terminal.title ?? getTerminalTabLabel(terminal.instanceId)}</p>
+                </TooltipContent>
+              </Tooltip>
               {terminals.length > 1 && (
                 <button
                   type="button"
