@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== 全局滚动条主题适配（浅色/暗色跟随 --muted-foreground） =====
+ * 未显式加 .scrollbar-thin 的滚动容器（表格横向滚动、右侧栏列表等）
+ * 默认使用浏览器样式，在暗色主题下会刺眼、浅色下过淡；这里统一收敛。
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.35);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.55);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* ===== 全局字体与渲染优化 =====
  * 拉丁字符用自托管 Geist Variable（比 Inter 更有性格的工具类无衬线，Vercel 出品），
  * 中文回退 PingFang / 微软雅黑；Geist 缺字时由 -apple-system 兜底。
