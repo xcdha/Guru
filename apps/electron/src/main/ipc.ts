@@ -1228,7 +1228,11 @@ export function registerIpcHandlers(): void {
       }
       const allowedSessionPath = sessionPath && isPathAllowed(sessionPath, access) ? sessionPath : undefined
       const allowedWorkspaceFilesPath = workspaceFilesPath && isPathAllowed(workspaceFilesPath, access) ? workspaceFilesPath : undefined
-      const allowedExtraPaths = extraPaths?.filter((p) => isPathAllowed(p, access))
+      // worktree 路径不在会话授权根下，但回溯主仓库已被授权时仍应放行（ensurePathAllowedWithWorktree）
+      const allowedExtraPaths: string[] = []
+      for (const p of extraPaths ?? []) {
+        if (await ensurePathAllowedWithWorktree(p, access)) allowedExtraPaths.push(p)
+      }
       return getUnstagedChanges(dirPath, allowedSessionPath, allowedWorkspaceFilesPath, allowedExtraPaths)
     }
   )

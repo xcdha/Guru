@@ -85,6 +85,16 @@ import { createAgentStreamEventBatcher } from '@/lib/agent-stream-event-batcher'
 /** 触发右侧文件浏览器自动定位的写入类工具集合 */
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Update'])
 
+/** 命令类工具（Bash/powershell）中疑似写文件的特征，命中则视为写入工具 */
+const SHELL_WRITE_PATTERNS = /(?:>|>>|Set-Content|Add-Content|Out-File|Write-Output|Move-Item|Copy-Item|New-Item|Remove-Item|mv|cp|rm|mkdir|touch|tee)\b/
+
+/** 判断命令工具输入是否可能修改了文件系统（用于触发 diff 刷新） */
+function isShellWriteCommand(input: Record<string, unknown>): boolean {
+  const command = typeof input?.command === 'string' ? input.command : typeof input?.cmd === 'string' ? input.cmd : ''
+  if (!command) return false
+  return SHELL_WRITE_PATTERNS.test(command)
+}
+
 /** 会改变 git 工作树状态的子命令（用于识别 Bash 中触发 diff 刷新的 git 操作） */
 const GIT_MUTATING_SUBCOMMANDS = /\bgit\s+(commit|checkout|reset|restore|stash|clean|add|rm|mv|pull|merge|rebase|cherry-pick|revert|switch|am|apply)\b/
 
@@ -1145,7 +1155,7 @@ export function useGlobalAgentListeners(): void {
           // 非 Git 文件写入时自动打开“文件改动”；Git Diff 的面板状态仍由用户控制。
 
           // Agent 修改文件时，记入「最近修改」状态，用于 60s 内左侧竖条标记
-          if (event.type === 'tool_start' && WRITE_TOOLS.has(event.toolName)) {
+          if (event.type === 'tool_start' && (WRITE_TOOLS.has(event.toolName) || ((event.toolName === 'Bash' || event.toolName === 'powershell') && isShellWriteCommand(event.input as Record<string, unknown> | undefined ?? {})))) {
             const input = event.input as Record<string, unknown> | undefined
             const targetPath =
               (input?.file_path as string | undefined)
