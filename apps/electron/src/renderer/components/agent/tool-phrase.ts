@@ -478,7 +478,11 @@ function phrase(label: string): ToolPhrase {
  * 完整结果仍由 ToolResultRenderer 展示，主行只保留用户需要快速扫读的事实。
  */
 export function getToolResultSummary(toolName: string, result: string | undefined, isError = false): string | null {
-  if (isError) return '失败'
+    if (isError) return '失败'
+  if (toolName === 'Bash' || toolName === 'powershell' || toolName === 'PowerShell') {
+    // shell 命令空输出也是成功完成（如 cd），显示完成状态
+    return '已完成'
+  }
   if (!result?.trim()) return null
 
   if (toolName === 'Read') {
@@ -489,7 +493,7 @@ export function getToolResultSummary(toolName: string, result: string | undefine
     if (remainingLineCount) return `还有 ${remainingLineCount} 行`
   }
   if (toolName === 'Grep' && /(?:no matches|没有匹配|未找到)/i.test(result)) return '无匹配'
-  if (toolName === 'Bash') return '已完成'
+
   if (toolName === 'Edit' || toolName === 'Write') return '已更新'
   if (toolName === 'Glob') return '已完成'
 
