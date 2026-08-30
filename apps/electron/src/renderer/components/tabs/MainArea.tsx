@@ -195,7 +195,7 @@ export function MainArea(): React.ReactElement {
     }, 400)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [terminalSessionId])
-  const showTerminalPanel = !!terminalSessionId && (terminalOpenMap.get(terminalSessionId) ?? false) && activeView === 'conversations'
+  const showTerminalPanel = !!terminalSessionId && (terminalOpenMap.get(terminalSessionId) ?? false)
   const previewOpen =
     activeTab?.type === 'agent'
     && (previewOpenMap.get(activeTab.sessionId) ?? false)
