@@ -283,6 +283,22 @@ function getStartupSplashPath(): string {
   return join(resourcesDir, 'startup-splash', 'index.html')
 }
 
+/**
+ * 根据设置的主题模式解析主窗口背景色，用于避免切回窗口时的白屏闪烁。
+ * 暗色主题用接近 --background 的暖黑，亮色用白。
+ */
+function resolveWindowBackgroundColor(): string {
+  const mode = getSettings().themeMode
+  const dark = mode === 'dark' || (mode !== 'light' && nativeTheme.shouldUseDarkColors)
+  return dark ? '#1a1612' : '#ffffff'
+}
+
+/** 主窗口 focus/show 时刷新背景色（跟随当前主题，避免切回时白屏闪烁） */
+function applyWindowBackgroundColor(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.setBackgroundColor(resolveWindowBackgroundColor())
+}
+
 function dismissStartupSplash(): void {
   if (startupSplashWindow && !startupSplashWindow.isDestroyed()) {
     startupSplashWindow.destroy()
@@ -470,6 +486,7 @@ function createWindow(): void {
     minHeight: MIN_MAIN_WINDOW_HEIGHT,
     icon: iconExists ? iconPath : undefined,
     show: false,
+    backgroundColor: resolveWindowBackgroundColor(),
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -484,6 +501,9 @@ function createWindow(): void {
     ...titleBarOptions,
   })
   setStoredMainWindow(mainWindow)
+  // 切回窗口/显示时刷新背景色，避免闪白（夜间暗色主题尤其刺眼）
+  mainWindow.on('focus', applyWindowBackgroundColor)
+  mainWindow.on('show', applyWindowBackgroundColor)
   registerTaskHandlers(mainWindow)
   void rehydrateIncompleteTaskRuns()
     .then(() => healOrphanedTaskRuns())
