@@ -216,6 +216,13 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
     [extraPathsMemo, attachedFiles, wsAttachedFiles]
   )
 
+  // Diff 候选目录：额外加入会话的 Git Worktree / 仓库根，避免 worktree 会话的改动
+  // 不在主仓库/沙箱内时右侧栏“文件改动”查不到而显示为空。
+  const gitSessionPathsMemo = React.useMemo(
+    () => [...fileAccessPathsMemo, currentSession?.gitWorktreePath, currentSession?.gitRepoPath].filter(Boolean) as string[],
+    [fileAccessPathsMemo, currentSession?.gitWorktreePath, currentSession?.gitRepoPath]
+  )
+
   // 加载工作区级附加目录
   React.useEffect(() => {
     if (!workspaceSlug || !currentWorkspaceId) return
@@ -549,7 +556,7 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
                 workspaceFilesPath={projectFilesPath || undefined}
                 secondarySourceLabel={PROJECT_TERMS.files}
                 combinedSourceLabel={`会话+${PROJECT_TERMS.files}`}
-                extraPaths={fileAccessPathsMemo}
+                extraPaths={gitSessionPathsMemo}
                 refreshVersion={diffRefreshVersion}
                 selectedFilePath={selectedFilePath}
                 onFileClick={handleDiffFileClick}
