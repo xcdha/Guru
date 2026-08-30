@@ -8,7 +8,7 @@
 
 import * as React from 'react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Plus, SquareTerminal, X } from 'lucide-react'
+import { Plus, Power, SquareTerminal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -111,12 +111,18 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
   )
 
   // 面板关闭：销毁该会话全部 pty + 清理全局状态
-  const close = React.useCallback(async () => {
-    const closeSession = (window.electronAPI as Partial<typeof window.electronAPI>).closeAgentTerminalSession
-    if (typeof closeSession === 'function') {
-      try { await closeSession(sessionId) } catch { /* noop */ }
-    }
+  // 隐藏面板（保留 pty 进程，重新打开时复用）
+  const hidePanel = React.useCallback(() => {
     setOpenMap((previous) => { const next = new Map(previous); next.delete(sessionId); return next })
+    onClose()
+  }, [onClose, sessionId, setOpenMap])
+
+  // 真正关闭：杀掉该会话全部 pty
+  const closeSession = React.useCallback(async () => {
+    const closeSessionApi = (window.electronAPI as Partial<typeof window.electronAPI>).closeAgentTerminalSession
+    if (typeof closeSessionApi === 'function') {
+      try { await closeSessionApi(sessionId) } catch { /* noop */ }
+    }
     setStateMap((previous) => {
       const next = new Map(previous)
       const prefix = `${sessionId}#`
@@ -125,8 +131,8 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
       }
       return next
     })
-    onClose()
-  }, [onClose, sessionId, setOpenMap, setStateMap])
+    hidePanel()
+  }, [hidePanel, sessionId, setStateMap])
 
   // 新建终端实例
   const createTerminal = React.useCallback(() => {
@@ -273,13 +279,21 @@ export function TerminalPanel({ sessionId, onClose }: TerminalPanelProps): React
             )}
           </span>
         </span>
-        <Tooltip>
+                <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0" onClick={() => void close()}>
+            <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0" onClick={hidePanel}>
               <X className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom"><p>关闭终端</p></TooltipContent>
+          <TooltipContent side="bottom"><p>隐藏终端（保留进程）</p></TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => void closeSession()}>
+              <Power className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom"><p>结束终端进程</p></TooltipContent>
         </Tooltip>
       </div>
       {/* xterm 内容区：多实例层叠，仅激活实例可见（其余保持挂载保留状态） */}

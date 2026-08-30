@@ -150,10 +150,23 @@ export function MainArea(): React.ReactElement {
   }, [browserSessionId, clearBrowserSessionState, publishBrowserState])
 
   // 终端状态推送（主进程 → 渲染）：打开/退出时更新 state map（key = terminalId）。
+  const [autoRevealAgentTerminal, setAutoRevealAgentTerminal] = React.useState(true)
+  React.useEffect(() => {
+    let cancelled = false
+    window.electronAPI.getSettings()
+      .then((settings) => { if (!cancelled) setAutoRevealAgentTerminal(settings.autoRevealAgentTerminal ?? true) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
+
   const publishTerminalState = React.useCallback((event: { state: import('@guru/shared').TerminalViewState }) => {
     setTerminalStateMap((previous) => { const next = new Map(previous); next.set(event.state.terminalId, event.state); return next })
-    setTerminalOpenMap((previous) => { const next = new Map(previous); next.set(event.state.sessionId, true); return next })
-  }, [setTerminalOpenMap, setTerminalStateMap])
+    // 仅当用户开启“自动弹出”时才打开面板；关闭时仍写状态，用户手动点终端按钮可随时打开
+    setTerminalOpenMap((previous) => {
+      if (!autoRevealAgentTerminal) return previous
+      const next = new Map(previous); next.set(event.state.sessionId, true); return next
+    })
+  }, [autoRevealAgentTerminal, setTerminalOpenMap, setTerminalStateMap])
 
   React.useEffect(() => {
     const subscribe = (window.electronAPI as Partial<typeof window.electronAPI>).onAgentTerminalStateChanged
@@ -179,6 +192,8 @@ export function MainArea(): React.ReactElement {
   const browserPanelState = showBrowserPanel ? browserState : browserClosingState?.state ?? null
   // 终端抽屉：仅 agent 会话、打开状态、会话视图下显示（底部弹出，不占用右侧工作区）
   const terminalSessionId = activeTab?.type === 'agent' ? activeTab.sessionId : null
+
+  // 用户设置：AI 执行终端命令时是否自动弹出可见终端面板（默认 true）
 
   // 会话激活时预启动终端（warmup）：后台 spawn shell，用户点开终端面板时
   // open 复用 running pty + 回放输出缓冲 → 立即显示 prompt（对齐 synara 体验）。
