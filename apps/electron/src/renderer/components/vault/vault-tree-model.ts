@@ -1,8 +1,8 @@
 import type { VaultFileEntry } from '@guru/shared'
 
-/** A fresh file tree intentionally reveals no nested folders. */
+/** A fresh file tree reveals the Inbox folder so newly created notes are visible. */
 export function getInitialVaultExpandedFolders(): ReadonlySet<string> {
-  return new Set()
+  return new Set(['Guru Inbox', 'Inbox'])
 }
 
 export interface VaultFolderNode {

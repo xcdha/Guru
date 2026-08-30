@@ -372,7 +372,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
   const [vaultSwitcherOpen, setVaultSwitcherOpen] = React.useState(false)
   const [candidatesLoading, setCandidatesLoading] = React.useState(false)
   const [files, setFiles] = React.useState<VaultFileEntry[]>([])
-  const [loading, setLoading] = React.useState(true)
+  const [loading, setLoading] = React.useState(false)
   const [fileLoading, setFileLoading] = React.useState(false)
   const [selectedFile, setSelectedFile] = useAtom(selectedVaultFileAtom)
   const [focusedFolder, setFocusedFolder] = useAtom(focusedVaultFolderAtom)
@@ -448,10 +448,15 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
 
   const refresh = React.useCallback(async ({ showLoading = false }: { showLoading?: boolean } = {}): Promise<void> => {
     if (showLoading) setLoading(true)
+    console.log('[VaultView] refresh start, showLoading =', showLoading)
     try {
+      console.log('[VaultView] calling getVaultConfig...')
       const nextConfig = await window.electronAPI.getVaultConfig()
+      console.log('[VaultView] getVaultConfig done:', nextConfig ? 'config present' : 'null')
       setConfig(nextConfig)
+      console.log('[VaultView] calling listVaultFiles...')
       const nextFiles = nextConfig ? await window.electronAPI.listVaultFiles() : []
+      console.log('[VaultView] listVaultFiles done, count:', nextFiles.length)
       setFiles((current) => hasSameVaultTreeEntries(current, nextFiles) ? current : nextFiles)
       if (!nextConfig) {
         setSelectedFile(null)
@@ -474,8 +479,17 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
       toast.error(error instanceof Error ? error.message : `无法读取 ${VAULT_NAME}`)
     } finally {
       if (showLoading) setLoading(false)
+      console.log('[VaultView] refresh finished')
     }
   }, [setReadResult, setSelectedFile])
+
+  // IPC 调用挂起保险：3 秒后强制结束加载状态，避免永久转圈
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setLoading(false)
+    }, 3000)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   React.useEffect(() => {
     const showLoading = initialRefreshRef.current
