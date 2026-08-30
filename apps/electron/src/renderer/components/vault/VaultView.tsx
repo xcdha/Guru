@@ -24,11 +24,11 @@ import { buildVaultTree, getInitialVaultExpandedFolders, getVaultFolderAncestors
 const VAULT_NAME = 'Vault'
 const VAULT_SIDEBAR_MIN_WIDTH = 180
 const VAULT_SIDEBAR_MAX_WIDTH = 520
-const PROMA_MANAGED_VAULT_DISPLAY_NAME = 'Proma Vault'
-const PROMA_SELF_MANAGED_VAULT_LABEL = 'Proma 自建 Vault'
+const GURU_MANAGED_VAULT_DISPLAY_NAME = 'Guru Vault'
+const GURU_SELF_MANAGED_VAULT_LABEL = 'Guru 自建 Vault'
 
 function getVaultCandidateDisplayName(candidate: VaultCandidate): string {
-  return candidate.isPromaManaged ? PROMA_MANAGED_VAULT_DISPLAY_NAME : candidate.displayName
+  return candidate.isGuruManaged ? GURU_MANAGED_VAULT_DISPLAY_NAME : candidate.displayName
 }
 
 function displayDocumentTitle(filename: string): string {
@@ -516,7 +516,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
   }, [setReadResult, setSelectedFile])
 
   const selectVaultManually = async (): Promise<void> => {
-    const selected = await window.electronAPI.selectVault({ inboxPath: 'Proma Inbox', allowAgentWrites: false })
+    const selected = await window.electronAPI.selectVault({ inboxPath: 'Guru Inbox', allowAgentWrites: false })
     if (!selected) return
     setConfig(selected)
     setVaultSwitcherOpen(false)
@@ -524,7 +524,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
     toast.success(`已连接 ${selected.displayName}`)
   }
 
-  const createPromaVault = async (): Promise<void> => {
+  const createGuruVault = async (): Promise<void> => {
     try {
       const selected = await window.electronAPI.selectDefaultVault()
       setConfig(selected)
@@ -532,15 +532,15 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
       setRefreshToken((value) => value + 1)
       toast.success(`已创建 ${selected.displayName}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : `无法创建 ${PROMA_MANAGED_VAULT_DISPLAY_NAME}`)
+      toast.error(error instanceof Error ? error.message : `无法创建 ${GURU_MANAGED_VAULT_DISPLAY_NAME}`)
     }
   }
 
   const connectDiscoveredVault = async (candidate: VaultCandidate): Promise<void> => {
     try {
-      const selected = candidate.isPromaManaged
+      const selected = candidate.isGuruManaged
         ? await window.electronAPI.selectDefaultVault()
-        : await window.electronAPI.authorizeDiscoveredVault(candidate.path, { inboxPath: 'Proma Inbox', allowAgentWrites: false })
+        : await window.electronAPI.authorizeDiscoveredVault(candidate.path, { inboxPath: 'Guru Inbox', allowAgentWrites: false })
       setConfig(selected)
       setVaultSwitcherOpen(false)
       setRefreshToken((value) => value + 1)
@@ -766,7 +766,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
                           >
                             <BookOpen size={15} className="shrink-0 text-primary" />
                             <span className="min-w-0 flex-1 truncate">{getVaultCandidateDisplayName(candidate)}</span>
-                            {candidate.isPromaManaged && <span className="shrink-0 text-[10px] text-muted-foreground">{PROMA_SELF_MANAGED_VAULT_LABEL}</span>}
+                            {candidate.isGuruManaged && <span className="shrink-0 text-[10px] text-muted-foreground">{GURU_SELF_MANAGED_VAULT_LABEL}</span>}
                           </button>
                         ))
                       ) : (
@@ -776,11 +776,11 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
                     <div className="mt-1 border-t border-border/60 pt-1">
                       <button
                         type="button"
-                        onClick={() => { void createPromaVault() }}
+                        onClick={() => { void createGuruVault() }}
                         className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
                       >
                         <Plus size={15} className="shrink-0 text-muted-foreground" />
-                        创建 Proma Vault
+                        创建 Guru Vault
                       </button>
                       <button
                         type="button"
@@ -853,13 +853,13 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
       <Dialog open={vaultHelpOpen} onOpenChange={setVaultHelpOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>在 Proma 中使用 {VAULT_NAME}</DialogTitle>
-            <DialogDescription>Proma 直接读写本机已授权的 Markdown Vault；这些笔记也会继续保留在 {VAULT_NAME} 中。</DialogDescription>
+            <DialogTitle>在 Guru 中使用 {VAULT_NAME}</DialogTitle>
+            <DialogDescription>Guru 直接读写本机已授权的 Markdown Vault；这些笔记也会继续保留在 {VAULT_NAME} 中。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 text-sm leading-6 text-muted-foreground">
             <section>
               <p className="font-medium text-foreground">切换与管理 Vault</p>
-              <p>点击左下角的 Vault 名称可切换已发现的本地 Vault，也可以创建 Proma Vault 或打开本地仓库。云端 Vault 需先同步或挂载到本机。</p>
+              <p>点击左下角的 Vault 名称可切换已发现的本地 Vault，也可以创建 Guru Vault 或打开本地仓库。云端 Vault 需先同步或挂载到本机。</p>
             </section>
             <section>
               <p className="font-medium text-foreground">浏览与新建笔记</p>
