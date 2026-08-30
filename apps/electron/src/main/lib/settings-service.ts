@@ -89,6 +89,7 @@ export function getSettings(): AppSettings {
       lastWindowsTerminalProfile: process.platform === 'win32'
         ? sanitizeWindowsTerminalProfile(settings.lastWindowsTerminalProfile ?? legacyLastTerminalProfile)
         : undefined,
+      autoRevealAgentTerminal: settings.autoRevealAgentTerminal ?? true,
       agentThinking: settings.agentThinking ?? { type: 'adaptive' },
       defaultThinkingLevel: settings.defaultThinkingLevel ?? 'high',
       // 缺省 true：老配置文件未写该字段时保持推广默认开启
