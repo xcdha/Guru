@@ -21,7 +21,7 @@ import {
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
 import { activeSessionIdAtom } from '@/atoms/tab-atoms'
-import { terminalPanelOpenMapAtom } from '@/atoms/terminal-atoms'
+import { terminalPanelOpenMapAtom, terminalStateMapAtom } from '@/atoms/terminal-atoms'
 import { cn } from '@/lib/utils'
 import { MarkdownStreamingContext, MessageResponse } from '@/components/ai-elements/message'
 import { getToolIcon, extractFilePath } from './tool-utils'
@@ -45,7 +45,9 @@ import type {
 
 // ===== 发送命令到终端 =====
 
-/** 渲染层自增的 Agent 终端实例 ID（与主进程 Agent 专用空间一致，>= 1000） */
+/** 渲染层 Agent 终端实例 ID 分配（与主进程 Agent 专用空间一致，>= 1000）
+ * 不复用仍挂着的实例；已关闭的实例 ID 会被重新分配。
+ */
 let agentTerminalInstanceSeq = 1000
 
 /** 判断是否为命令类工具（可“在终端运行”） */
@@ -396,6 +398,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   // ===== 在终端运行（命令类工具） =====
   const activeSessionId = useAtomValue(activeSessionIdAtom)
   const setTerminalPanelOpen = useSetAtom(terminalPanelOpenMapAtom)
+  const terminalStateMap = useAtomValue(terminalStateMapAtom)
   const commandToRun = isCommandTool(block.name) ? extractCommand(block.input) : null
   const [terminalRunState, setTerminalRunState] = React.useState<'idle' | 'running' | 'error'>('idle')
   const handleRunInTerminal = React.useCallback(async () => {
@@ -405,9 +408,27 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     if (typeof openApi !== 'function' || typeof writeApi !== 'function') return
     setTerminalRunState('running')
     try {
-      const instanceId = agentTerminalInstanceSeq++
-      const state = await openApi({ sessionId: activeSessionId, instanceId, cols: 80, rows: 24 })
-      await writeApi({ terminalId: state.terminalId, data: `${commandToRun}\r` })
+      // 优先复用该会话已有的 Agent 终端（无论是否可见）：直接把命令写进去，不新开 Tab
+      const existingAgentTerminal = [...terminalStateMap.values()]
+        .filter((s) => s.sessionId === activeSessionId)
+        .sort((a, b) => Number(a.terminalId.split('#').pop() ?? 0) - Number(b.terminalId.split('#').pop() ?? 0))
+        .find((s) => Number(s.terminalId.split('#').pop() ?? 0) >= 1000)
+      if (existingAgentTerminal) {
+        await writeApi({ terminalId: existingAgentTerminal.terminalId, data: `${commandToRun}\r` })
+      } else {
+        // 无已有 Agent 终端：分配空闲实例 ID 新开
+        const usedIds = new Set<number>()
+        for (const key of terminalStateMap.keys()) {
+          if (!key.startsWith(`${activeSessionId}#`)) continue
+          const num = Number(key.split('#').pop() ?? 0)
+          if (Number.isFinite(num) && num >= 1000) usedIds.add(num)
+        }
+        let instanceId = agentTerminalInstanceSeq
+        while (usedIds.has(instanceId)) instanceId += 1
+        agentTerminalInstanceSeq = instanceId + 1
+        const state = await openApi({ sessionId: activeSessionId, instanceId, cols: 80, rows: 24 })
+        await writeApi({ terminalId: state.terminalId, data: `${commandToRun}\r` })
+      }
       // 打开终端面板（若已打开则保持；未打开则弹出）
       setTerminalPanelOpen((previous) => {
         const next = new Map(previous)
@@ -418,7 +439,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     } catch {
       setTerminalRunState('error')
     }
-  }, [commandToRun, activeSessionId, terminalRunState, setTerminalPanelOpen])
+  }, [commandToRun, activeSessionId, terminalRunState, setTerminalPanelOpen, terminalStateMap])
 
   const delay = animate && index < 10 ? `${index * 30}ms` : '0ms'
 
