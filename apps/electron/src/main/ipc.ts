@@ -6774,7 +6774,7 @@ export function registerIpcHandlers(): void {
     })
   })
 
-  ipcMain.handle(VAULT_IPC_CHANNELS.LIST_FILES, async () => getConfiguredVaultFileSystem())
+  ipcMain.handle(VAULT_IPC_CHANNELS.LIST_FILES, async () => getConfiguredVaultFileSystem().listFiles())
 
   ipcMain.handle(VAULT_IPC_CHANNELS.READ_FILE, async (_, relativePath: unknown) => {
     if (typeof relativePath !== 'string') throw new Error('Vault relativePath 无效')
