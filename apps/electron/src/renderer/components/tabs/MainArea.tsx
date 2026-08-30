@@ -150,11 +150,13 @@ export function MainArea(): React.ReactElement {
   }, [browserSessionId, clearBrowserSessionState, publishBrowserState])
 
   // 终端状态推送（主进程 → 渲染）：打开/退出时更新 state map（key = terminalId）。
-  const [autoRevealAgentTerminal, setAutoRevealAgentTerminal] = React.useState(true)
+    // 用户设置：AI 执行终端命令时是否自动弹出可见终端面板（默认 true）
+  // 用 ref 保存，避免 getSettings 异步返回前事件先到导致设置无效
+  const autoRevealAgentTerminalRef = React.useRef(true)
   React.useEffect(() => {
     let cancelled = false
     window.electronAPI.getSettings()
-      .then((settings) => { if (!cancelled) setAutoRevealAgentTerminal(settings.autoRevealAgentTerminal ?? true) })
+      .then((settings) => { if (!cancelled) autoRevealAgentTerminalRef.current = settings.autoRevealAgentTerminal ?? true })
       .catch(() => undefined)
     return () => { cancelled = true }
   }, [])
@@ -163,10 +165,10 @@ export function MainArea(): React.ReactElement {
     setTerminalStateMap((previous) => { const next = new Map(previous); next.set(event.state.terminalId, event.state); return next })
     // 仅当用户开启“自动弹出”时才打开面板；关闭时仍写状态，用户手动点终端按钮可随时打开
     setTerminalOpenMap((previous) => {
-      if (!autoRevealAgentTerminal) return previous
+      if (!autoRevealAgentTerminalRef.current) return previous
       const next = new Map(previous); next.set(event.state.sessionId, true); return next
     })
-  }, [autoRevealAgentTerminal, setTerminalOpenMap, setTerminalStateMap])
+  }, [setTerminalOpenMap, setTerminalStateMap])
 
   React.useEffect(() => {
     const subscribe = (window.electronAPI as Partial<typeof window.electronAPI>).onAgentTerminalStateChanged
