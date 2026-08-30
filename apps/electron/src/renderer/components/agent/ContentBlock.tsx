@@ -503,7 +503,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             dimmed ? 'text-muted-foreground/70' : 'text-muted-foreground',
           )}>{displayLabel}</span>
 
-          {resultSummary && (
+          {/* 仅工具已有结果时显示状态摘要（避免流式中/结果未返回时误显示“已完成”） */}
+          {resultSummary && isCompleted && (
             <span className={cn(
               'shrink-0 text-[11px] tabular-nums',
               isError ? 'text-destructive/70' : 'text-muted-foreground/55',
