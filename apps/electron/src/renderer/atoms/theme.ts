@@ -26,8 +26,11 @@ import {
   normalizeThemeState,
   resolveThemePack,
   canApplyHydratedInterfaceVariant,
+  canApplyHydratedTheme,
   captureInterfaceVariantUpdateEpoch,
+  captureThemeUpdateEpoch,
   markInterfaceVariantUpdated,
+  markThemeUpdated,
 } from '../theme/theme.logic'
 
 const THEME_CACHE_KEY = 'guru-theme-mode'
@@ -229,14 +232,19 @@ export async function initializeTheme(
   setThemeActiveVariant?: (variant: ThemeVariant) => void,
 ): Promise<() => void> {
   const interfaceVariantEpoch = captureInterfaceVariantUpdateEpoch()
+  const themeEpoch = captureThemeUpdateEpoch()
   const settings = await window.electronAPI.getSettings()
   const packs = normalizeThemeState({ packs: settings.themePacks }).packs
-  setThemeMode(settings.themeMode)
-  setThemeStyle?.(settings.themeStyle ?? DEFAULT_THEME_STYLE)
-  setThemePacks?.(packs)
-  cacheThemeMode(settings.themeMode)
-  cacheThemeStyle(settings.themeStyle ?? DEFAULT_THEME_STYLE)
-  cacheThemePacks(packs)
+  // themeMode/themeStyle/themePacks 与 interfaceVariant 一样，IPC 返回可能迟到；
+  // 若期间用户已通过 updateThemeMode 等主动更新过主题，则丢弃迟到的旧值，避免覆盖用户新选择。
+  if (canApplyHydratedTheme(themeEpoch)) {
+    setThemeMode(settings.themeMode)
+    setThemeStyle?.(settings.themeStyle ?? DEFAULT_THEME_STYLE)
+    setThemePacks?.(packs)
+    cacheThemeMode(settings.themeMode)
+    cacheThemeStyle(settings.themeStyle ?? DEFAULT_THEME_STYLE)
+    cacheThemePacks(packs)
+  }
 
   if (canApplyHydratedInterfaceVariant(interfaceVariantEpoch)) {
     const interfaceVariant = settings.interfaceVariant ?? DEFAULT_INTERFACE_VARIANT
@@ -286,11 +294,13 @@ export async function initializeTheme(
 }
 
 export async function updateThemeMode(mode: ThemeMode): Promise<void> {
+  markThemeUpdated()
   cacheThemeMode(mode)
   await window.electronAPI.updateSettings({ themeMode: mode })
 }
 
 export async function updateThemeStyle(style: ThemeStyle): Promise<void> {
+  markThemeUpdated()
   cacheThemeStyle(style)
   await window.electronAPI.updateSettings({ themeStyle: style })
 }
@@ -300,14 +310,27 @@ export async function updateThemeActiveVariant(variant: ThemeVariant): Promise<v
   await window.electronAPI.updateSettings({ themeActiveVariant: variant })
 }
 
+/**
+ * 模块级串行队列：并发的 updateThemePack「读缓存-合并-写缓存-提交」按序执行，
+ * 每次合并都基于上一次提交后的最新缓存，避免基于过期缓存的整体提交互相覆盖（M21）。
+ */
+let themePackWriteQueue: Promise<unknown> = Promise.resolve()
+
 export async function updateThemePack(variant: ThemeVariant, patch: Partial<ThemePack>): Promise<void> {
-  const current = getCachedPacks()
-  const next: Record<ThemeVariant, ThemePack> = {
-    ...current,
-    [variant]: normalizeThemePack({ ...current[variant], ...patch, theme: { ...current[variant].theme, ...(patch.theme ?? {}) } }, variant),
-  }
-  cacheThemePacks(next)
-  await window.electronAPI.updateSettings({ themePacks: next })
+  const run = themePackWriteQueue.then(async () => {
+    markThemeUpdated()
+    // 队列内重新读取缓存：此处拿到的是上一个任务合并并写入后的最新 themePacks。
+    const current = getCachedPacks()
+    const next: Record<ThemeVariant, ThemePack> = {
+      ...current,
+      [variant]: normalizeThemePack({ ...current[variant], ...patch, theme: { ...current[variant].theme, ...(patch.theme ?? {}) } }, variant),
+    }
+    cacheThemePacks(next)
+    await window.electronAPI.updateSettings({ themePacks: next })
+  })
+  // 队列吞掉失败，避免一次失败阻断后续写入；错误通过返回的 Promise 抛给调用方。
+  themePackWriteQueue = run.catch(() => undefined)
+  return run
 }
 
 export async function updateInterfaceVariant(variant: InterfaceVariant): Promise<void> {
@@ -328,6 +351,7 @@ export async function updateThemeSelection(selection: {
   interfaceVariant?: InterfaceVariant
 }): Promise<void> {
   if (selection.interfaceVariant) markInterfaceVariantUpdated()
+  markThemeUpdated()
   cacheThemeMode(selection.themeMode)
   cacheThemeStyle(selection.themeStyle)
   cacheThemeActiveVariant(selection.themeActiveVariant)
