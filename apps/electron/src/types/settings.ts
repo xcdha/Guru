@@ -527,6 +527,8 @@ export interface AppSettings {
   lastWindowsTerminalProfile?: TerminalProfile
   /** 是否在 Agent 执行终端命令时自动弹出可见终端面板（默认 true） */
   autoRevealAgentTerminal?: boolean
+  /** 是否在对话里显示子 Agent（协作委派）执行 UI（默认 true；关闭后子 Agent 仍可执行但不展示过程） */
+  showDelegationUi?: boolean
   /** Windows 上 Agent Bash 工具的运行环境；默认自动选择 Git Bash，WSL 需用户显式启用。 */
   windowsShellPreference?: WindowsShellPreference
   /** 侧栏「自动任务」合成项目组在项目列表中的位置索引（默认 0 = 最靠前；可拖拽调整） */
