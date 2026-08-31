@@ -61,6 +61,8 @@ interface DelegationRecord {
   childSessionId: string
   channelId: string
   modelId?: string
+  /** 父会话中委派工具的 toolCallId（渲染层按它关联活动 UI） */
+  parentToolUseId?: string
   title: string
   role: AgentDelegationRole
   goal: string
@@ -82,6 +84,16 @@ const DELEGATION_GOAL_CHAR_LIMIT = 1_000
 const MAX_RETAINED_FINISHED_DELEGATIONS = 200
 
 const delegations = new Map<string, DelegationRecord>()
+/** childSessionId → delegationId 索引（eventBus 事件 O(1) 查找） */
+const delegationByChildSession = new Map<string, string>()
+
+/** delegation_progress 转发去重/节流状态 */
+/** 已转发过的 tool_start（key: delegationId + ':' + toolUseId），避免 Pi 流式重放导致重复 */
+const forwardedToolStarts = new Set<string>()
+/** 各委派最近一次 assistant 文本转发的毫秒时间戳（节流用） */
+const lastAssistantForwardAt = new Map<string, number>()
+/** assistant 文本节流窗口（ms）：同一委派在窗口内合并为一次转发 */
+const ASSISTANT_FORWARD_THROTTLE_MS = 250
 
 /** 从工具输入中提取简短摘要（用于子 Agent 活动展示） */
 function summarizeToolInput(toolName: string, input?: Record<string, unknown>): string | undefined {
@@ -140,7 +152,9 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
   _eventBusRef = eventBus
 
   eventBus.on((sessionId: string, payload: AgentStreamPayload) => {
-    const record = Array.from(delegations.values()).find((d) => d.childSessionId === sessionId)
+    // O(1) 索引查找（避免每次事件全量扫描 delegations Map）
+    const delegationId = delegationByChildSession.get(sessionId)
+    const record = delegationId ? delegations.get(delegationId) : undefined
     if (!record || record.status !== 'running') return
 
     // 子 Agent 工具活动转发：子会话的 SDK 消息（tool_use/tool_result/assistant 文本）
@@ -152,7 +166,11 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
         const content = Array.isArray(msgContent) ? msgContent : []
         for (const block of content) {
           const typed = block as { type?: string; id?: string; name?: string; input?: Record<string, unknown> }
-          if (typed.type === 'tool_use') {
+          if (typed.type === 'tool_use' && typed.id) {
+            // 去重：Pi 流式可能先 partial 后完整重放同一 tool_use
+            const dedupKey = `${record.delegationId}:${typed.id}`
+            if (forwardedToolStarts.has(dedupKey)) continue
+            forwardedToolStarts.add(dedupKey)
             eventBus.emit(record.parentSessionId, {
               kind: 'guru_event',
               event: {
@@ -164,23 +182,31 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
                 brief: summarizeToolInput(typed.name ?? '工具', typed.input),
                 title: record.title,
                 role: record.role,
+                parentToolUseId: record.parentToolUseId,
               } as import('@guru/shared').GuruEvent,
             })
           }
         }
         const text = extractAssistantText(msg)
         if (text) {
-          eventBus.emit(record.parentSessionId, {
-            kind: 'guru_event',
-            event: {
-              type: 'delegation_progress' as const,
-              delegationId: record.delegationId,
-              phase: 'assistant' as const,
-              text,
-              title: record.title,
-              role: record.role,
-            } as import('@guru/shared').GuruEvent,
-          })
+          // 节流：同一委派 250ms 内合并文本转发，避免流式帧刷屏
+          const now = Date.now()
+          const lastAt = lastAssistantForwardAt.get(record.delegationId) ?? 0
+          if (now - lastAt >= ASSISTANT_FORWARD_THROTTLE_MS) {
+            lastAssistantForwardAt.set(record.delegationId, now)
+            eventBus.emit(record.parentSessionId, {
+              kind: 'guru_event',
+              event: {
+                type: 'delegation_progress' as const,
+                delegationId: record.delegationId,
+                phase: 'assistant' as const,
+                text,
+                title: record.title,
+                role: record.role,
+                parentToolUseId: record.parentToolUseId,
+              } as import('@guru/shared').GuruEvent,
+            })
+          }
         }
       }
       if (msg.type === 'user') {
@@ -198,6 +224,7 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
                 isError: typed.is_error === true,
                 title: record.title,
                 role: record.role,
+                parentToolUseId: record.parentToolUseId,
               } as import('@guru/shared').GuruEvent,
             })
           }
@@ -279,7 +306,28 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
 }
 
 function getPendingBlockedEvents(delegationId: string): BlockedEvent[] {
-  return Array.from(blockedEvents.values()).filter((be) => be.delegationId === delegationId && !be.resolved)
+  return Array.from(blockedEvents.values()).filter((be) => {
+    if (be.delegationId !== delegationId || be.resolved) return false
+    // 去活校验：用户可能已通过主界面直接响应（ipc 路径不经过 eventBus），
+    // 此时服务端 pending 已清除，blockedEvent 视为幽灵，直接清理
+    if (be.type === 'ask_user' && be.askUserRequestId) {
+      const { askUserService } = require('./agent-ask-user-service') as typeof import('./agent-ask-user-service')
+      const stillPending = askUserService.getPendingRequests?.().some((r) => r.requestId === be.askUserRequestId)
+      if (!stillPending) {
+        blockedEvents.delete(be.id)
+        return false
+      }
+    }
+    if (be.type === 'permission' && be.permissionRequestId) {
+      const { permissionService } = require('./agent-permission-service') as typeof import('./agent-permission-service')
+      const stillPending = permissionService.getPendingRequests().some((r) => r.requestId === be.permissionRequestId)
+      if (!stillPending) {
+        blockedEvents.delete(be.id)
+        return false
+      }
+    }
+    return true
+  })
 }
 
 function getBlockedEventById(blockedEventId: string): BlockedEvent | undefined {
@@ -487,20 +535,24 @@ function listKnownDelegations(parentSessionId: string): Array<Record<string, unk
   const liveIds = new Set(live.map((item) => item.delegationId))
   const persisted = listAgentSessions()
     .filter((session) => session.parentSessionId === parentSessionId && session.sourceDelegationId && !liveIds.has(session.sourceDelegationId))
-    .map((session) => ({
-      delegationId: session.sourceDelegationId,
-      parentSessionId,
-      childSessionId: session.id,
-      channelId: session.channelId,
-      modelId: session.modelId,
-      title: session.title,
-      role: session.delegationRole,
-      goal: session.delegationGoal,
-      permissionMode: session.permissionMode,
-      status: session.delegationStatus,
-      startedAt: session.createdAt,
-      completedAt: session.delegationStatus && session.delegationStatus !== 'running' ? session.updatedAt : undefined,
-    }))
+    .map((session) => {
+      // 重启后遗留 running → interrupted
+      const status = session.delegationStatus === 'running' ? 'interrupted' : session.delegationStatus
+      return {
+        delegationId: session.sourceDelegationId,
+        parentSessionId,
+        childSessionId: session.id,
+        channelId: session.channelId,
+        modelId: session.modelId,
+        title: session.title,
+        role: session.delegationRole,
+        goal: session.delegationGoal,
+        permissionMode: session.permissionMode,
+        status,
+        startedAt: session.createdAt,
+        completedAt: session.delegationStatus === 'running' ? undefined : session.updatedAt,
+      }
+    })
 
   return [...live, ...persisted]
 }
@@ -519,7 +571,10 @@ function getDelegationResult(parentSessionId: string, delegationId: string): Rec
     throw new Error(`未找到当前会话下的委派: ${delegationId}`)
   }
 
-  const resultSummary = session.delegationStatus && session.delegationStatus !== 'running'
+  // 应用重启后遗留的 running 委派实际已中断：归一化为 interrupted，避免父会话看到"永远 running"的幽灵委派
+  const effectiveStatus = session.delegationStatus === 'running' ? 'interrupted' : session.delegationStatus
+
+  const resultSummary = effectiveStatus
     ? summarizeChildResult(session.id)
     : undefined
 
@@ -533,9 +588,9 @@ function getDelegationResult(parentSessionId: string, delegationId: string): Rec
     role: session.delegationRole,
     goal: session.delegationGoal,
     permissionMode: session.permissionMode,
-    status: session.delegationStatus,
+    status: effectiveStatus,
     startedAt: session.createdAt,
-    completedAt: session.delegationStatus && session.delegationStatus !== 'running' ? session.updatedAt : undefined,
+    completedAt: session.delegationStatus === 'running' ? undefined : session.updatedAt,
     resultSummary,
   }
 }
@@ -738,6 +793,7 @@ function startDelegation(
   ctx: CollaborationToolContext,
   parent: AgentSessionMeta | undefined,
   args: DelegateAgentArgs,
+  parentToolUseId?: string,
 ): StartDelegationResult {
   const task = assertNonBlank(args.task, 'task')
   const delegationId = randomUUID()
@@ -782,6 +838,7 @@ function startDelegation(
     childSessionId: child.id,
     channelId: ctx.channelId,
     modelId: effectiveModelId,
+    parentToolUseId,
     title,
     role,
     goal,
@@ -792,6 +849,7 @@ function startDelegation(
     resolveCompletion,
   }
   delegations.set(delegationId, record)
+  delegationByChildSession.set(child.id, delegationId)
   pruneFinishedDelegations()
 
   const prompt = buildDelegationPrompt({
@@ -827,6 +885,7 @@ function startDelegation(
       },
       onTitleUpdated: (updatedTitle) => {
         record.title = updatedTitle
+        try { updateAgentSessionMeta(record.childSessionId, { title: updatedTitle }) } catch { /* 持久化失败不影响运行 */ }
       },
     },
   ).catch((error: unknown) => {
@@ -954,7 +1013,7 @@ export function buildPiCollaborationTools(
         const args = params as DelegateAgentArgs
         const result = piDelegateAgentCalls.getOrCreate(ctx.sessionId, toolCallId, () => {
           const parent = assertCanCreateDelegation(ctx)
-          const created = startDelegation(ctx, parent, args)
+          const created = startDelegation(ctx, parent, args, toolCallId)
           return {
             delegationId: created.record.delegationId,
             effectivePermissionMode: created.effectivePermissionMode,
@@ -991,7 +1050,7 @@ export function buildPiCollaborationTools(
                   sharedContext: args.sharedContext,
                   task: item.task,
                 }),
-              })
+              }, toolCallId)
               created.push({
                 delegationId: started.record.delegationId,
                 effectivePermissionMode: started.effectivePermissionMode,
@@ -1230,7 +1289,10 @@ export function buildPiCollaborationTools(
               const resultSummary = summarizeChildResult(record.childSessionId)
               markDelegationFinished(record, 'completed', { resultSummary })
             },
-            onTitleUpdated: () => {},
+            onTitleUpdated: (updatedTitle) => {
+              record.title = updatedTitle
+              try { updateAgentSessionMeta(record.childSessionId, { title: updatedTitle }) } catch { /* 持久化失败不影响运行 */ }
+            },
           },
         ).catch((error: unknown) => {
           markDelegationFinished(record, 'failed', {

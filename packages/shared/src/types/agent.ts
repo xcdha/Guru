@@ -702,7 +702,7 @@ export type GuruEvent =
   // 协作子会话阻塞事件上浮
   | { type: 'delegation_blocked'; delegationId: string; blockedEvent: unknown }
   // 协作子会话过程事件（工具活动/文本片段），父会话对话里实时展示子 Agent 执行过程
-  | { type: 'delegation_progress'; delegationId: string; toolUseId?: string; phase: 'tool_start' | 'tool_result' | 'assistant'; toolName?: string; brief?: string; isError?: boolean; text?: string; title?: string; role?: string }
+  | { type: 'delegation_progress'; delegationId: string; toolUseId?: string; phase: 'tool_start' | 'tool_result' | 'assistant'; toolName?: string; brief?: string; isError?: boolean; text?: string; title?: string; role?: string; parentToolUseId?: string }
   // 自动任务会话被用户接管（毕业）
   | { type: 'automation_graduated' }
 

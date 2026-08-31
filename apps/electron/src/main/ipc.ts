@@ -2021,6 +2021,18 @@ export function registerIpcHandlers(): void {
     async (event, updates: Partial<AppSettings>): Promise<AppSettings> => {
       const result = await updateSettingsAsync(updates)
 
+      // 通用设置变更广播：让渲染层实时同步（如 showDelegationUi 开关）
+      if (updates.showDelegationUi !== undefined || updates.autoRevealAgentTerminal !== undefined) {
+        BrowserWindow.getAllWindows().forEach((win) => {
+          if (win.webContents.id !== event.sender.id) {
+            win.webContents.send(SETTINGS_IPC_CHANNELS.ON_SETTINGS_CHANGED, {
+              showDelegationUi: result.showDelegationUi,
+              autoRevealAgentTerminal: result.autoRevealAgentTerminal,
+            })
+          }
+        })
+      }
+
       if (updates.feishuSessionMirror !== undefined) {
         syncFeishuSyncSleepBlocker(result)
       }

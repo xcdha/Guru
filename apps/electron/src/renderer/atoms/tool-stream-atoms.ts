@@ -22,6 +22,8 @@ export interface DelegationActivity {
   title?: string
   /** 子 Agent 角色 */
   role?: string
+  /** 父会话中委派工具的 toolUseId（渲染层按它关联活动 UI） */
+  parentToolUseId?: string
 }
 
 /** 每个委派的最新活动列表（保留最近 30 条） */
