@@ -10,6 +10,24 @@ afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true })
 })
 
+/**
+ * Windows 未开启开发者模式时创建 symlink 需要管理员权限（EPERM）。
+ * 这些测试只验证“拒绝 symlink 逃逸”的安全逻辑，无法创建 symlink 时跳过而不是失败。
+ */
+const canCreateSymlink = ((): boolean => {
+  try {
+    const probeRoot = mkdtempSync(join(tmpdir(), 'guru-symlink-probe-'))
+    const probeTarget = join(probeRoot, 'target')
+    const probeLink = join(probeRoot, 'link')
+    mkdirSync(probeTarget)
+    symlinkSync(probeTarget, probeLink, 'dir')
+    rmSync(probeRoot, { recursive: true, force: true })
+    return true
+  } catch {
+    return false
+  }
+})()
+
 describe('recovery-trash-service', () => {
   test('moves a destructive target without deleting it and writes a recoverable journal', () => {
     const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
@@ -33,7 +51,7 @@ describe('recovery-trash-service', () => {
     expect(readFileSync(join(root, '.recovery-trash', 'journal.jsonl'), 'utf-8')).toContain(record.id)
   })
 
-  test('rejects a symlinked recovery root before moving anything', () => {
+  test.skipIf(!canCreateSymlink)('rejects a symlinked recovery root before moving anything', () => {
     const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     const outside = mkdtempSync(join(tmpdir(), 'guru-recovery-outside-'))
     roots.push(root, outside)
@@ -46,7 +64,7 @@ describe('recovery-trash-service', () => {
     expect(existsSync(join(outside, 'secret'))).toBe(false)
   })
 
-  test('rejects a dangling recovery-root symlink before creating an escape path', () => {
+  test.skipIf(!canCreateSymlink)('rejects a dangling recovery-root symlink before creating an escape path', () => {
     const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     const outside = join(tmpdir(), `guru-recovery-missing-${Date.now()}`)
     roots.push(root)
@@ -59,7 +77,7 @@ describe('recovery-trash-service', () => {
     expect(existsSync(outside)).toBe(false)
   })
 
-  test('rejects a recovery journal index symlink before moving the source', () => {
+  test.skipIf(!canCreateSymlink)('rejects a recovery journal index symlink before moving the source', () => {
     const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     const outside = mkdtempSync(join(tmpdir(), 'guru-recovery-outside-'))
     roots.push(root, outside)
@@ -91,7 +109,7 @@ describe('recovery-trash-service', () => {
     })
   })
 
-  test('rejects a symlinked source path before moving the real target', () => {
+  test.skipIf(!canCreateSymlink)('rejects a symlinked source path before moving the real target', () => {
     const root = mkdtempSync(join(tmpdir(), 'guru-recovery-'))
     roots.push(root)
     const realSource = join(root, 'tasks', 'real')

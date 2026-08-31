@@ -225,10 +225,10 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
 describe('migrateGlobalScopes - Skills 上浮与清理', () => {
   test('Given 工作区持有预制 Skill 副本 When 迁移 Then 副本被清理并移入备份目录（不再残留在工作区）', async () => {
-    writeDefaultSkillFixture('brainstorming', '头脑风暴')
+    writeDefaultSkillFixture('code-review', '代码审查')
     const ws = manager.ensureDefaultWorkspace() // ensureDefaultWorkspace 会自动从 default-skills 复制一份到工作区
 
-    const workspaceCopyPath = join(configPaths.getWorkspaceSkillsDir(ws.slug), 'brainstorming')
+    const workspaceCopyPath = join(configPaths.getWorkspaceSkillsDir(ws.slug), 'code-review')
     expect(existsSync(workspaceCopyPath)).toBe(true)
 
     await migration.migrateGlobalScopes()
@@ -236,7 +236,7 @@ describe('migrateGlobalScopes - Skills 上浮与清理', () => {
     // 工作区里的预制技能副本应已被搬走（不再残留，避免与全局层重复维护）
     expect(existsSync(workspaceCopyPath)).toBe(false)
     // 全局层应持有这份技能
-    expect(existsSync(join(configPaths.getGlobalSkillsDir(), 'brainstorming'))).toBe(true)
+    expect(existsSync(join(configPaths.getGlobalSkillsDir(), 'code-review'))).toBe(true)
   })
 
   test('Given 用户自建了一个与全局技能同名但内容不同的 Skill When 迁移 Then 不被误判为冗余副本、原样保留', async () => {
