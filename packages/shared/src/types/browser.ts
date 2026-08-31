@@ -96,3 +96,12 @@ export interface BrowserCreateTabInput {
   sessionId: string
   url?: string
 }
+
+/** 浏览器会话已关闭（renderer 用它清理本地状态） */
+export interface BrowserSessionClosed {
+  sessionId: string
+  closed: true
+}
+
+/** 浏览器状态变更：正常状态快照或会话关闭 */
+export type BrowserStateChange = BrowserViewState | BrowserSessionClosed
