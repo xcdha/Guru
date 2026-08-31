@@ -90,6 +90,7 @@ export function getSettings(): AppSettings {
         ? sanitizeWindowsTerminalProfile(settings.lastWindowsTerminalProfile ?? legacyLastTerminalProfile)
         : undefined,
       autoRevealAgentTerminal: settings.autoRevealAgentTerminal ?? true,
+      showDelegationUi: settings.showDelegationUi ?? true,
       agentThinking: settings.agentThinking ?? { type: 'adaptive' },
       defaultThinkingLevel: settings.defaultThinkingLevel ?? 'high',
       // 缺省 true：老配置文件未写该字段时保持推广默认开启

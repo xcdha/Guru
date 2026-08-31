@@ -23,6 +23,9 @@ export interface DelegationActivity {
 /** 每个委派的最新活动列表（保留最近 30 条） */
 export const delegationActivityAtom = atom<Map<string, DelegationActivity[]>>(new Map())
 
+/** 用户设置：是否显示子 Agent（协作委派）执行 UI（默认 true；关闭后仍可执行但不展示） */
+export const showDelegationUiAtom = atom<boolean>(true)
+
 /** 清空某工具（或全部）的流式输出缓存 */
 export function clearToolStreamOutput(
   map: Map<string, string>,
