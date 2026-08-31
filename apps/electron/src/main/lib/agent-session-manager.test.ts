@@ -28,6 +28,21 @@ mock.module('node:os', () => ({
   homedir: () => tempHome,
 }))
 
+/** Windows 未开启开发者模式时创建 symlink 需要管理员权限（EPERM），相关测试跳过 */
+const canCreateSymlink = ((): boolean => {
+  try {
+    const probeRoot = mkdtempSync(join(os.tmpdir(), 'guru-symlink-probe-'))
+    const probeTarget = join(probeRoot, 'target')
+    const probeLink = join(probeRoot, 'link')
+    mkdirSync(probeTarget)
+    symlinkSync(probeTarget, probeLink, 'dir')
+    rmSync(probeRoot, { recursive: true, force: true })
+    return true
+  } catch {
+    return false
+  }
+})()
+
 function jsonl(rows: string[]): string {
   return rows.join('\n') + '\n'
 }
@@ -108,7 +123,7 @@ afterAll(() => {
 })
 
 describe('Agent 会话 JSONL 读取', () => {
-  test('Given Worktree 干净但 recovery 隔离不可用 When 删除会话 Then Worktree 与 Session 索引都保留', () => {
+  test.skipIf(!canCreateSymlink)('Given Worktree 干净但 recovery 隔离不可用 When 删除会话 Then Worktree 与 Session 索引都保留', () => {
     const sessionId = 'session-worktree-recovery'
     const repo = join(tempHome, 'repo-for-delete')
     const worktree = join(tempHome, 'worktree-for-delete')
