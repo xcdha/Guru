@@ -68,7 +68,7 @@ import type { AgentStreamState } from '@/atoms/agent-atoms'
 import { agentDiffUnseenChangesAtom, agentDiffUnseenFilesAtom } from '@/atoms/agent-atoms'
 import { channelsAtom } from '@/atoms/chat-atoms'
 import { previewFileMapAtom } from '@/atoms/preview-atoms'
-import { toolStreamOutputAtom, delegationActivityAtom } from '@/atoms/tool-stream-atoms'
+import { toolStreamOutputAtom, delegationActivityAtom, showDelegationUiAtom } from '@/atoms/tool-stream-atoms'
 import type { NotificationSoundType } from '@/types/settings'
 import { toast } from 'sonner'
 import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, GuruEvent, AgentSessionMeta, ProviderType } from '@guru/shared'
@@ -902,6 +902,11 @@ export function useGlobalAgentListeners(): void {
         store.set(stoppedByUserSessionsAtom, stoppedIds)
       }
     }).catch(console.error)
+
+    // 初始化子 Agent UI 开关（用户设置）
+    window.electronAPI.getSettings()
+      .then((settings) => store.set(showDelegationUiAtom, settings.showDelegationUi ?? true))
+      .catch(() => undefined)
 
     // ===== 1. 流式事件 =====
     const handleStreamEvent = (streamEvent: AgentStreamEvent): void => {

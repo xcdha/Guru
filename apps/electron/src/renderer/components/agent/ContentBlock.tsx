@@ -23,7 +23,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
 import { activeSessionIdAtom } from '@/atoms/tab-atoms'
 import { terminalPanelOpenMapAtom, terminalStateMapAtom } from '@/atoms/terminal-atoms'
-import { toolStreamOutputAtom, delegationActivityAtom } from '@/atoms/tool-stream-atoms'
+import { toolStreamOutputAtom, delegationActivityAtom, showDelegationUiAtom } from '@/atoms/tool-stream-atoms'
 import { cn } from '@/lib/utils'
 import { MarkdownStreamingContext, MessageResponse } from '@/components/ai-elements/message'
 import { getToolIcon, extractFilePath } from './tool-utils'
@@ -359,7 +359,7 @@ interface ToolUseBlockProps {
   isStreaming?: boolean
 }
 
-function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed = false, childBlocks, basePath, isStreaming }: ToolUseBlockProps): React.ReactElement {
+function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed = false, childBlocks, basePath, isStreaming }: ToolUseBlockProps): React.ReactElement | null {
   const [expanded, setExpanded] = React.useState(false)
   const toolResult = useToolResult(block.id, allMessages)
   const resultText = toolResult?.result
@@ -379,6 +379,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   const isAgentTool = block.name === 'Agent' || block.name === 'Task'
   // 协作委派工具（mcp__collaboration__delegate_agent / delegate_agents）也视为子 Agent 容器
   const isDelegationTool = block.name === 'mcp__collaboration__delegate_agent' || block.name === 'mcp__collaboration__delegate_agents'
+  // 用户设置：是否显示子 Agent 执行 UI（关闭则不渲染，功能照常）
+  const showDelegationUi = useAtomValue(showDelegationUiAtom)
   const hasChildren = (isAgentTool || isDelegationTool) && childBlocks && childBlocks.length > 0
   const subAgentMeta = useSubAgentMeta(block.id, allMessages)
   // 从 tool_result 解析 delegationId（委派工具的 result 是含 delegationId 的 JSON）
@@ -408,8 +410,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     return all.sort((a, b) => a.seq - b.seq)
   }, [isDelegationTool, delegationIds, delegationActivityMap])
 
-  // Agent/Task 子代理内容默认折叠（委派工具默认展开以显示实时活动）
-  const [childrenExpanded, setChildrenExpanded] = React.useState(isDelegationTool)
+  // Agent/Task 子代理内容默认折叠
+  const [childrenExpanded, setChildrenExpanded] = React.useState(false)
 
   const phrase = getToolPhrase(block.name, block.input)
   const ToolIcon = getToolIcon(block.name)
@@ -484,8 +486,18 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   // 子代理工具调用统计
   const childToolCount = childBlocks?.filter((b) => b.type === 'tool_use').length ?? 0
 
+  // 当前执行步骤摘要（委派工具收缩时显示）：最近一条 tool_start 的工具名+摘要
+  const currentStep = React.useMemo(() => {
+    if (!isDelegationTool) return null
+    const lastToolStart = [...delegationActivities].reverse().find((a) => a.phase === 'tool_start')
+    if (!lastToolStart) return null
+    return lastToolStart.brief ? `${lastToolStart.toolName} · ${lastToolStart.brief}` : lastToolStart.toolName
+  }, [isDelegationTool, delegationActivities])
+
   // ===== Agent/Task 工具（含协作委派）：特殊渲染 =====
   if (isAgentTool || isDelegationTool) {
+    // 用户关闭子 Agent UI：不渲染委派工具行（功能照常执行）
+    if (isDelegationTool && !showDelegationUi) return null
     return (
       <div
         className={cn(
@@ -520,6 +532,22 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             </>
           )}
           <span className="min-w-0 flex-1 truncate text-[14px] text-muted-foreground">{displayLabel}</span>
+          {/* 委派工具收缩时：显示当前执行步骤 + 活动数 */}
+          {isDelegationTool && !childrenExpanded && (
+            <>
+              {currentStep && (
+                <span className="shrink-0 max-w-[40%] truncate text-[12px] text-muted-foreground/60">
+                  <Loader2 className="mr-1 inline size-2.5 animate-spin text-primary/60" />
+                  {currentStep}
+                </span>
+              )}
+              {delegationActivities.length > 0 && (
+                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/55">
+                  {delegationActivities.length} 步
+                </span>
+              )}
+            </>
+          )}
           {childToolCount > 0 && !childrenExpanded && (
             <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/55">
               {childToolCount} 项工具

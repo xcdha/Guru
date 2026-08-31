@@ -101,6 +101,7 @@ export function GeneralSettings(): React.ReactElement {
   const [showAvatarPicker, setShowAvatarPicker] = React.useState(false);
   const [archiveAfterDays, setArchiveAfterDays] = React.useState<number>(7);
   const [autoRevealAgentTerminal, setAutoRevealAgentTerminal] = React.useState(true);
+  const [showDelegationUi, setShowDelegationUi] = React.useState(true);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // 加载归档天数 / 默认思考深度
@@ -110,6 +111,7 @@ export function GeneralSettings(): React.ReactElement {
       .then((settings) => {
         setArchiveAfterDays(settings.archiveAfterDays ?? 7);
         setAutoRevealAgentTerminal(settings.autoRevealAgentTerminal ?? true);
+        setShowDelegationUi(settings.showDelegationUi ?? true);
         setDefaultThinkingLevel(
           settings.defaultThinkingLevel ?? DEFAULT_AGENT_THINKING_LEVEL,
         );
@@ -138,6 +140,16 @@ export function GeneralSettings(): React.ReactElement {
       await window.electronAPI.updateSettings({ autoRevealAgentTerminal: checked });
     } catch (error) {
       console.error("[通用设置] 更新自动弹出终端失败:", error);
+    }
+  };
+
+  /** 切换子 Agent UI 显示 */
+  const handleShowDelegationUiChange = async (checked: boolean): Promise<void> => {
+    setShowDelegationUi(checked);
+    try {
+      await window.electronAPI.updateSettings({ showDelegationUi: checked });
+    } catch (error) {
+      console.error("[通用设置] 更新子 Agent UI 开关失败:", error);
     }
   };
 
@@ -362,6 +374,12 @@ export function GeneralSettings(): React.ReactElement {
             description="AI 执行终端命令时自动弹出可见终端面板；关闭后命令仍会执行但不自动弹出，可手动点击终端按钮查看"
             checked={autoRevealAgentTerminal}
             onCheckedChange={(checked) => { void handleAutoRevealAgentTerminalChange(checked) }}
+          />
+          <SettingsToggle
+            label="显示子 Agent 执行过程"
+            description="开启后对话里显示子 Agent（协作委派）的执行过程卡片，可展开查看详细步骤；关闭后子 Agent 仍正常执行但不展示 UI"
+            checked={showDelegationUi}
+            onCheckedChange={(checked) => { void handleShowDelegationUiChange(checked) }}
           />
 <SettingsToggle
             label="桌面通知"

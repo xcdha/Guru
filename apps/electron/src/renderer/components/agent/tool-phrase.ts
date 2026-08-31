@@ -173,6 +173,20 @@ export function getToolPhrase(toolName: string, input: Record<string, unknown>):
       return phrase('执行命令')
     }
 
+    case 'mcp__collaboration__delegate_agent': {
+      const task = input.task ?? input.prompt
+      if (typeof task === 'string' && task.trim()) {
+        return phrase(`委派子 Agent：${truncate(task.trim(), 60)}`)
+      }
+      return phrase('委派子 Agent')
+    }
+
+    case 'mcp__collaboration__delegate_agents': {
+      const items = input.items
+      const count = Array.isArray(items) ? items.length : 0
+      return phrase(count > 0 ? `委派 ${count} 个子 Agent` : '批量委派子 Agent')
+    }
+
     case 'Grep': {
       const pattern = input.pattern
       if (typeof pattern === 'string') {
@@ -504,6 +518,21 @@ export function getToolResultSummary(toolName: string, result: string | undefine
 
   if (toolName === 'Edit' || toolName === 'Write') return '已更新'
   if (toolName === 'Glob') return '已完成'
+  if (toolName === 'mcp__collaboration__delegate_agent' || toolName === 'mcp__collaboration__delegate_agents') {
+    // 委派工具完成：从结果 JSON 提取状态
+    try {
+      const parsed = JSON.parse(result ?? '') as { delegation?: { status?: string }; delegations?: Array<{ status?: string }> }
+      const statuses: string[] = []
+      if (parsed.delegation?.status) statuses.push(parsed.delegation.status)
+      if (Array.isArray(parsed.delegations)) for (const d of parsed.delegations) if (d.status) statuses.push(d.status)
+      if (statuses.length === 0) return null
+      const done = statuses.filter((s) => s === 'completed').length
+      if (done === statuses.length) return `已完成 ${done} 个子 Agent`
+      return `完成 ${done}/${statuses.length}`
+    } catch {
+      return null
+    }
+  }
 
   return null
 }
