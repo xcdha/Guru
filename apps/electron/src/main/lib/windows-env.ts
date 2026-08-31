@@ -17,9 +17,6 @@ import { join } from 'path'
 import { app } from 'electron'
 import type { ShellEnvResult } from '@guru/shared'
 
-/**
- * Windows PATH 分隔符
- */
 const PATH_SEP = ';'
 
 /**
@@ -61,72 +58,33 @@ export function readRegistryValue(key: string, valueName: string): string | null
   }
 }
 
-/**
- * 从注册表读取 Git for Windows 安装路径
- *
- * 检测顺序：HKLM（系统级） → HKCU（用户级）
- *
- * @returns Git 安装目录路径，失败返回 null
- */
 export function getGitForWindowsInstallPath(): string | null {
-  // HKLM
   let path = readRegistryValue('HKLM\\SOFTWARE\\GitForWindows', 'InstallPath')
   if (path) return path
-
-  // HKCU
   path = readRegistryValue('HKCU\\SOFTWARE\\GitForWindows', 'InstallPath')
   return path
 }
 
-/**
- * 从注册表读取 Node.js 安装路径
- *
- * 检测顺序：HKLM（系统级） → HKCU（用户级）
- *
- * @returns Node.js 安装目录路径，失败返回 null
- */
 export function getNodeInstallPathFromRegistry(): string | null {
   if (process.platform !== 'win32') return null
-
-  // HKLM
   let path = readRegistryValue('HKLM\\SOFTWARE\\Node.js', 'InstallPath')
   if (path) return path
-
-  // HKCU
   path = readRegistryValue('HKCU\\SOFTWARE\\Node.js', 'InstallPath')
   return path
 }
 
-/**
- * 展开 Windows 环境变量中的 %VAR% 引用
- *
- * 例如 %SCOOP% → D:\Scoop
- */
 function expandEnvVars(value: string): string {
-  return value.replace(/%([^%]+)%/g, (_, varName: string) => {
-    return process.env[varName] || `%${varName}%`
-  })
+  return value.replace(/%([^%]+)%/g, (_, varName: string) => process.env[varName] || `%${varName}%`)
 }
 
-/**
- * 规范化路径用于去重比较（忽略大小写和尾部斜杠）
- */
 function normalizePathForCompare(p: string): string {
   return p.replace(/[/\\]+$/, '').toLowerCase()
 }
 
-/**
- * 合并注册表 PATH 到 process.env.PATH
- *
- * 策略：注册表中的路径优先（放在前面），与现有 PATH 合并去重
- *
- * @returns 新增的路径数量
- */
 function mergeRegistryPath(registryPath: string): number {
   const currentPath = process.env.PATH || ''
   const currentEntries = currentPath.split(PATH_SEP).filter(Boolean)
   const currentSet = new Set(currentEntries.map(normalizePathForCompare))
-
   const registryEntries = registryPath
     .split(PATH_SEP)
     .filter(Boolean)
@@ -135,7 +93,6 @@ function mergeRegistryPath(registryPath: string): number {
 
   let addedCount = 0
   const newEntries: string[] = []
-
   for (const entry of registryEntries) {
     const normalized = normalizePathForCompare(entry)
     if (!currentSet.has(normalized)) {
@@ -145,11 +102,7 @@ function mergeRegistryPath(registryPath: string): number {
     }
   }
 
-  if (addedCount > 0) {
-    // 注册表路径放在前面，优先级更高
-    process.env.PATH = [...newEntries, ...currentEntries].join(PATH_SEP)
-  }
-
+  if (addedCount > 0) process.env.PATH = [...newEntries, ...currentEntries].join(PATH_SEP)
   return addedCount
 }
 
@@ -230,40 +183,29 @@ export function getRegistryPathFromRegistry(): string | null {
  * @returns 加载结果
  */
 export async function loadWindowsEnv(): Promise<ShellEnvResult> {
-  // 仅在 Windows 上执行
-  if (process.platform !== 'win32') {
-    return { success: true, loadedCount: 0, error: null }
-  }
-
-  // 开发模式下跳过（从终端启动，PATH 已完整）
-  if (!app.isPackaged) {
-    return { success: true, loadedCount: 0, error: null }
-  }
+  if (process.platform !== 'win32') return { success: true, loadedCount: 0, error: null }
+  if (!app.isPackaged) return { success: true, loadedCount: 0, error: null }
 
   console.log('[Windows 环境] 正在从注册表加载 PATH...')
-
   try {
     let totalAdded = 0
-
-    // 读取系统 PATH
-    const systemPath = readRegistryValue(
-      'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-      'Path',
-    )
+    const [systemPath, userPath] = await Promise.all([
+      readRegistryValue(
+        'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
+        'Path',
+      ),
+      readRegistryValue('HKCU\\Environment', 'Path'),
+    ])
     if (systemPath) {
       const added = mergeRegistryPath(systemPath)
       totalAdded += added
       console.log(`[Windows 环境] 系统 PATH: 新增 ${added} 个路径`)
     }
-
-    // 读取用户 PATH
-    const userPath = readRegistryValue('HKCU\\Environment', 'Path')
     if (userPath) {
       const added = mergeRegistryPath(userPath)
       totalAdded += added
       console.log(`[Windows 环境] 用户 PATH: 新增 ${added} 个路径`)
     }
-
     console.log(`[Windows 环境] PATH 加载完成，共新增 ${totalAdded} 个路径`)
     return { success: true, loadedCount: totalAdded, error: null }
   } catch (error) {

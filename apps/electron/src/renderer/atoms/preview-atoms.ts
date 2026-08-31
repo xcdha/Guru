@@ -31,6 +31,11 @@ export interface PreviewFile {
   baseRef?: string
 }
 
+/** 预览 Tab 的稳定 key：同一文件在不同预览/比较上下文可独立打开。 */
+export function getPreviewFileId(file: PreviewFile): string {
+  return [file.filePath, file.previewOnly ? 'preview' : 'diff', file.gitRoot ?? '', file.baseRef ?? ''].join('\u0000')
+}
+
 // ===== Atoms =====
 
 /** 每会话预览面板开关 */
