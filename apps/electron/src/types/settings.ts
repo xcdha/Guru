@@ -652,6 +652,8 @@ export const SETTINGS_IPC_CHANNELS = {
   ON_SYSTEM_THEME_CHANGED: 'settings:system-theme-changed',
   /** 用户手动切换主题时广播给所有窗口 */
   ON_THEME_SETTINGS_CHANGED: 'settings:theme-settings-changed',
+  /** 通用设置变更广播（如 showDelegationUi 开关） */
+  ON_SETTINGS_CHANGED: 'settings:changed',
 } as const
 
 /** Scratch Pad IPC 通道 */

@@ -639,6 +639,9 @@ export interface ElectronAPI {
   /** 订阅用户手动切换主题事件（跨窗口同步，返回清理函数） */
   onThemeSettingsChanged: (callback: (payload: { themeMode: string; themeStyle?: string; themePacks?: AppSettings['themePacks']; themeActiveVariant?: string; interfaceVariant?: string }) => void) => () => void
 
+  /** 订阅通用设置变更（如 showDelegationUi 开关，返回清理函数） */
+  onSettingsChanged: (callback: (payload: { showDelegationUi?: boolean; autoRevealAgentTerminal?: boolean }) => void) => () => void
+
   // ===== Scratch Pad =====
 
   /** 从磁盘加载 scratch-pad.md */
@@ -2250,6 +2253,12 @@ const electronAPI: ElectronAPI = {
     const listener = (_: unknown, payload: { themeMode: string; themeStyle?: string; themePacks?: AppSettings['themePacks']; themeActiveVariant?: string; interfaceVariant?: string }): void => callback(payload)
     ipcRenderer.on(SETTINGS_IPC_CHANNELS.ON_THEME_SETTINGS_CHANGED, listener)
     return () => { ipcRenderer.removeListener(SETTINGS_IPC_CHANNELS.ON_THEME_SETTINGS_CHANGED, listener) }
+  },
+
+  onSettingsChanged: (callback: (payload: { showDelegationUi?: boolean; autoRevealAgentTerminal?: boolean }) => void) => {
+    const listener = (_: unknown, payload: { showDelegationUi?: boolean; autoRevealAgentTerminal?: boolean }): void => callback(payload)
+    ipcRenderer.on(SETTINGS_IPC_CHANNELS.ON_SETTINGS_CHANGED, listener)
+    return () => { ipcRenderer.removeListener(SETTINGS_IPC_CHANNELS.ON_SETTINGS_CHANGED, listener) }
   },
 
   // Scratch Pad 持久化

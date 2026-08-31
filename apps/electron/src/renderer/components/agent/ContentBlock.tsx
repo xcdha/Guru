@@ -19,6 +19,7 @@ import {
   Terminal,
   Wrench,
   Bot,
+  CheckCircle2,
 } from 'lucide-react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
@@ -400,16 +401,28 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     return ids
   }, [isDelegationTool, resultText])
   // 子 Agent 实时活动（主进程 eventBus 转发 delegation_progress → atom），按子 Agent 分组
+  // 关联方式：优先按父会话委派工具的 toolUseId（block.id）匹配（委派执行中即可显示）；
+  // 兜底从 tool_result JSON 解析 delegationId（历史消息/重载场景）
   const delegationActivityMap = useAtomValue(delegationActivityAtom)
+  const matchedDelegationIds = React.useMemo(() => {
+    // 按 parentToolUseId 匹配的活动（本工具行发起）
+    const byToolUse = new Set<string>()
+    for (const [delegationId, list] of delegationActivityMap) {
+      if (list.some((a) => a.parentToolUseId === block.id)) byToolUse.add(delegationId)
+    }
+    // 从 tool_result 解析的 delegationId（兜底）
+    const byResult = delegationIds
+    return [...new Set([...byToolUse, ...byResult])]
+  }, [delegationActivityMap, block.id, delegationIds])
   const delegationActivityGroups = React.useMemo(() => {
-    if (!isDelegationTool || delegationIds.length === 0) return []
+    if (!isDelegationTool || matchedDelegationIds.length === 0) return []
     const groups: Array<{
       delegationId: string
       title?: string
       role?: string
       activities: Array<{ seq: number; ts: number; phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string }>
     }> = []
-    for (const id of delegationIds) {
+    for (const id of matchedDelegationIds) {
       const list = delegationActivityMap.get(id)
       if (!list || list.length === 0) continue
       groups.push({
@@ -420,7 +433,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
       })
     }
     return groups
-  }, [isDelegationTool, delegationIds, delegationActivityMap])
+  }, [isDelegationTool, matchedDelegationIds, delegationActivityMap])
   const delegationActivities = React.useMemo(() => {
     return delegationActivityGroups.flatMap((g) => g.activities)
   }, [delegationActivityGroups])
@@ -510,7 +523,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
       if (lastToolStart) {
         const label = group.title ? group.title.replace(/^协作[：:]\s*/, '').slice(0, 12) : undefined
         const detail = lastToolStart.brief ? `${lastToolStart.toolName ?? '工具'} · ${lastToolStart.brief}` : (lastToolStart.toolName ?? '工具')
-        steps.push(label ? `${label}: ${detail}` : detail)
+        const clipped = detail.length > 30 ? `${detail.slice(0, 30)}…` : detail
+        steps.push(label ? `${label}: ${clipped}` : clipped)
       }
     }
     if (steps.length === 0) return null
@@ -518,6 +532,14 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     const rest = steps.length - shown.length
     return shown.join(' ｜ ') + (rest > 0 ? ` 等 ${rest} 个` : '')
   }, [isDelegationTool, delegationActivityGroups])
+
+  // 工具步数统计：仅计 tool_start（排除 assistant 文本活动，避免语义混乱）
+  const delegationStepCount = React.useMemo(() => {
+    return delegationActivityGroups.reduce((sum, g) => sum + g.activities.filter((a) => a.phase === 'tool_start').length, 0)
+  }, [delegationActivityGroups])
+
+  // 委派是否活跃：有活动且未完成（不依赖 turn 级 isStreaming）
+  const delegationActive = isDelegationTool && !isCompleted && delegationActivities.length > 0
 
   // ===== Agent/Task 工具（含协作委派）：特殊渲染 =====
   if (isAgentTool || isDelegationTool) {
@@ -557,18 +579,18 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             </>
           )}
           <span className="min-w-0 flex-1 truncate text-[14px] text-muted-foreground">{displayLabel}</span>
-          {/* 委派工具收缩时：显示当前执行步骤 + 活动数 */}
+          {/* 委派工具收缩时：显示当前执行步骤 + 步数（完成后不显示 spinner 步骤） */}
           {isDelegationTool && !childrenExpanded && (
             <>
-              {currentStep && (
+              {delegationActive && currentStep && (
                 <span className="shrink-0 max-w-[40%] truncate text-[12px] text-muted-foreground/60">
                   <Loader2 className="mr-1 inline size-2.5 animate-spin text-primary/60" />
                   {currentStep}
                 </span>
               )}
-              {delegationActivities.length > 0 && (
+              {delegationStepCount > 0 && (
                 <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/55">
-                  {delegationActivities.length} 步
+                  {delegationStepCount} 步
                 </span>
               )}
             </>
@@ -593,8 +615,12 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {isDelegationTool && delegationActivityGroups.length > 0 && (
               <div className="space-y-2 rounded-md border border-border/30 bg-muted/20 p-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
-                  <Loader2 className="size-3 animate-spin text-primary/60" />
-                  子 Agent 执行中
+                  {isCompleted ? (
+                    <CheckCircle2 className="size-3 text-emerald-500/80" />
+                  ) : (
+                    <Loader2 className="size-3 animate-spin text-primary/60" />
+                  )}
+                  {isCompleted ? '子 Agent 执行完成' : (delegationActivities.length > 0 ? '子 Agent 执行中' : '等待子 Agent 启动…')}
                 </div>
                 {delegationActivityGroups.map((group) => (
                   <div key={group.delegationId} className="space-y-1">

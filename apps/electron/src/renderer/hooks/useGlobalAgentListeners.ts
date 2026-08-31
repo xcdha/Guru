@@ -907,6 +907,10 @@ export function useGlobalAgentListeners(): void {
     window.electronAPI.getSettings()
       .then((settings) => store.set(showDelegationUiAtom, settings.showDelegationUi ?? true))
       .catch(() => undefined)
+    // 订阅设置变更：运行中切换开关实时生效
+    const unsubscribeSettings = window.electronAPI.onSettingsChanged?.((payload) => {
+      if (payload.showDelegationUi !== undefined) store.set(showDelegationUiAtom, payload.showDelegationUi)
+    })
 
     // ===== 1. 流式事件 =====
     const handleStreamEvent = (streamEvent: AgentStreamEvent): void => {
@@ -970,6 +974,7 @@ export function useGlobalAgentListeners(): void {
                 text: evt.text,
                 title: evt.title,
                 role: evt.role,
+                parentToolUseId: evt.parentToolUseId,
               }
               const next = [...list, activity].slice(-30)
               const map = new Map(prev)
@@ -1673,6 +1678,10 @@ export function useGlobalAgentListeners(): void {
           // 清理后台任务
           store.set(backgroundTasksAtomFamily(data.sessionId), [])
 
+          // 一轮消息结束：清空工具流式输出缓存与子 Agent 活动（均已展示完成，避免内存增长）
+          store.set(toolStreamOutputAtom, new Map())
+          store.set(delegationActivityAtom, new Map())
+
           // 后台会话没有挂载的 AgentView 来执行收尾清理（MainArea 只渲染活动 Tab）。
           // 若不在此处回收，liveMessagesMap 与流式状态索引会随运行时长单调增长，
           // 让每个 delta 的 Map 复制与聚合读取越来越慢（表现为“同样 1 个 Agent 越跑越卡”）。
@@ -1919,6 +1928,7 @@ export function useGlobalAgentListeners(): void {
     const unsubscribeSettingsOpen = store.sub(settingsOpenAtom, syncVisibleAgentStreamSession)
 
     return () => {
+      unsubscribeSettings?.()
       unsubscribeSettingsOpen()
       cleanupEvent()
       streamEventBatcher.dispose()
