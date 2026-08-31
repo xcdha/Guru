@@ -18,6 +18,7 @@ import {
   MessageSquareText,
   Terminal,
   Wrench,
+  Bot,
 } from 'lucide-react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
@@ -398,17 +399,31 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     }
     return ids
   }, [isDelegationTool, resultText])
-  // 子 Agent 实时活动（主进程 eventBus 转发 delegation_progress → atom）
+  // 子 Agent 实时活动（主进程 eventBus 转发 delegation_progress → atom），按子 Agent 分组
   const delegationActivityMap = useAtomValue(delegationActivityAtom)
-  const delegationActivities = React.useMemo(() => {
+  const delegationActivityGroups = React.useMemo(() => {
     if (!isDelegationTool || delegationIds.length === 0) return []
-    const all: Array<{ seq: number; ts: number; phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string }> = []
+    const groups: Array<{
+      delegationId: string
+      title?: string
+      role?: string
+      activities: Array<{ seq: number; ts: number; phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string }>
+    }> = []
     for (const id of delegationIds) {
       const list = delegationActivityMap.get(id)
-      if (list) all.push(...list)
+      if (!list || list.length === 0) continue
+      groups.push({
+        delegationId: id,
+        title: list[list.length - 1]?.title,
+        role: list[list.length - 1]?.role,
+        activities: [...list].sort((a, b) => a.seq - b.seq),
+      })
     }
-    return all.sort((a, b) => a.seq - b.seq)
+    return groups
   }, [isDelegationTool, delegationIds, delegationActivityMap])
+  const delegationActivities = React.useMemo(() => {
+    return delegationActivityGroups.flatMap((g) => g.activities)
+  }, [delegationActivityGroups])
 
   // Agent/Task 子代理内容默认折叠
   const [childrenExpanded, setChildrenExpanded] = React.useState(false)
@@ -486,13 +501,23 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   // 子代理工具调用统计
   const childToolCount = childBlocks?.filter((b) => b.type === 'tool_use').length ?? 0
 
-  // 当前执行步骤摘要（委派工具收缩时显示）：最近一条 tool_start 的工具名+摘要
+  // 当前执行步骤摘要（委派工具收缩时显示）：每个子 Agent 最近一条 tool_start 的工具名+摘要
   const currentStep = React.useMemo(() => {
     if (!isDelegationTool) return null
-    const lastToolStart = [...delegationActivities].reverse().find((a) => a.phase === 'tool_start')
-    if (!lastToolStart) return null
-    return lastToolStart.brief ? `${lastToolStart.toolName} · ${lastToolStart.brief}` : lastToolStart.toolName
-  }, [isDelegationTool, delegationActivities])
+    const steps: string[] = []
+    for (const group of delegationActivityGroups) {
+      const lastToolStart = [...group.activities].reverse().find((a) => a.phase === 'tool_start')
+      if (lastToolStart) {
+        const label = group.title ? group.title.replace(/^协作[：:]\s*/, '').slice(0, 12) : undefined
+        const detail = lastToolStart.brief ? `${lastToolStart.toolName ?? '工具'} · ${lastToolStart.brief}` : (lastToolStart.toolName ?? '工具')
+        steps.push(label ? `${label}: ${detail}` : detail)
+      }
+    }
+    if (steps.length === 0) return null
+    const shown = steps.slice(0, 3)
+    const rest = steps.length - shown.length
+    return shown.join(' ｜ ') + (rest > 0 ? ` 等 ${rest} 个` : '')
+  }, [isDelegationTool, delegationActivityGroups])
 
   // ===== Agent/Task 工具（含协作委派）：特殊渲染 =====
   if (isAgentTool || isDelegationTool) {
@@ -564,35 +589,45 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {/* 提示词：可折叠行 */}
             {agentPrompt && <PromptRow prompt={agentPrompt} dimmed={dimmed} />}
 
-            {/* 子 Agent 实时活动（委派工具：主进程转发 delegation_progress） */}
-            {isDelegationTool && delegationActivities.length > 0 && (
-              <div className="space-y-1 rounded-md border border-border/30 bg-muted/20 p-2">
+            {/* 子 Agent 实时活动（委派工具：主进程转发 delegation_progress），按子 Agent 分组 */}
+            {isDelegationTool && delegationActivityGroups.length > 0 && (
+              <div className="space-y-2 rounded-md border border-border/30 bg-muted/20 p-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
                   <Loader2 className="size-3 animate-spin text-primary/60" />
                   子 Agent 执行中
                 </div>
-                {delegationActivities.map((act) => (
-                  <div key={`${act.seq}`} className="flex items-start gap-1.5 text-[12px] leading-5">
-                    {act.phase === 'tool_start' && (
-                      <>
-                        <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
-                        <span className="min-w-0 break-all text-muted-foreground">
-                          <span className="text-foreground/80">{act.toolName}</span>
-                          {act.brief && <span className="text-muted-foreground/60"> · {act.brief}</span>}
-                        </span>
-                      </>
-                    )}
-                    {act.phase === 'tool_result' && (
-                      <>
-                        {act.isError
-                          ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
-                          : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
-                        <span className="text-muted-foreground/50">{act.isError ? '失败' : '完成'}</span>
-                      </>
-                    )}
-                    {act.phase === 'assistant' && act.text && (
-                      <span className="min-w-0 break-all text-muted-foreground/80">{act.text}</span>
-                    )}
+                {delegationActivityGroups.map((group) => (
+                  <div key={group.delegationId} className="space-y-1">
+                    {/* 子 Agent 标题头 */}
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground/75">
+                      <Bot className="size-3 shrink-0 text-primary/60" />
+                      <span className="truncate">{group.title ?? group.delegationId.slice(0, 8)}</span>
+                      {group.role && <span className="rounded bg-muted px-1 py-px text-[10px] text-muted-foreground/70">{group.role}</span>}
+                    </div>
+                    {group.activities.map((act) => (
+                      <div key={`${group.delegationId}-${act.seq}`} className="flex items-start gap-1.5 pl-4 text-[12px] leading-5">
+                        {act.phase === 'tool_start' && (
+                          <>
+                            <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
+                            <span className="min-w-0 break-all text-muted-foreground">
+                              <span className="text-foreground/80">{act.toolName}</span>
+                              {act.brief && <span className="text-muted-foreground/60"> · {act.brief}</span>}
+                            </span>
+                          </>
+                        )}
+                        {act.phase === 'tool_result' && (
+                          <>
+                            {act.isError
+                              ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
+                              : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
+                            <span className="text-muted-foreground/50">{act.isError ? '失败' : '完成'}</span>
+                          </>
+                        )}
+                        {act.phase === 'assistant' && act.text && (
+                          <span className="min-w-0 break-all text-muted-foreground/80">{act.text}</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
