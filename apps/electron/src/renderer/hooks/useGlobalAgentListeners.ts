@@ -968,6 +968,8 @@ export function useGlobalAgentListeners(): void {
                 brief: evt.brief,
                 isError: evt.isError,
                 text: evt.text,
+                title: evt.title,
+                role: evt.role,
               }
               const next = [...list, activity].slice(-30)
               const map = new Map(prev)
