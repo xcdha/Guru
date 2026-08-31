@@ -162,6 +162,8 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
                 phase: 'tool_start' as const,
                 toolName: typed.name,
                 brief: summarizeToolInput(typed.name ?? '工具', typed.input),
+                title: record.title,
+                role: record.role,
               } as import('@guru/shared').GuruEvent,
             })
           }
@@ -175,6 +177,8 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
               delegationId: record.delegationId,
               phase: 'assistant' as const,
               text,
+              title: record.title,
+              role: record.role,
             } as import('@guru/shared').GuruEvent,
           })
         }
@@ -192,6 +196,8 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
                 toolUseId: typed.tool_use_id,
                 phase: 'tool_result' as const,
                 isError: typed.is_error === true,
+                title: record.title,
+                role: record.role,
               } as import('@guru/shared').GuruEvent,
             })
           }
