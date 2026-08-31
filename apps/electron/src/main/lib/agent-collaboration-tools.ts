@@ -82,6 +82,34 @@ const DELEGATION_GOAL_CHAR_LIMIT = 1_000
 const MAX_RETAINED_FINISHED_DELEGATIONS = 200
 
 const delegations = new Map<string, DelegationRecord>()
+
+/** 从工具输入中提取简短摘要（用于子 Agent 活动展示） */
+function summarizeToolInput(toolName: string, input?: Record<string, unknown>): string | undefined {
+  if (!input) return undefined
+  const priorityKeys = ['command', 'query', 'pattern', 'path', 'file_path', 'url', 'prompt', 'subject', 'description']
+  for (const key of priorityKeys) {
+    const value = input[key]
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim().length > 80 ? `${value.trim().slice(0, 80)}…` : value.trim()
+    }
+  }
+  const first = Object.values(input).find((v): v is string => typeof v === 'string' && v.trim().length > 0)
+  if (first) return first.trim().length > 80 ? `${first.trim().slice(0, 80)}…` : first.trim()
+  return undefined
+}
+
+/** 从子 Agent assistant 消息中提取文本内容（流式片段） */
+function extractAssistantText(msg: unknown): string | undefined {
+  const m = msg as { message?: { content?: Array<{ type?: string; text?: string }> }; content?: Array<{ type?: string; text?: string }> }
+  const blocks = m.message?.content ?? m.content
+  if (!Array.isArray(blocks)) return undefined
+  const text = blocks
+    .filter((b) => b.type === 'text' && typeof b.text === 'string')
+    .map((b) => b.text)
+    .join('')
+    .trim()
+  return text || undefined
+}
 // Pi 的 provider/retry 流可能重放同一个 tool call；委派会创建真实会话，必须幂等。
 const piDelegateAgentCalls = createToolCallIdempotencyCache<PiDelegationToolResult>()
 const piDelegateAgentsCalls = createToolCallIdempotencyCache<PiBatchDelegationResult>()
@@ -114,6 +142,64 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
   eventBus.on((sessionId: string, payload: AgentStreamPayload) => {
     const record = Array.from(delegations.values()).find((d) => d.childSessionId === sessionId)
     if (!record || record.status !== 'running') return
+
+    // 子 Agent 工具活动转发：子会话的 SDK 消息（tool_use/tool_result/assistant 文本）
+    // 转成父会话的 delegation_progress 事件，让父会话对话里实时看到子 Agent 执行过程
+    if (payload.kind === 'sdk_message') {
+      const msg = payload.message
+      const msgContent = (msg as unknown as { message?: { content?: unknown[] } }).message?.content
+      if (msg.type === 'assistant') {
+        const content = Array.isArray(msgContent) ? msgContent : []
+        for (const block of content) {
+          const typed = block as { type?: string; id?: string; name?: string; input?: Record<string, unknown> }
+          if (typed.type === 'tool_use') {
+            eventBus.emit(record.parentSessionId, {
+              kind: 'guru_event',
+              event: {
+                type: 'delegation_progress' as const,
+                delegationId: record.delegationId,
+                toolUseId: typed.id,
+                phase: 'tool_start' as const,
+                toolName: typed.name,
+                brief: summarizeToolInput(typed.name ?? '工具', typed.input),
+              } as import('@guru/shared').GuruEvent,
+            })
+          }
+        }
+        const text = extractAssistantText(msg)
+        if (text) {
+          eventBus.emit(record.parentSessionId, {
+            kind: 'guru_event',
+            event: {
+              type: 'delegation_progress' as const,
+              delegationId: record.delegationId,
+              phase: 'assistant' as const,
+              text,
+            } as import('@guru/shared').GuruEvent,
+          })
+        }
+      }
+      if (msg.type === 'user') {
+        const content = Array.isArray(msgContent) ? msgContent : []
+        for (const block of content) {
+          const typed = block as { type?: string; tool_use_id?: string; is_error?: boolean }
+          if (typed.type === 'tool_result') {
+            eventBus.emit(record.parentSessionId, {
+              kind: 'guru_event',
+              event: {
+                type: 'delegation_progress' as const,
+                delegationId: record.delegationId,
+                toolUseId: typed.tool_use_id,
+                phase: 'tool_result' as const,
+                isError: typed.is_error === true,
+              } as import('@guru/shared').GuruEvent,
+            })
+          }
+        }
+      }
+      return
+    }
+
     if (payload.kind !== 'guru_event') return
 
     const event = payload.event

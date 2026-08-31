@@ -315,10 +315,12 @@ export async function executeNanoBananaTool(
 
     const baseUrl = credentials.baseUrl?.trim() || DEFAULT_BASE_URL
     const model = credentials.model?.trim() || DEFAULT_MODEL
-    const provider = credentials.provider?.trim() || 'gemini'
+    // provider 归一化：trim + 小写，兼容 'openai' / 'openai-images' / 'gpt-image' 等变体都走 OpenAI Images 协议，其余走 Gemini
+    const provider = (credentials.provider?.trim() || 'gemini').toLowerCase()
+    const isOpenAI = provider === 'openai-images' || provider === 'openai' || provider === 'gpt-image'
 
     // ===== OpenAI Images 协议分支（gpt-image 系列）=====
-    if (provider === 'openai-images') {
+    if (isOpenAI) {
       const openaiBaseUrl = baseUrl === DEFAULT_BASE_URL ? OPENAI_IMAGES_DEFAULT_BASE_URL : baseUrl
       const openaiModel = model === DEFAULT_MODEL ? OPENAI_IMAGES_DEFAULT_MODEL : model
       // 参考图：从 GeminiPart 格式提取 inlineData（复用现有收集逻辑）

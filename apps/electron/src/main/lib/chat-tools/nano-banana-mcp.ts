@@ -53,6 +53,9 @@ interface GeminiResponse {
 
 const sessionHistory = new Map<string, GeminiContent[]>()
 
+/** 最多保留的对话轮数（每轮 = user + model 两条 contents） */
+const MAX_HISTORY_ROUNDS = 10
+
 // ===== 默认配置 =====
 
 const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com'
@@ -306,7 +309,7 @@ async function callGeminiAndBuildResult(
   // 更新会话历史（保留原始 parts 含 thoughtSignature，多轮编辑必需）
   const userContent: GeminiContent = { role: 'user', parts: [...referenceImageParts, { text: prompt }] }
   const modelContent: GeminiContent = { role: 'model', parts }
-  const updatedHistory = [...history, userContent, modelContent]
+  const updatedHistory = [...history, userContent, modelContent].slice(-MAX_HISTORY_ROUNDS * 2)
   sessionHistory.set(sessionId, updatedHistory)
 
   // 在图片内容块之后追加文本摘要

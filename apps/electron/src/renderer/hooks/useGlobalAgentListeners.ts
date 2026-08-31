@@ -68,6 +68,7 @@ import type { AgentStreamState } from '@/atoms/agent-atoms'
 import { agentDiffUnseenChangesAtom, agentDiffUnseenFilesAtom } from '@/atoms/agent-atoms'
 import { channelsAtom } from '@/atoms/chat-atoms'
 import { previewFileMapAtom } from '@/atoms/preview-atoms'
+import { toolStreamOutputAtom, delegationActivityAtom } from '@/atoms/tool-stream-atoms'
 import type { NotificationSoundType } from '@/types/settings'
 import { toast } from 'sonner'
 import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, GuruEvent, AgentSessionMeta, ProviderType } from '@guru/shared'
@@ -539,12 +540,14 @@ function payloadToLegacyEvents(payload: AgentStreamPayload): AgentEvent[] {
     }
 
     case 'tool_progress': {
-      const tpMsg = msg as { tool_use_id: string; elapsed_time_seconds?: number; task_id?: string }
+      const tpMsg = msg as { tool_use_id: string; elapsed_time_seconds?: number; task_id?: string; partial_result?: unknown }
       return [{
         type: 'task_progress',
         toolUseId: tpMsg.tool_use_id,
         elapsedSeconds: tpMsg.elapsed_time_seconds,
         taskId: tpMsg.task_id,
+        // SDK 工具执行中的流式输出（Bash/PowerShell 每批输出），渲染层用它增量显示
+        partialResult: tpMsg.partial_result,
       }]
     }
 
@@ -945,6 +948,30 @@ export function useGlobalAgentListeners(): void {
             .catch(console.error)
         }
 
+        // 子 Agent 过程事件：记录到 delegationActivityAtom，委派工具行实时展示
+        if (payload.kind === 'guru_event' && payload.event.type === 'delegation_progress') {
+          const evt = payload.event
+          if (evt.delegationId) {
+            store.set(delegationActivityAtom, (prev) => {
+              const list = prev.get(evt.delegationId) ?? []
+              const activity = {
+                delegationId: evt.delegationId,
+                seq: (list[list.length - 1]?.seq ?? 0) + 1,
+                ts: Date.now(),
+                phase: evt.phase,
+                toolName: evt.toolName,
+                brief: evt.brief,
+                isError: evt.isError,
+                text: evt.text,
+              }
+              const next = [...list, activity].slice(-30)
+              const map = new Map(prev)
+              map.set(evt.delegationId, next)
+              return map
+            })
+          }
+        }
+
         // 如果收到未知会话的事件（跨工作区场景），立即刷新会话列表
         const knownSessions = store.get(agentSessionsAtom)
         if (!knownSessions.some((s) => s.id === sessionId)) {
@@ -1234,6 +1261,23 @@ export function useGlobalAgentListeners(): void {
                   : t
               )
             )
+            // 工具流式输出：写入 toolStreamOutputAtom，ContentBlock 增量渲染
+            const partial = (event as { partialResult?: unknown }).partialResult
+            if (partial && typeof partial === 'object' && 'content' in (partial as Record<string, unknown>)) {
+              const content = (partial as { content?: Array<{ type?: string; text?: string }> }).content
+              const text = Array.isArray(content)
+                ? content.filter((c) => c.type === 'text' && typeof c.text === 'string').map((c) => c.text).join('')
+                : undefined
+              if (typeof text === 'string' && text.length > 0) {
+                store.set(toolStreamOutputAtom, (prev) => {
+                  const next = new Map(prev)
+                  const existing = next.get(event.toolUseId) ?? ''
+                  // 输出是追加式：SDK 每次推送的是累计输出（progress.output），直接覆盖而非拼接
+                  next.set(event.toolUseId, text)
+                  return next
+                })
+              }
+            }
           } else if (event.type === 'shell_backgrounded') {
             store.set(backgroundTasksAtomFamily(sessionId), (prev) => {
               if (prev.some((t) => t.toolUseId === event.toolUseId)) return prev
@@ -1247,7 +1291,12 @@ export function useGlobalAgentListeners(): void {
               }]
             })
           } else if (event.type === 'tool_result') {
-            // 工具完成时，移除对应的后台任务
+            // 工具完成时，移除对应的后台任务 + 清空流式输出缓存（最终结果接管显示）
+            store.set(toolStreamOutputAtom, (prev) => {
+              const next = new Map(prev)
+              next.delete(event.toolUseId)
+              return next
+            })
             store.set(backgroundTasksAtomFamily(sessionId), (prev) =>
               prev.filter((t) => t.toolUseId !== event.toolUseId)
             )
