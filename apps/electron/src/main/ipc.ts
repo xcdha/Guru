@@ -246,7 +246,7 @@ import {
 import { extractTextFromAttachment } from './lib/document-parser'
 import { getTutorialContent, createWelcomeConversation } from './lib/tutorial-service'
 import { getUserProfile, updateUserProfile } from './lib/user-profile-service'
-import { getSettings, updateSettings } from './lib/settings-service'
+import { getSettings, updateSettings, updateSettingsAsync } from './lib/settings-service'
 import { applyIconForCurrentTheme } from './lib/icon-applier'
 import { refreshCodeClawConfiguration } from './lib/codeclaw-service'
 import { setBuiltinMcpUserEnabled } from './lib/builtin-mcp/settings'
@@ -2019,7 +2019,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     SETTINGS_IPC_CHANNELS.UPDATE,
     async (event, updates: Partial<AppSettings>): Promise<AppSettings> => {
-      const result = await updateSettings(updates)
+      const result = await updateSettingsAsync(updates)
 
       if (updates.feishuSessionMirror !== undefined) {
         syncFeishuSyncSleepBlocker(result)

@@ -17,11 +17,13 @@ import {
   Brain,
   MessageSquareText,
   Terminal,
+  Wrench,
 } from 'lucide-react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
 import { activeSessionIdAtom } from '@/atoms/tab-atoms'
 import { terminalPanelOpenMapAtom, terminalStateMapAtom } from '@/atoms/terminal-atoms'
+import { toolStreamOutputAtom, delegationActivityAtom } from '@/atoms/tool-stream-atoms'
 import { cn } from '@/lib/utils'
 import { MarkdownStreamingContext, MessageResponse } from '@/components/ai-elements/message'
 import { getToolIcon, extractFilePath } from './tool-utils'
@@ -363,6 +365,9 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   const resultText = toolResult?.result
   const isError = toolResult?.isError === true
   const shouldShowResult = !!resultText
+  // 工具执行中的流式输出（SDK onUpdate → tool_execution_update → toolStreamOutputAtom）
+  const toolStreamOutput = useAtomValue(toolStreamOutputAtom).get(block.id)
+  const streamOutput = toolStreamOutput ?? ''
   const taskGetSummary = React.useMemo(() => {
     if (block.name !== 'TaskGet' || !resultText || isError) return null
     return parseTaskGetResult(resultText)
@@ -372,11 +377,39 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     return parseTaskListResult(resultText)
   }, [block.name, resultText, isError])
   const isAgentTool = block.name === 'Agent' || block.name === 'Task'
-  const hasChildren = isAgentTool && childBlocks && childBlocks.length > 0
+  // 协作委派工具（mcp__collaboration__delegate_agent / delegate_agents）也视为子 Agent 容器
+  const isDelegationTool = block.name === 'mcp__collaboration__delegate_agent' || block.name === 'mcp__collaboration__delegate_agents'
+  const hasChildren = (isAgentTool || isDelegationTool) && childBlocks && childBlocks.length > 0
   const subAgentMeta = useSubAgentMeta(block.id, allMessages)
+  // 从 tool_result 解析 delegationId（委派工具的 result 是含 delegationId 的 JSON）
+  const delegationIds = React.useMemo(() => {
+    if (!isDelegationTool || !resultText) return []
+    const ids: string[] = []
+    try {
+      const parsed = JSON.parse(resultText) as { delegation?: { delegationId?: string } | null; delegations?: Array<{ delegationId?: string }> }
+      if (parsed.delegation?.delegationId) ids.push(parsed.delegation.delegationId)
+      if (Array.isArray(parsed.delegations)) {
+        for (const d of parsed.delegations) if (d.delegationId) ids.push(d.delegationId)
+      }
+    } catch {
+      // 结果不是 JSON（可能是错误信息），忽略
+    }
+    return ids
+  }, [isDelegationTool, resultText])
+  // 子 Agent 实时活动（主进程 eventBus 转发 delegation_progress → atom）
+  const delegationActivityMap = useAtomValue(delegationActivityAtom)
+  const delegationActivities = React.useMemo(() => {
+    if (!isDelegationTool || delegationIds.length === 0) return []
+    const all: Array<{ seq: number; ts: number; phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string }> = []
+    for (const id of delegationIds) {
+      const list = delegationActivityMap.get(id)
+      if (list) all.push(...list)
+    }
+    return all.sort((a, b) => a.seq - b.seq)
+  }, [isDelegationTool, delegationIds, delegationActivityMap])
 
-  // Agent/Task 子代理内容默认折叠
-  const [childrenExpanded, setChildrenExpanded] = React.useState(false)
+  // Agent/Task 子代理内容默认折叠（委派工具默认展开以显示实时活动）
+  const [childrenExpanded, setChildrenExpanded] = React.useState(isDelegationTool)
 
   const phrase = getToolPhrase(block.name, block.input)
   const ToolIcon = getToolIcon(block.name)
@@ -451,8 +484,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
   // 子代理工具调用统计
   const childToolCount = childBlocks?.filter((b) => b.type === 'tool_use').length ?? 0
 
-  // ===== Agent/Task 工具：特殊渲染 =====
-  if (isAgentTool) {
+  // ===== Agent/Task 工具（含协作委派）：特殊渲染 =====
+  if (isAgentTool || isDelegationTool) {
     return (
       <div
         className={cn(
@@ -502,6 +535,40 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
           )}>
             {/* 提示词：可折叠行 */}
             {agentPrompt && <PromptRow prompt={agentPrompt} dimmed={dimmed} />}
+
+            {/* 子 Agent 实时活动（委派工具：主进程转发 delegation_progress） */}
+            {isDelegationTool && delegationActivities.length > 0 && (
+              <div className="space-y-1 rounded-md border border-border/30 bg-muted/20 p-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
+                  <Loader2 className="size-3 animate-spin text-primary/60" />
+                  子 Agent 执行中
+                </div>
+                {delegationActivities.map((act) => (
+                  <div key={`${act.seq}`} className="flex items-start gap-1.5 text-[12px] leading-5">
+                    {act.phase === 'tool_start' && (
+                      <>
+                        <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
+                        <span className="min-w-0 break-all text-muted-foreground">
+                          <span className="text-foreground/80">{act.toolName}</span>
+                          {act.brief && <span className="text-muted-foreground/60"> · {act.brief}</span>}
+                        </span>
+                      </>
+                    )}
+                    {act.phase === 'tool_result' && (
+                      <>
+                        {act.isError
+                          ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
+                          : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
+                        <span className="text-muted-foreground/50">{act.isError ? '失败' : '完成'}</span>
+                      </>
+                    )}
+                    {act.phase === 'assistant' && act.text && (
+                      <span className="min-w-0 break-all text-muted-foreground/80">{act.text}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* 子代理工具调用 */}
             {hasChildren && childBlocks.map((childBlock, ci) => (
@@ -645,7 +712,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
           )}
         </button>
 
-      {shouldShowResult && resultText && expanded && (
+      {(shouldShowResult && resultText && expanded) && (
         <div className={cn(
           'ml-5.5 mt-1 mb-2 pl-3 border-l-2 border-border/30',
           animate && 'animate-in fade-in slide-in-from-top-1 duration-fast',
@@ -657,6 +724,18 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             isError={isError}
             basePath={basePath}
           />
+        </div>
+      )}
+
+      {/* 工具执行中：展示 SDK 流式推送的实时输出（展开时） */}
+      {!shouldShowResult && streamOutput && expanded && (
+        <div className={cn(
+          'ml-5.5 mt-1 mb-2 pl-3 border-l-2 border-border/30',
+          animate && 'animate-in fade-in slide-in-from-top-1 duration-fast',
+        )}>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-muted-foreground/90 max-h-72 overflow-y-auto">
+            {streamOutput}
+          </pre>
         </div>
       )}
     </div>

@@ -624,7 +624,7 @@ export type AgentEvent =
   // 后台任务
   | { type: 'task_backgrounded'; toolUseId: string; taskId: string; intent?: string; turnId?: string }
   | { type: 'task_started'; taskId: string; toolUseId?: string; description: string; taskType?: string; turnId?: string }
-  | { type: 'task_progress'; toolUseId: string; elapsedSeconds?: number; turnId?: string; taskId?: string; description?: string; lastToolName?: string; usage?: TaskUsage }
+  | { type: 'task_progress'; toolUseId: string; elapsedSeconds?: number; turnId?: string; taskId?: string; description?: string; lastToolName?: string; usage?: TaskUsage; partialResult?: unknown }
   | { type: 'task_notification'; taskId: string; toolUseId?: string; status: 'completed' | 'failed' | 'stopped'; summary: string; outputFile?: string; usage?: TaskUsage; turnId?: string }
   | { type: 'thinking_tokens'; estimatedTokens: number; estimatedTokensDelta: number }
   | { type: 'shell_backgrounded'; toolUseId: string; shellId: string; intent?: string; command?: string; turnId?: string }
@@ -701,6 +701,8 @@ export type GuruEvent =
   | { type: 'run_stopped'; runId?: string; startedAt?: number }
   // 协作子会话阻塞事件上浮
   | { type: 'delegation_blocked'; delegationId: string; blockedEvent: unknown }
+  // 协作子会话过程事件（工具活动/文本片段），父会话对话里实时展示子 Agent 执行过程
+  | { type: 'delegation_progress'; delegationId: string; toolUseId?: string; phase: 'tool_start' | 'tool_result' | 'assistant'; toolName?: string; brief?: string; isError?: boolean; text?: string }
   // 自动任务会话被用户接管（毕业）
   | { type: 'automation_graduated' }
 

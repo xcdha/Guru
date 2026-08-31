@@ -137,6 +137,19 @@ export function getSettings(): AppSettings {
  *
  * 合并更新字段并写入文件。
  */
+/**
+ * 模块级串行队列：确保并发的 updateSettingsAsync 调用按顺序执行，
+ * 避免「读-合并-写」互相覆盖（M17）。
+ */
+let settingsWriteQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * 更新应用设置（同步版本）。
+ *
+ * 合并更新字段并写入文件。仅用于必须在返回前完成落盘的同步场景
+ * （如 ipcMain.on 的 sendSync handler、beforeunload）；并发安全由
+ * 调用方保证（同一时刻通常只有一个同步调用）。
+ */
 export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   const current = getSettings()
   const updated: AppSettings = {
@@ -161,4 +174,17 @@ export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   }
 
   return updated
+}
+
+/**
+ * 更新应用设置（异步版本，并发安全）。
+ *
+ * 读-合并-写整体放入模块级串行队列（链式 then），保证并发的
+ * updateSettingsAsync 调用严格按调用顺序执行，不会因交错读写丢更新。
+ */
+export function updateSettingsAsync(updates: Partial<AppSettings>): Promise<AppSettings> {
+  const run = settingsWriteQueue.then(() => updateSettings(updates))
+  // 队列吞掉失败，避免一次失败阻断后续写入；错误通过返回的 Promise 抛给调用方。
+  settingsWriteQueue = run.catch(() => undefined)
+  return run
 }

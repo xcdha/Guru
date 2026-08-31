@@ -2029,6 +2029,8 @@ export class PiAgentAdapter implements AgentProviderAdapter {
                 tool_use_id: event.toolCallId,
                 tool_name: displayToolName(event.toolName, event.args as Record<string, unknown> | undefined),
                 parent_tool_use_id: null,
+                // 流式输出内容：SDK 每批执行输出都通过 onUpdate 推送，带上它渲染层才能增量显示
+                partial_result: event.partialResult,
               } as unknown as SDKMessage)
               break
             case 'compaction_start': {

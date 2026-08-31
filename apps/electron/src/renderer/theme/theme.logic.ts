@@ -65,6 +65,22 @@ export function canApplyHydratedInterfaceVariant(epoch: number): boolean {
   return epoch === interfaceVariantUpdateEpoch
 }
 
+// themeMode/themeStyle/themePacks 的初始化同样是异步的；如果用户在 getSettings()
+// 返回前切换主题模式/风格/自定义包，旧的持久化值不能在请求完成后覆盖用户刚选中的值。
+let themeUpdateEpoch = 0
+
+export function captureThemeUpdateEpoch(): number {
+  return themeUpdateEpoch
+}
+
+export function markThemeUpdated(): void {
+  themeUpdateEpoch += 1
+}
+
+export function canApplyHydratedTheme(epoch: number): boolean {
+  return epoch === themeUpdateEpoch
+}
+
 export const CODE_THEME_OPTIONS: readonly CodeThemeOption[] = [
   { id: 'guru', label: 'Guru', variants: ['light', 'dark'] },
   { id: 'codex', label: 'Codex', variants: ['light', 'dark'] },
