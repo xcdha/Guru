@@ -244,6 +244,65 @@ function DelegationFooter({ resultText }: { resultText?: string }): React.ReactE
   )
 }
 
+// ===== 委派活动单行（可展开查看工具输出） =====
+
+function DelegationActivityRow({ activity }: { activity: { phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string; result?: string } }): React.ReactElement {
+  const [expanded, setExpanded] = React.useState(false)
+
+  if (activity.phase === 'tool_start') {
+    return (
+      <div className="flex items-start gap-1.5 pl-4 text-[12px] leading-5">
+        <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
+        <span className="min-w-0 break-all text-muted-foreground">
+          <span className="text-foreground/80">{activity.toolName}</span>
+          {activity.brief && <span className="text-muted-foreground/60"> · {activity.brief}</span>}
+        </span>
+      </div>
+    )
+  }
+
+  if (activity.phase === 'tool_result') {
+    const hasContent = !!activity.result
+    return (
+      <div className="pl-4">
+        <button
+          type="button"
+          onClick={() => hasContent && setExpanded((v) => !v)}
+          className={cn(
+            'flex w-full items-start gap-1.5 text-left text-[12px] leading-5',
+            hasContent ? 'cursor-pointer rounded px-0.5 hover:bg-muted/40' : 'cursor-default',
+          )}
+        >
+          {activity.isError
+            ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
+            : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
+          <span className={activity.isError ? 'text-destructive/80' : 'text-muted-foreground/60'}>
+            {activity.isError ? '失败' : '完成'}
+          </span>
+          {hasContent && (
+            <ChevronRight className={cn('mt-0.5 size-3 shrink-0 text-muted-foreground/40 transition-transform', expanded && 'rotate-90')} />
+          )}
+        </button>
+        {hasContent && expanded && (
+          <pre className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border/30 bg-background/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground/90">
+            {activity.result}
+          </pre>
+        )}
+      </div>
+    )
+  }
+
+  if (activity.phase === 'assistant' && activity.text) {
+    return (
+      <div className="pl-4 text-[12px] leading-5 text-muted-foreground/80">
+        {activity.text}
+      </div>
+    )
+  }
+
+  return <></>
+}
+
 // ===== 委派完成信息尾部 =====
 
 function SubAgentFooter({
@@ -707,28 +766,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                       {group.role && <span className="rounded bg-muted px-1 py-px text-[10px] text-muted-foreground/70">{group.role}</span>}
                     </div>
                     {group.activities.map((act) => (
-                      <div key={`${group.delegationId}-${act.seq}`} className="flex items-start gap-1.5 pl-4 text-[12px] leading-5">
-                        {act.phase === 'tool_start' && (
-                          <>
-                            <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
-                            <span className="min-w-0 break-all text-muted-foreground">
-                              <span className="text-foreground/80">{act.toolName}</span>
-                              {act.brief && <span className="text-muted-foreground/60"> · {act.brief}</span>}
-                            </span>
-                          </>
-                        )}
-                        {act.phase === 'tool_result' && (
-                          <>
-                            {act.isError
-                              ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
-                              : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
-                            <span className="text-muted-foreground/50">{act.isError ? '失败' : '完成'}</span>
-                          </>
-                        )}
-                        {act.phase === 'assistant' && act.text && (
-                          <span className="min-w-0 break-all text-muted-foreground/80">{act.text}</span>
-                        )}
-                      </div>
+                      <DelegationActivityRow key={`${group.delegationId}-${act.seq}`} activity={act} />
                     ))}
                   </div>
                 ))}

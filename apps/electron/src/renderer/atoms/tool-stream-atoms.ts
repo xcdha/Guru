@@ -18,6 +18,8 @@ export interface DelegationActivity {
   brief?: string
   isError?: boolean
   text?: string
+  /** 工具输出内容（tool_result 时携带，供展开查看） */
+  result?: string
   /** 子 Agent 标题（批量委派时用于分组展示） */
   title?: string
   /** 子 Agent 角色 */
