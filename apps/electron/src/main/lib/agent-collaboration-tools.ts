@@ -189,7 +189,9 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
           }
         }
         const text = extractAssistantText(msg)
-        if (text) {
+        // 只转发过程文本（短片段）：最终报告（长文本）不在此处转发，
+        // 避免活动区与 footer 的 resultSummary 重复显示；完整报告由 final 事件携带。
+        if (text && text.length <= 500) {
           // 节流：同一委派 250ms 内合并文本转发，避免流式帧刷屏
           const now = Date.now()
           const lastAt = lastAssistantForwardAt.get(record.delegationId) ?? 0
