@@ -291,9 +291,8 @@ interface DelegationActivityItem {
   parentToolUseId?: string
 }
 
-function DelegationActivityList({ activities }: { activities: DelegationActivityItem[] }): React.ReactElement {
+function DelegationActivityList({ activities, isCompleted }: { activities: DelegationActivityItem[]; isCompleted?: boolean }): React.ReactElement {
   const [expandedResults, setExpandedResults] = React.useState<Set<string>>(new Set())
-
   // 配对：tool_start + 同 toolUseId 的 tool_result 合成一行；assistant 文本单独行
   const rows = React.useMemo(() => {
     const sorted = [...activities].sort((a, b) => a.seq - b.seq)
@@ -387,11 +386,32 @@ function DelegationActivityList({ activities }: { activities: DelegationActivity
           </div>
         )
       })}
-      {rows.texts.map((t, i) => (
-        <div key={`text-${i}`} className="pl-2 pr-1 py-0.5 min-w-0">
-          {t.text ? <MessageResponse>{t.text}</MessageResponse> : null}
-        </div>
+      {/* 过程文本：仅未完成时显示（完成后的完整报告由 footer 展示，避免重复） */}
+      {!isCompleted && rows.texts.slice(-3).map((t, i) => (
+        <DelegationTextRow key={`text-${i}`} text={t.text} />
       ))}
+    </div>
+  )
+}
+
+/** 子 Agent 活动文本行：短文本直接显示，长文本（可能是完整报告）折叠避免与 footer 重复 */
+function DelegationTextRow({ text }: { text?: string }): React.ReactElement | null {
+  const [expanded, setExpanded] = React.useState(false)
+  if (!text) return null
+  const isLong = text.length > 300
+  const shown = isLong && !expanded ? `${text.slice(0, 300)}…` : text
+  return (
+    <div className="pl-2 pr-1 py-0.5 min-w-0">
+      <MessageResponse>{shown}</MessageResponse>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-0.5 text-[12px] text-primary/70 hover:text-primary transition-colors"
+        >
+          {expanded ? '收起' : '展开全文'}
+        </button>
+      )}
     </div>
   )
 }
@@ -858,7 +878,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                       <span className="truncate">{group.title ?? group.delegationId.slice(0, 8)}</span>
                       {group.role && <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-normal text-muted-foreground/80">{group.role}</span>}
                     </div>
-                    <DelegationActivityList activities={group.activities} />
+                    <DelegationActivityList activities={group.activities} isCompleted={isCompleted} />
                   </div>
                 ))}
               </div>
