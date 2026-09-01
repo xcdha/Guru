@@ -207,11 +207,15 @@ function DelegationFooter({ resultText }: { resultText?: string }): React.ReactE
   const failed = parsed.statuses.filter((s) => s === 'failed' || s === 'cancelled' || s === 'interrupted').length
   const running = parsed.statuses.filter((s) => s === 'running').length
   const total = parsed.statuses.length
+  const [reportsExpanded, setReportsExpanded] = React.useState(false)
 
   if (total === 0 && parsed.errors.length === 0 && parsed.resultSummaries.length === 0) return null
 
+  // 多个摘要时默认只展开第一个，其余折叠（避免批量委派时超长）
+  const showAll = reportsExpanded || parsed.resultSummaries.length <= 1
+
   return (
-    <div className="mt-2 pt-2 border-t border-border/20 space-y-1.5">
+    <div className="mt-2 pt-2 border-t border-border/20 space-y-2">
       {/* 状态摘要 */}
       <div className="flex items-center gap-2 text-[12px] text-muted-foreground/70">
         <CheckCircle2 className="size-3 text-emerald-500/80" />
@@ -226,10 +230,25 @@ function DelegationFooter({ resultText }: { resultText?: string }): React.ReactE
         </span>
       </div>
 
-      {/* 结果摘要 */}
+      {/* 结果摘要（Markdown 渲染） */}
       {parsed.resultSummaries.map((summary, i) => (
-        <div key={i} className="text-[13px] text-muted-foreground/80 leading-relaxed">
-          {summary.length > 300 ? `${summary.slice(0, 300)}…` : summary}
+        <div key={i} className="min-w-0">
+          {i > 0 && !showAll && (
+            <button
+              type="button"
+              onClick={() => setReportsExpanded(true)}
+              className="text-[12px] text-primary/70 hover:text-primary transition-colors"
+            >
+              还有 {parsed.resultSummaries.length - 1} 份报告，点击展开全部
+            </button>
+          )}
+          {showAll && (
+            <div className="rounded-md border border-border/25 bg-background/40 px-3 py-2">
+              <div className="text-muted-foreground/70 max-w-full">
+                <MessageResponse>{summary}</MessageResponse>
+              </div>
+            </div>
+          )}
         </div>
       ))}
 
