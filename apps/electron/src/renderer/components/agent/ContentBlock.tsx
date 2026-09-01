@@ -172,7 +172,7 @@ function parseAgentResultText(raw: string): ParsedAgentResult {
 
 interface ParsedDelegationResult {
   statuses: string[]
-  resultSummaries: string[]
+  resultSummaries: Array<{ title?: string; text: string }>
   errors: string[]
 }
 
@@ -182,15 +182,15 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   if (!resultText) return empty
   try {
     const parsed = JSON.parse(resultText) as {
-      delegation?: { status?: string; resultSummary?: string; error?: string }
-      delegations?: Array<{ status?: string; resultSummary?: string; error?: string }>
+      delegation?: { status?: string; resultSummary?: string; error?: string; title?: string }
+      delegations?: Array<{ status?: string; resultSummary?: string; error?: string; title?: string }>
       failures?: Array<{ index?: number; title?: string; error?: string }>
       note?: string
     }
     const items = parsed.delegation ? [parsed.delegation] : (parsed.delegations ?? [])
     return {
       statuses: items.map((d) => d.status ?? 'unknown'),
-      resultSummaries: items.map((d) => d.resultSummary ?? '').filter(Boolean),
+      resultSummaries: items.map((d) => ({ title: d.title, text: d.resultSummary ?? '' })).filter((r) => r.text),
       errors: [
         ...items.map((d) => d.error ?? '').filter(Boolean),
         ...(parsed.failures ?? []).map((f) => f.error ?? ''),
@@ -201,15 +201,15 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   }
 }
 
-function DelegationFooter({ resultText, activities }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean }> }): React.ReactElement | null {
+function DelegationFooter({ resultText, activities }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string }> }): React.ReactElement | null {
   const parsed = React.useMemo(() => {
-    // 优先使用主进程终态事件携带的 resultSummary（完整报告）
-    const finalActivity = activities?.find((a) => a.phase === 'final')
-    if (finalActivity?.result) {
+    // 优先使用主进程终态事件携带的 resultSummary（完整报告）——收集全部 final（批量委派多个子 Agent）
+    const finalActivities = activities?.filter((a) => a.phase === 'final' && a.result)
+    if (finalActivities && finalActivities.length > 0) {
       return {
-        statuses: [finalActivity.isError ? 'failed' : 'completed'],
-        resultSummaries: [finalActivity.result],
-        errors: finalActivity.isError ? [finalActivity.result] : [],
+        statuses: finalActivities.map((a) => (a.isError ? 'failed' : 'completed')),
+        resultSummaries: finalActivities.map((a) => ({ title: a.title, text: a.result! })),
+        errors: finalActivities.filter((a) => a.isError).map((a) => a.result!).filter(Boolean),
       }
     }
     return parseDelegationResult(resultText)
@@ -241,7 +241,7 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
         </span>
       </div>
 
-      {/* 结果摘要（Markdown 渲染） */}
+      {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题） */}
       {parsed.resultSummaries.map((summary, i) => (
         <div key={i} className="min-w-0">
           {i > 0 && !showAll && (
@@ -255,8 +255,14 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
           )}
           {showAll && (
             <div className="rounded-md border border-border/25 bg-background/40 px-3 py-2">
+              {summary.title && (
+                <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-foreground/80">
+                  <Bot className="size-3 text-primary/60" />
+                  {summary.title}
+                </div>
+              )}
               <div className="text-muted-foreground/70 max-w-full">
-                <MessageResponse>{summary}</MessageResponse>
+                <MessageResponse>{summary.text}</MessageResponse>
               </div>
             </div>
           )}
@@ -870,8 +876,8 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                   )}
                   {isCompleted ? '子 Agent 执行完成' : (delegationActivities.length > 0 ? '子 Agent 执行中' : '等待子 Agent 启动…')}
                 </div>
-                {delegationActivityGroups.map((group) => (
-                  <div key={group.delegationId} className="space-y-1">
+                {delegationActivityGroups.map((group, gi) => (
+                  <div key={group.delegationId} className={cn('space-y-1 rounded-lg border border-border/20 bg-background/30 p-2', gi > 0 && 'mt-1')}>
                     {/* 子 Agent 标题头 */}
                     <div className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[13px] font-semibold text-foreground/90">
                       <Bot className="size-3.5 shrink-0 text-primary/70" />
