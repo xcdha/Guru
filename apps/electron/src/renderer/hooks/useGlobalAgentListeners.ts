@@ -973,6 +973,7 @@ export function useGlobalAgentListeners(): void {
                 brief: evt.brief,
                 isError: evt.isError,
                 text: evt.text,
+                result: evt.result,
                 title: evt.title,
                 role: evt.role,
                 parentToolUseId: evt.parentToolUseId,

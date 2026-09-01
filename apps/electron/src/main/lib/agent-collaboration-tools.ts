@@ -213,8 +213,18 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
       if (msg.type === 'user') {
         const content = Array.isArray(msgContent) ? msgContent : []
         for (const block of content) {
-          const typed = block as { type?: string; tool_use_id?: string; is_error?: boolean }
+          const typed = block as { type?: string; tool_use_id?: string; is_error?: boolean; content?: unknown }
           if (typed.type === 'tool_result') {
+            // 提取工具输出文本（供渲染层展开查看）
+            let resultText: string | undefined
+            if (typeof typed.content === 'string') {
+              resultText = typed.content
+            } else if (Array.isArray(typed.content)) {
+              resultText = (typed.content as Array<{ type?: string; text?: string }>)
+                .filter((c) => c.type === 'text' && typeof c.text === 'string')
+                .map((c) => c.text)
+                .join('\n')
+            }
             eventBus.emit(record.parentSessionId, {
               kind: 'guru_event',
               event: {
@@ -223,6 +233,7 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
                 toolUseId: typed.tool_use_id,
                 phase: 'tool_result' as const,
                 isError: typed.is_error === true,
+                result: resultText && resultText.length > 8000 ? `${resultText.slice(0, 8000)}…` : resultText,
                 title: record.title,
                 role: record.role,
                 parentToolUseId: record.parentToolUseId,
