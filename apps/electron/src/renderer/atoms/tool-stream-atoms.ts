@@ -14,6 +14,8 @@ export interface DelegationActivity {
   seq: number
   ts: number
   phase: 'tool_start' | 'tool_result' | 'assistant'
+  /** 子会话中工具的 toolUseId（tool_start/tool_result 配对用） */
+  toolUseId?: string
   toolName?: string
   brief?: string
   isError?: boolean
