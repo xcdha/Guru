@@ -514,6 +514,26 @@ function markDelegationFinished(
   record.completedAt = Date.now()
   record.error = fields.error
   record.resultSummary = fields.resultSummary
+  // 委派终态事件：渲染层据此在委派工具行显示最终摘要（报告 Markdown）
+  try {
+    if (_eventBusRef && record.parentToolUseId) {
+      _eventBusRef.emit(record.parentSessionId, {
+        kind: 'guru_event',
+        event: {
+          type: 'delegation_progress' as const,
+          delegationId: record.delegationId,
+          phase: 'final' as const,
+          isError: status !== 'completed',
+          result: fields.resultSummary,
+          title: record.title,
+          role: record.role,
+          parentToolUseId: record.parentToolUseId,
+        } as import('@guru/shared').GuruEvent,
+      })
+    }
+  } catch {
+    // 转发失败不影响状态机
+  }
   try {
     // 子会话可能已被用户删除（updateAgentSessionMeta 会抛"会话不存在"）：
     // 不能让该异常阻断 resolveCompletion，否则父会话 wait_for_delegations 会永久挂起
