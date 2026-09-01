@@ -969,6 +969,7 @@ export function useGlobalAgentListeners(): void {
                 seq: (list[list.length - 1]?.seq ?? 0) + 1,
                 ts: Date.now(),
                 phase: evt.phase,
+                toolUseId: evt.toolUseId,
                 toolName: evt.toolName,
                 brief: evt.brief,
                 isError: evt.isError,

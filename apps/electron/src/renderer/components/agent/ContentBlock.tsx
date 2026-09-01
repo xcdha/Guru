@@ -244,63 +244,127 @@ function DelegationFooter({ resultText }: { resultText?: string }): React.ReactE
   )
 }
 
-// ===== 委派活动单行（可展开查看工具输出） =====
+// ===== 委派活动列表（工具启动+结果配对成一行，可展开查看输出） =====
 
-function DelegationActivityRow({ activity }: { activity: { phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string; result?: string } }): React.ReactElement {
-  const [expanded, setExpanded] = React.useState(false)
+interface DelegationActivityItem {
+  seq: number
+  ts: number
+  phase: string
+  toolName?: string
+  brief?: string
+  isError?: boolean
+  text?: string
+  result?: string
+  toolUseId?: string
+  title?: string
+  role?: string
+  parentToolUseId?: string
+}
 
-  if (activity.phase === 'tool_start') {
-    return (
-      <div className="flex items-start gap-1.5 pl-4 text-[12px] leading-5">
-        <Wrench className="mt-0.5 size-3 shrink-0 text-muted-foreground/50" />
-        <span className="min-w-0 break-all text-muted-foreground">
-          <span className="text-foreground/80">{activity.toolName}</span>
-          {activity.brief && <span className="text-muted-foreground/60"> · {activity.brief}</span>}
-        </span>
-      </div>
-    )
+function DelegationActivityList({ activities }: { activities: DelegationActivityItem[] }): React.ReactElement {
+  const [expandedResults, setExpandedResults] = React.useState<Set<string>>(new Set())
+
+  // 配对：tool_start + 同 toolUseId 的 tool_result 合成一行；assistant 文本单独行
+  const rows = React.useMemo(() => {
+    const sorted = [...activities].sort((a, b) => a.seq - b.seq)
+    const paired: Array<{
+      key: string
+      toolName?: string
+      brief?: string
+      isError?: boolean
+      result?: string
+      toolUseId?: string
+      status: 'running' | 'done' | 'error' | 'none'
+    }> = []
+    const resultByTool = new Map<string, { isError?: boolean; result?: string }>()
+    for (const act of sorted) {
+      if (act.phase === 'tool_result' && act.toolUseId) {
+        resultByTool.set(act.toolUseId, { isError: act.isError, result: act.result })
+      }
+    }
+    for (const act of sorted) {
+      if (act.phase === 'tool_start') {
+        const result = act.toolUseId ? resultByTool.get(act.toolUseId) : undefined
+        paired.push({
+          key: `${act.seq}`,
+          toolName: act.toolName,
+          brief: act.brief,
+          toolUseId: act.toolUseId,
+          isError: result?.isError,
+          result: result?.result,
+          status: result ? (result.isError ? 'error' : 'done') : 'running',
+        })
+      }
+    }
+    const texts = sorted.filter((a) => a.phase === 'assistant' && a.text)
+    return { paired, texts }
+  }, [activities])
+
+  const toggle = (key: string): void => {
+    setExpandedResults((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
-  if (activity.phase === 'tool_result') {
-    const hasContent = !!activity.result
-    return (
-      <div className="pl-4">
-        <button
-          type="button"
-          onClick={() => hasContent && setExpanded((v) => !v)}
-          className={cn(
-            'flex w-full items-start gap-1.5 text-left text-[12px] leading-5',
-            hasContent ? 'cursor-pointer rounded px-0.5 hover:bg-muted/40' : 'cursor-default',
-          )}
-        >
-          {activity.isError
-            ? <XCircle className="mt-0.5 size-3 shrink-0 text-destructive/70" />
-            : <span className="mt-1 size-1.5 shrink-0 rounded-full bg-emerald-500/70" />}
-          <span className={activity.isError ? 'text-destructive/80' : 'text-muted-foreground/60'}>
-            {activity.isError ? '失败' : '完成'}
-          </span>
-          {hasContent && (
-            <ChevronRight className={cn('mt-0.5 size-3 shrink-0 text-muted-foreground/40 transition-transform', expanded && 'rotate-90')} />
-          )}
-        </button>
-        {hasContent && expanded && (
-          <pre className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border/30 bg-background/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground/90">
-            {activity.result}
-          </pre>
-        )}
-      </div>
-    )
-  }
-
-  if (activity.phase === 'assistant' && activity.text) {
-    return (
-      <div className="pl-4 text-[12px] leading-5 text-muted-foreground/80">
-        {activity.text}
-      </div>
-    )
-  }
-
-  return <></>
+  return (
+    <div className="space-y-0.5">
+      {rows.paired.map((row) => {
+        const isOpen = expandedResults.has(row.key)
+        const hasContent = !!row.result
+        return (
+          <div key={row.key}>
+            <button
+              type="button"
+              onClick={() => hasContent && toggle(row.key)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[13px] leading-5 transition-colors',
+                hasContent ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default',
+              )}
+            >
+              {row.status === 'running' ? (
+                <Loader2 className="size-3 shrink-0 animate-spin text-primary/60" />
+              ) : row.status === 'error' ? (
+                <XCircle className="size-3 shrink-0 text-destructive/70" />
+              ) : (
+                <span className="size-2 shrink-0 rounded-full bg-emerald-500/70" />
+              )}
+              <span className="min-w-0 flex-1 truncate text-foreground/85">
+                {row.toolName}
+                {row.brief && <span className="text-muted-foreground/60"> · {row.brief}</span>}
+              </span>
+              {/* 状态徽章：与工具同行 */}
+              {row.status === 'running' ? (
+                <span className="shrink-0 rounded-full bg-primary/10 px-2 py-px text-[11px] text-primary/80">执行中</span>
+              ) : (
+                <span className={cn(
+                  'shrink-0 rounded-full px-2 py-px text-[11px]',
+                  row.status === 'error' ? 'bg-destructive/10 text-destructive/80' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                )}>
+                  {row.status === 'error' ? '失败' : '完成'}
+                </span>
+              )}
+              {hasContent && (
+                <ChevronRight className={cn('size-3.5 shrink-0 text-muted-foreground/40 transition-transform', isOpen && 'rotate-90')} />
+              )}
+            </button>
+            {hasContent && isOpen && (
+              <pre className="ml-6 mt-1 max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border/30 bg-background/60 p-2.5 font-mono text-[12px] leading-relaxed text-muted-foreground/90">
+                {row.result}
+              </pre>
+            )}
+          </div>
+        )
+      })}
+      {rows.texts.map((t, i) => (
+        <div key={`text-${i}`} className="pl-2 pr-1 py-0.5 text-[13px] leading-5 text-muted-foreground/80">
+          {t.text}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // ===== 委派完成信息尾部 =====
@@ -555,7 +619,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
       delegationId: string
       title?: string
       role?: string
-      activities: Array<{ seq: number; ts: number; phase: string; toolName?: string; brief?: string; isError?: boolean; text?: string }>
+      activities: Array<{ seq: number; ts: number; phase: string; toolUseId?: string; toolName?: string; brief?: string; isError?: boolean; text?: string; result?: string }>
     }> = []
     for (const id of matchedDelegationIds) {
       const list = delegationActivityMap.get(id)
@@ -760,14 +824,12 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                 {delegationActivityGroups.map((group) => (
                   <div key={group.delegationId} className="space-y-1">
                     {/* 子 Agent 标题头 */}
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-foreground/75">
-                      <Bot className="size-3 shrink-0 text-primary/60" />
+                    <div className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[13px] font-semibold text-foreground/90">
+                      <Bot className="size-3.5 shrink-0 text-primary/70" />
                       <span className="truncate">{group.title ?? group.delegationId.slice(0, 8)}</span>
-                      {group.role && <span className="rounded bg-muted px-1 py-px text-[10px] text-muted-foreground/70">{group.role}</span>}
+                      {group.role && <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-normal text-muted-foreground/80">{group.role}</span>}
                     </div>
-                    {group.activities.map((act) => (
-                      <DelegationActivityRow key={`${group.delegationId}-${act.seq}`} activity={act} />
-                    ))}
+                    <DelegationActivityList activities={group.activities} />
                   </div>
                 ))}
               </div>
