@@ -201,8 +201,19 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   }
 }
 
-function DelegationFooter({ resultText }: { resultText?: string }): React.ReactElement | null {
-  const parsed = React.useMemo(() => parseDelegationResult(resultText), [resultText])
+function DelegationFooter({ resultText, activities }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean }> }): React.ReactElement | null {
+  const parsed = React.useMemo(() => {
+    // 优先使用主进程终态事件携带的 resultSummary（完整报告）
+    const finalActivity = activities?.find((a) => a.phase === 'final')
+    if (finalActivity?.result) {
+      return {
+        statuses: [finalActivity.isError ? 'failed' : 'completed'],
+        resultSummaries: [finalActivity.result],
+        errors: finalActivity.isError ? [finalActivity.result] : [],
+      }
+    }
+    return parseDelegationResult(resultText)
+  }, [resultText, activities])
   const done = parsed.statuses.filter((s) => s === 'completed').length
   const failed = parsed.statuses.filter((s) => s === 'failed' || s === 'cancelled' || s === 'interrupted').length
   const running = parsed.statuses.filter((s) => s === 'running').length
@@ -316,8 +327,7 @@ function DelegationActivityList({ activities }: { activities: DelegationActivity
       }
     }
     const texts = sorted.filter((a) => a.phase === 'assistant' && a.text)
-    return { paired, texts }
-  }, [activities])
+    return { paired, texts }  }, [activities])
 
   const toggle = (key: string): void => {
     setExpandedResults((prev) => {
@@ -378,8 +388,8 @@ function DelegationActivityList({ activities }: { activities: DelegationActivity
         )
       })}
       {rows.texts.map((t, i) => (
-        <div key={`text-${i}`} className="pl-2 pr-1 py-0.5 text-[13px] leading-5 text-muted-foreground/80">
-          {t.text}
+        <div key={`text-${i}`} className="pl-2 pr-1 py-0.5 min-w-0">
+          {t.text ? <MessageResponse>{t.text}</MessageResponse> : null}
         </div>
       ))}
     </div>
@@ -871,7 +881,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {/* SubAgent 完成信息（委派工具：显示友好摘要而非原始 JSON） */}
             {isCompleted && (
               isDelegationTool ? (
-                <DelegationFooter resultText={toolResult?.result} />
+                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} />
               ) : (
                 <SubAgentFooter
                   meta={subAgentMeta}
