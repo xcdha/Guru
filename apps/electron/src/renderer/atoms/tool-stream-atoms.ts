@@ -13,7 +13,7 @@ export interface DelegationActivity {
   /** 活动序号（追加排序用） */
   seq: number
   ts: number
-  phase: 'tool_start' | 'tool_result' | 'assistant'
+  phase: 'tool_start' | 'tool_result' | 'assistant' | 'final'
   /** 子会话中工具的 toolUseId（tool_start/tool_result 配对用） */
   toolUseId?: string
   toolName?: string
