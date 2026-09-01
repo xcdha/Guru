@@ -226,10 +226,10 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
   const showAll = reportsExpanded || parsed.resultSummaries.length <= 1
 
   return (
-    <div className="mt-2 pt-2 border-t border-border/20 space-y-2">
-      {/* 状态摘要 */}
-      <div className="flex items-center gap-2 text-[12px] text-muted-foreground/70">
-        <CheckCircle2 className="size-3 text-emerald-500/80" />
+    <div className="mt-3 pt-2 border-t-2 border-border/30 space-y-2">
+      {/* 状态摘要：醒目 */}
+      <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground/80">
+        <CheckCircle2 className="size-4 text-emerald-500/90" />
         <span>
           {total > 0
             ? (running > 0
@@ -282,6 +282,21 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
 
 // ===== 委派活动列表（工具启动+结果配对成一行，可展开查看输出） =====
 
+/** 子 Agent 角色 → 视觉颜色（一眼区分不同角色） */
+const ROLE_STYLES: Record<string, { border: string; header: string; badge: string }> = {
+  research: { border: 'border-sky-500/30', header: 'bg-sky-500/10', badge: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
+  implement: { border: 'border-violet-500/30', header: 'bg-violet-500/10', badge: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+  review: { border: 'border-amber-500/30', header: 'bg-amber-500/10', badge: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+  explore: { border: 'border-emerald-500/30', header: 'bg-emerald-500/10', badge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+  custom: { border: 'border-rose-500/30', header: 'bg-rose-500/10', badge: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+}
+const DEFAULT_ROLE_STYLE = { border: 'border-primary/25', header: 'bg-primary/8', badge: 'bg-muted text-muted-foreground' }
+function roleStyle(role?: string): { border: string; header: string; badge: string } {
+  return (role && ROLE_STYLES[role]) || DEFAULT_ROLE_STYLE
+}
+function roleBorderClass(role?: string): string { return roleStyle(role).border }
+function roleHeaderBgClass(role?: string): string { return roleStyle(role).header }
+function roleBadgeClass(role?: string): string { return roleStyle(role).badge }
 interface DelegationActivityItem {
   seq: number
   ts: number
@@ -359,11 +374,11 @@ function DelegationActivityList({ activities, isCompleted }: { activities: Deleg
               )}
             >
               {row.status === 'running' ? (
-                <Loader2 className="size-3 shrink-0 animate-spin text-primary/60" />
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/70" />
               ) : row.status === 'error' ? (
-                <XCircle className="size-3 shrink-0 text-destructive/70" />
+                <XCircle className="size-3.5 shrink-0 text-destructive/80" />
               ) : (
-                <span className="size-2 shrink-0 rounded-full bg-emerald-500/70" />
+                <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500/80" />
               )}
               <span className="min-w-0 flex-1 truncate text-foreground/85">
                 {row.toolName}
@@ -867,24 +882,35 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
 
             {/* 子 Agent 实时活动（委派工具：主进程转发 delegation_progress），按子 Agent 分组 */}
             {isDelegationTool && delegationActivityGroups.length > 0 && (
-              <div className="space-y-2 rounded-md border border-border/30 bg-muted/20 p-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
+              <div className="space-y-2">
+                {/* 状态头：大而醒目 */}
+                <div className={cn(
+                  'flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium',
+                  isCompleted ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-primary/10 text-primary',
+                )}>
                   {isCompleted ? (
-                    <CheckCircle2 className="size-3 text-emerald-500/80" />
+                    <CheckCircle2 className="size-4 shrink-0" />
                   ) : (
-                    <Loader2 className="size-3 animate-spin text-primary/60" />
+                    <Loader2 className="size-4 shrink-0 animate-spin" />
                   )}
-                  {isCompleted ? '子 Agent 执行完成' : (delegationActivities.length > 0 ? '子 Agent 执行中' : '等待子 Agent 启动…')}
+                  {isCompleted ? `子 Agent 执行完成（${delegationActivityGroups.length} 个）` : (delegationActivities.length > 0 ? `子 Agent 执行中（${delegationActivityGroups.length} 个）` : '等待子 Agent 启动…')}
                 </div>
                 {delegationActivityGroups.map((group, gi) => (
-                  <div key={group.delegationId} className={cn('space-y-1 rounded-lg border border-border/20 bg-background/30 p-2', gi > 0 && 'mt-1')}>
-                    {/* 子 Agent 标题头 */}
-                    <div className="flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[13px] font-semibold text-foreground/90">
-                      <Bot className="size-3.5 shrink-0 text-primary/70" />
-                      <span className="truncate">{group.title ?? group.delegationId.slice(0, 8)}</span>
-                      {group.role && <span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-normal text-muted-foreground/80">{group.role}</span>}
+                  <div key={group.delegationId} className={cn(
+                    'overflow-hidden rounded-lg border',
+                    roleBorderClass(group.role),
+                    'bg-background/40',
+                    gi > 0 && 'mt-1.5',
+                  )}>
+                    {/* 子 Agent 标题栏 */}
+                    <div className={cn('flex items-center gap-2 px-2.5 py-1.5', roleHeaderBgClass(group.role))}>
+                      <Bot className="size-4 shrink-0 text-foreground/80" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
+                      {group.role && <span className={cn('shrink-0 rounded-full px-2 py-px text-[11px] font-medium', roleBadgeClass(group.role))}>{group.role}</span>}
                     </div>
-                    <DelegationActivityList activities={group.activities} isCompleted={isCompleted} />
+                    <div className="p-1.5">
+                      <DelegationActivityList activities={group.activities} isCompleted={isCompleted} />
+                    </div>
                   </div>
                 ))}
               </div>
