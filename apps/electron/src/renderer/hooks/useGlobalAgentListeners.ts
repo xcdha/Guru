@@ -960,6 +960,7 @@ export function useGlobalAgentListeners(): void {
         // 子 Agent 过程事件：记录到 delegationActivityAtom，委派工具行实时展示
         if (payload.kind === 'guru_event' && payload.event.type === 'delegation_progress') {
           const evt = payload.event
+          console.log('[渲染] 收到 delegation_progress:', evt.phase, evt.toolName ?? evt.text?.slice(0, 30), 'parentToolUseId=', evt.parentToolUseId)
           if (evt.delegationId) {
             store.set(delegationActivityAtom, (prev) => {
               const list = prev.get(evt.delegationId) ?? []
@@ -1678,9 +1679,8 @@ export function useGlobalAgentListeners(): void {
           // 清理后台任务
           store.set(backgroundTasksAtomFamily(data.sessionId), [])
 
-          // 一轮消息结束：清空工具流式输出缓存与子 Agent 活动（均已展示完成，避免内存增长）
+          // 一轮消息结束：清空工具流式输出缓存（委派活动历史保留，供展开回看）
           store.set(toolStreamOutputAtom, new Map())
-          store.set(delegationActivityAtom, new Map())
 
           // 后台会话没有挂载的 AgentView 来执行收尾清理（MainArea 只渲染活动 Tab）。
           // 若不在此处回收，liveMessagesMap 与流式状态索引会随运行时长单调增长，

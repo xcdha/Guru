@@ -168,7 +168,83 @@ function parseAgentResultText(raw: string): ParsedAgentResult {
   return { text: text.trim(), usage }
 }
 
-// ===== SubAgent 完成信息尾部 =====
+// ===== 委派完成信息尾部（友好摘要，替代原始 JSON） =====
+
+interface ParsedDelegationResult {
+  statuses: string[]
+  resultSummaries: string[]
+  errors: string[]
+}
+
+/** 从委派工具结果 JSON 提取友好摘要 */
+function parseDelegationResult(resultText?: string): ParsedDelegationResult {
+  const empty: ParsedDelegationResult = { statuses: [], resultSummaries: [], errors: [] }
+  if (!resultText) return empty
+  try {
+    const parsed = JSON.parse(resultText) as {
+      delegation?: { status?: string; resultSummary?: string; error?: string }
+      delegations?: Array<{ status?: string; resultSummary?: string; error?: string }>
+      failures?: Array<{ index?: number; title?: string; error?: string }>
+      note?: string
+    }
+    const items = parsed.delegation ? [parsed.delegation] : (parsed.delegations ?? [])
+    return {
+      statuses: items.map((d) => d.status ?? 'unknown'),
+      resultSummaries: items.map((d) => d.resultSummary ?? '').filter(Boolean),
+      errors: [
+        ...items.map((d) => d.error ?? '').filter(Boolean),
+        ...(parsed.failures ?? []).map((f) => f.error ?? ''),
+      ],
+    }
+  } catch {
+    return empty
+  }
+}
+
+function DelegationFooter({ resultText }: { resultText?: string }): React.ReactElement | null {
+  const parsed = React.useMemo(() => parseDelegationResult(resultText), [resultText])
+  const done = parsed.statuses.filter((s) => s === 'completed').length
+  const failed = parsed.statuses.filter((s) => s === 'failed' || s === 'cancelled' || s === 'interrupted').length
+  const running = parsed.statuses.filter((s) => s === 'running').length
+  const total = parsed.statuses.length
+
+  if (total === 0 && parsed.errors.length === 0 && parsed.resultSummaries.length === 0) return null
+
+  return (
+    <div className="mt-2 pt-2 border-t border-border/20 space-y-1.5">
+      {/* 状态摘要 */}
+      <div className="flex items-center gap-2 text-[12px] text-muted-foreground/70">
+        <CheckCircle2 className="size-3 text-emerald-500/80" />
+        <span>
+          {total > 0
+            ? (running > 0
+                ? `完成 ${done}/${total} 个子 Agent（${running} 个运行中）`
+                : failed > 0
+                  ? `完成 ${done}/${total} 个子 Agent（${failed} 个失败/中断）`
+                  : `已完成 ${total} 个子 Agent`)
+            : '委派已完成'}
+        </span>
+      </div>
+
+      {/* 结果摘要 */}
+      {parsed.resultSummaries.map((summary, i) => (
+        <div key={i} className="text-[13px] text-muted-foreground/80 leading-relaxed">
+          {summary.length > 300 ? `${summary.slice(0, 300)}…` : summary}
+        </div>
+      ))}
+
+      {/* 错误 */}
+      {parsed.errors.map((err, i) => (
+        <div key={`err-${i}`} className="flex items-start gap-1.5 text-[12px] text-destructive/80">
+          <XCircle className="mt-0.5 size-3 shrink-0" />
+          <span className="min-w-0 break-all">{err}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ===== 委派完成信息尾部 =====
 
 function SubAgentFooter({
   meta,
@@ -673,12 +749,16 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
               />
             ))}
 
-            {/* SubAgent 完成信息 */}
+            {/* SubAgent 完成信息（委派工具：显示友好摘要而非原始 JSON） */}
             {isCompleted && (
-              <SubAgentFooter
-                meta={subAgentMeta}
-                resultText={toolResult?.result}
-              />
+              isDelegationTool ? (
+                <DelegationFooter resultText={toolResult?.result} />
+              ) : (
+                <SubAgentFooter
+                  meta={subAgentMeta}
+                  resultText={toolResult?.result}
+                />
+              )
             )}
 
             {/* 底部收起按钮 */}

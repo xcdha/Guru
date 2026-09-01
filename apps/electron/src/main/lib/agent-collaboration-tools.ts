@@ -171,6 +171,7 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
             const dedupKey = `${record.delegationId}:${typed.id}`
             if (forwardedToolStarts.has(dedupKey)) continue
             forwardedToolStarts.add(dedupKey)
+            console.log(`[协作] 转发 tool_start: ${typed.name} (parentToolUseId=${record.parentToolUseId})`)
             eventBus.emit(record.parentSessionId, {
               kind: 'guru_event',
               event: {
@@ -502,7 +503,13 @@ function markDelegationFinished(
   record.completedAt = Date.now()
   record.error = fields.error
   record.resultSummary = fields.resultSummary
-  updateAgentSessionMeta(record.childSessionId, { delegationStatus: status })
+  try {
+    // 子会话可能已被用户删除（updateAgentSessionMeta 会抛"会话不存在"）：
+    // 不能让该异常阻断 resolveCompletion，否则父会话 wait_for_delegations 会永久挂起
+    updateAgentSessionMeta(record.childSessionId, { delegationStatus: status })
+  } catch {
+    // 会话已删除或持久化失败：仅记日志，状态机照常收敛
+  }
   deleteBlockedEventsForDelegation(record.delegationId)
   record.resolveCompletion()
 }
