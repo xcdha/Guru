@@ -107,9 +107,15 @@ function compilePiReasoningCapabilities(
 export function shouldForcePiAdaptiveThinking(
   api: Api,
   catalogModel: { api: Api, compat?: unknown } | undefined,
+  modelId?: string,
 ): boolean {
-  if (api !== 'anthropic-messages' || catalogModel?.api !== 'anthropic-messages') return false
-  return (catalogModel.compat as { forceAdaptiveThinking?: unknown } | undefined)?.forceAdaptiveThinking === true
+  if (api !== 'anthropic-messages') return false
+  if ((catalogModel?.compat as { forceAdaptiveThinking?: unknown } | undefined)?.forceAdaptiveThinking === true) return true
+  // Fable 5.1 比 bundled Pi catalog（claude-fable-5）新，ID 精确查找可能落空；
+  // 官方 Anthropic Messages 端点仍拒绝 legacy thinking，识别整个 Fable 5 家族
+  // 让请求走 Pi adaptive + effort 路径
+  const claudeFamilyKey = modelId ? getClaudeFamilyKey(modelId, true) : undefined
+  return claudeFamilyKey === 'fable-5' || claudeFamilyKey?.startsWith('fable-5-') === true
 }
 
 const CODEX_56_THINKING_LEVEL_MAP = compilePiReasoningCapabilities('openai-responses', 'gpt-5.6')?.thinkingLevelMap
@@ -555,7 +561,7 @@ async function resolvePiModelDefaults(input: PiAgentQueryOptions): Promise<PiMod
     && (glmModelId === 'glm-5.3' || glmModelId === 'glm-5.3-flash')
   const catalogContextWindow = catalogModel?.contextWindow ?? DEFAULT_CONTEXT_WINDOW
   const inferredContextWindow = inferAgentSdkContextWindow(input.model, input.provider) ?? DEFAULT_CONTEXT_WINDOW
-  const shouldForceAdaptiveThinking = shouldForcePiAdaptiveThinking(api, catalogModel)
+  const shouldForceAdaptiveThinking = shouldForcePiAdaptiveThinking(api, catalogModel, input.model)
   return {
     api,
     reasoning: catalogModel?.reasoning ?? true,
