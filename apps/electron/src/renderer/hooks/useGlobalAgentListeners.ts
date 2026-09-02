@@ -68,7 +68,7 @@ import type { AgentStreamState } from '@/atoms/agent-atoms'
 import { agentDiffUnseenChangesAtom, agentDiffUnseenFilesAtom } from '@/atoms/agent-atoms'
 import { channelsAtom } from '@/atoms/chat-atoms'
 import { previewFileMapAtom } from '@/atoms/preview-atoms'
-import { toolStreamOutputAtom, delegationActivityAtom, showDelegationUiAtom } from '@/atoms/tool-stream-atoms'
+import { toolStreamOutputAtom, delegationActivityAtom, showDelegationUiAtom, persistDelegationActivitiesNow } from '@/atoms/tool-stream-atoms'
 import type { NotificationSoundType } from '@/types/settings'
 import { toast } from 'sonner'
 import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, GuruEvent, AgentSessionMeta, ProviderType } from '@guru/shared'
@@ -962,28 +962,28 @@ export function useGlobalAgentListeners(): void {
           const evt = payload.event
           console.log('[渲染] 收到 delegation_progress:', evt.phase, evt.toolName ?? evt.text?.slice(0, 30), 'parentToolUseId=', evt.parentToolUseId)
           if (evt.delegationId) {
-            store.set(delegationActivityAtom, (prev) => {
-              const list = prev.get(evt.delegationId) ?? []
-              const activity = {
-                delegationId: evt.delegationId,
-                seq: (list[list.length - 1]?.seq ?? 0) + 1,
-                ts: Date.now(),
-                phase: evt.phase,
-                toolUseId: evt.toolUseId,
-                toolName: evt.toolName,
-                brief: evt.brief,
-                isError: evt.isError,
-                text: evt.text,
-                result: evt.result,
-                title: evt.title,
-                role: evt.role,
-                parentToolUseId: evt.parentToolUseId,
-              }
-              const next = [...list, activity].slice(-30)
-              const map = new Map(prev)
-              map.set(evt.delegationId, next)
-              return map
-            })
+            const prevMap = store.get(delegationActivityAtom)
+            const list = prevMap.get(evt.delegationId) ?? []
+            const activity = {
+              delegationId: evt.delegationId,
+              seq: (list[list.length - 1]?.seq ?? 0) + 1,
+              ts: Date.now(),
+              phase: evt.phase,
+              toolUseId: evt.toolUseId,
+              toolName: evt.toolName,
+              brief: evt.brief,
+              isError: evt.isError,
+              text: evt.text,
+              result: evt.result,
+              title: evt.title,
+              role: evt.role,
+              parentToolUseId: evt.parentToolUseId,
+            }
+            const next = [...list, activity].slice(-30)
+            const nextMap = new Map(prevMap)
+            nextMap.set(evt.delegationId, next)
+            store.set(delegationActivityAtom, nextMap)
+            persistDelegationActivitiesNow(nextMap)
           }
         }
 
