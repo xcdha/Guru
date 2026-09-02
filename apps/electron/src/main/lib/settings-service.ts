@@ -7,10 +7,28 @@
 
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { getSettingsPath } from './config-paths'
+import { homedir } from 'node:os'
+import { getSettingsPath, getConfigDirName } from './config-paths'
 import { DEFAULT_AGENT_RUNTIME, DEFAULT_ICON_SKIN, DEFAULT_INTERFACE_VARIANT, DEFAULT_THEME_MODE, normalizeProductivityToolsSettings } from '../../types'
 import type { AppSettings } from '../../types'
 import { getTerminalProfilesForPlatform, isTerminalProfile } from '@guru/shared'
+
+/**
+ * 开发模式（.guru-dev）下，从生产设置（~/.guru/settings.json）回退缺失的字段。
+ * 原因：用户的外观/排版持久化在正式版配置里（如 typography/areaStyles/themePacks），
+ * dev 实例读不到时正文排版颜色会回落为继承色（发白）。这里仅合并缺失字段，不覆盖 dev 已有值。
+ */
+function readProductionSettingsFallback(): Partial<AppSettings> | null {
+  if (getConfigDirName() === '.guru') return null // 非 dev，无回退
+  const prodPath = join(homedir(), '.guru', 'settings.json')
+  if (!existsSync(prodPath)) return null
+  try {
+    const prod = JSON.parse(readFileSync(prodPath, 'utf-8')) as Partial<AppSettings>
+    return prod
+  } catch {
+    return null
+  }
+}
 
 export function sanitizeWindowsTerminalProfile(input: unknown): AppSettings['lastWindowsTerminalProfile'] {
   return isTerminalProfile(input) && getTerminalProfilesForPlatform('win32').includes(input)
@@ -70,8 +88,15 @@ export function getSettings(): AppSettings {
       lastTerminalProfile: legacyLastTerminalProfile,
       ...settings
     } = data
+    // dev 模式：生产设置中用户已配置、但 dev 缺失的外观/排版字段回退（不覆盖 dev 已有值）
+    // 只回退正文排版与区域样式（解决 dev 正文发白）；themePacks 不回退（dev 有默认包，避免主题突变）
+    const prodFallback = readProductionSettingsFallback()
+    const typography = data.typography ?? prodFallback?.typography
+    const areaStyles = data.areaStyles ?? prodFallback?.areaStyles
     return {
       ...settings,
+      typography,
+      areaStyles,
       themeMode: data.themeMode || DEFAULT_THEME_MODE,
       interfaceVariant: data.interfaceVariant || DEFAULT_INTERFACE_VARIANT,
       iconSkin: data.iconSkin ?? DEFAULT_ICON_SKIN,
