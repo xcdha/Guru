@@ -172,7 +172,7 @@ function parseAgentResultText(raw: string): ParsedAgentResult {
 
 interface ParsedDelegationResult {
   statuses: string[]
-  resultSummaries: Array<{ title?: string; text: string }>
+  resultSummaries: Array<{ title?: string; role?: string; text: string }>
   errors: string[]
 }
 
@@ -190,7 +190,7 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
     const items = parsed.delegation ? [parsed.delegation] : (parsed.delegations ?? [])
     return {
       statuses: items.map((d) => d.status ?? 'unknown'),
-      resultSummaries: items.map((d) => ({ title: d.title, text: d.resultSummary ?? '' })).filter((r) => r.text),
+      resultSummaries: items.map((d) => ({ title: d.title, role: undefined, text: d.resultSummary ?? '' })).filter((r) => r.text),
       errors: [
         ...items.map((d) => d.error ?? '').filter(Boolean),
         ...(parsed.failures ?? []).map((f) => f.error ?? ''),
@@ -201,14 +201,14 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   }
 }
 
-function DelegationFooter({ resultText, activities }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string }> }): React.ReactElement | null {
+function DelegationFooter({ resultText, activities, hideStatus }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string; role?: string }>; hideStatus?: boolean }): React.ReactElement | null {
   const parsed = React.useMemo(() => {
     // 优先使用主进程终态事件携带的 resultSummary（完整报告）——收集全部 final（批量委派多个子 Agent）
     const finalActivities = activities?.filter((a) => a.phase === 'final' && a.result)
     if (finalActivities && finalActivities.length > 0) {
       return {
         statuses: finalActivities.map((a) => (a.isError ? 'failed' : 'completed')),
-        resultSummaries: finalActivities.map((a) => ({ title: a.title, text: a.result! })),
+        resultSummaries: finalActivities.map((a) => ({ title: a.title, role: a.role, text: a.result! })),
         errors: finalActivities.filter((a) => a.isError).map((a) => a.result!).filter(Boolean),
       }
     }
@@ -222,34 +222,37 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
 
   if (total === 0 && parsed.errors.length === 0 && parsed.resultSummaries.length === 0) return null
 
-  // 多个摘要时默认只展开第一个，其余折叠（避免批量委派时超长）
+  // 多个摘要时默认只展开第一个，其余折叠（避免批量委派时超长）；再次点击可收起
   const showAll = reportsExpanded || parsed.resultSummaries.length <= 1
+  const canCollapse = reportsExpanded && parsed.resultSummaries.length > 1
 
   return (
     <div className="mt-3 pt-2 border-t-2 border-border/30 space-y-2">
-      {/* 状态摘要：醒目 */}
-      <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground/80">
-        <CheckCircle2 className="size-4 text-emerald-500/90" />
-        <span>
-          {total > 0
-            ? (running > 0
-                ? `完成 ${done}/${total} 个子 Agent（${running} 个运行中）`
-                : failed > 0
-                  ? `完成 ${done}/${total} 个子 Agent（${failed} 个失败/中断）`
-                  : `已完成 ${total} 个子 Agent`)
-            : '委派已完成'}
-        </span>
-      </div>
+      {/* 状态摘要：醒目（仅当没有活动区状态头时显示，避免重复） */}
+      {!hideStatus && (
+        <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground/80">
+          <CheckCircle2 className="size-4 text-emerald-500/90" />
+          <span>
+            {total > 0
+              ? (running > 0
+                  ? `完成 ${done}/${total} 个子 Agent（${running} 个运行中）`
+                  : failed > 0
+                    ? `完成 ${done}/${total} 个子 Agent（${failed} 个失败/中断）`
+                    : `已完成 ${total} 个子 Agent`)
+              : '委派已完成'}
+          </span>
+        </div>
+      )}
 
       {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题） */}
-      {!showAll && parsed.resultSummaries.length > 1 && (
+      {parsed.resultSummaries.length > 1 && (
         <button
           type="button"
-          onClick={() => setReportsExpanded(true)}
+          onClick={() => setReportsExpanded((v) => !v)}
           className="flex items-center gap-1 text-[12px] font-medium text-primary/80 hover:text-primary transition-colors"
         >
-          <ChevronDown className="size-3" />
-          还有 {parsed.resultSummaries.length - 1} 份报告，点击展开全部
+          {canCollapse ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+          {canCollapse ? '收起全部报告' : `还有 ${parsed.resultSummaries.length - 1} 份报告，点击展开全部`}
         </button>
       )}
       {parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
@@ -257,8 +260,10 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
           <div className="overflow-hidden rounded-lg border border-border/25 bg-background/40">
             {summary.title && (
               <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5 text-[12px] font-semibold text-foreground/90">
+                <span className={cn('size-2 shrink-0 rounded-full', roleStyle(summary.role).accent)} />
                 <Bot className="size-3 shrink-0 text-primary/70" />
                 <span className="truncate">{summary.title}</span>
+                {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
               </div>
             )}
             <div className="px-3 py-2 text-[13px] leading-relaxed text-muted-foreground/80 max-w-full">
@@ -860,6 +865,11 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                   {currentStep}
                 </span>
               )}
+              {isDelegationTool && isCompleted && delegationActivityGroups.length > 0 && (
+                <span className="shrink-0 rounded-full bg-emerald-500/10 px-1.5 py-px text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  ✓ {delegationActivityGroups.filter((g) => g.activities.some((a) => a.phase === 'final' && !a.isError)).length}/{delegationActivityGroups.length}
+                </span>
+              )}
               {delegationStepCount > 0 && (
                 <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/55">
                   {delegationStepCount} 步
@@ -919,6 +929,9 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                       <span className={cn('absolute left-0 top-0 h-full w-[3px]', roleStyle(group.role).accent)} />
                       <Bot className="size-4 shrink-0 text-foreground/70" />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
+                      {!isCompleted && group.activities.some((a) => a.phase === 'tool_start') && !group.activities.some((a) => a.phase === 'final') && (
+                        <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/70" />
+                      )}
                       <span className={cn('shrink-0 rounded-full px-2 py-[1.5px] text-[10.5px] font-semibold uppercase tracking-wider', roleStyle(group.role).badge)}>{group.role ?? 'agent'}</span>
                     </div>
                     <div className="px-2 py-1.5">
@@ -946,7 +959,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {/* SubAgent 完成信息（委派工具：显示友好摘要而非原始 JSON） */}
             {isCompleted && (
               isDelegationTool ? (
-                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} />
+                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} hideStatus={delegationActivityGroups.length > 0} />
               ) : (
                 <SubAgentFooter
                   meta={subAgentMeta}
