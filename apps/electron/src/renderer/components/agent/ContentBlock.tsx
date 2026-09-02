@@ -222,7 +222,7 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   }
 }
 
-function DelegationFooter({ resultText, activities, hideStatus, isStale }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string; role?: string }>; hideStatus?: boolean; isStale?: boolean }): React.ReactElement | null {
+function DelegationFooter({ resultText, activities, hideStatus, isStale, suppressReports }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string; role?: string }>; hideStatus?: boolean; isStale?: boolean; suppressReports?: boolean }): React.ReactElement | null {
   const parsed = React.useMemo(() => {
     // 优先使用主进程终态事件携带的 resultSummary（完整报告）——收集全部 final（批量委派多个子 Agent）
     const finalActivities = activities?.filter((a) => a.phase === 'final' && a.result)
@@ -242,6 +242,9 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale }: { res
   const [reportsExpanded, setReportsExpanded] = React.useState(false)
 
   if (total === 0 && parsed.errors.length === 0 && parsed.resultSummaries.length === 0) return null
+
+  // 抑制报告（wait 行实时场景：报告归属 delegate 行，不重复）；有错误仍显示错误
+  if (suppressReports && parsed.resultSummaries.length === 0 && parsed.errors.length === 0) return null
 
   // 多个摘要时默认只展开第一个，其余折叠（避免批量委派时超长）；再次点击可收起
   const showAll = reportsExpanded || parsed.resultSummaries.length <= 1
@@ -274,8 +277,8 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale }: { res
         </div>
       )}
 
-      {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题） */}
-      {parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
+      {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题）——wait 行实时场景 suppress 时隐藏（报告归属 delegate 行） */}
+      {!suppressReports && parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
         <div key={i} className="min-w-0">
           <div className="overflow-hidden rounded-lg border border-border/25 bg-background/40">
             <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5">
@@ -294,7 +297,7 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale }: { res
       ))}
 
       {/* 展开全部按钮：放在报告列表之后（看完第一份再决定是否展开） */}
-      {!showAll && parsed.resultSummaries.length > 1 && (
+      {!suppressReports && !showAll && parsed.resultSummaries.length > 1 && (
         <button
           type="button"
           onClick={() => setReportsExpanded(true)}
@@ -305,7 +308,7 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale }: { res
         </button>
       )}
 
-      {canCollapse && (
+      {!suppressReports && canCollapse && (
         <button
           type="button"
           onClick={() => setReportsExpanded(false)}
@@ -707,6 +710,10 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     || block.name === 'mcp__collaboration__wait_for_delegations'
     || block.name === 'mcp__collaboration__list_delegations'
     || block.name === 'mcp__collaboration__get_delegation_results'
+  // 发起行（delegate）：显示实时活动 + final 报告；
+  // 等待/查询行（wait/list/get）：不参与活动匹配，仅作重启后报告兜底（无 delegate 行展示时）
+  const isDelegateStartTool = block.name === 'mcp__collaboration__delegate_agent' || block.name === 'mcp__collaboration__delegate_agents'
+  const isDelegateWaitTool = isDelegationTool && !isDelegateStartTool
   // 用户设置：是否显示子 Agent 执行 UI（关闭则不渲染，功能照常）
   const showDelegationUi = useAtomValue(showDelegationUiAtom)
   const hasChildren = (isAgentTool || isDelegationTool) && childBlocks && childBlocks.length > 0
@@ -727,19 +734,21 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     return ids
   }, [isDelegationTool, resultText])
   // 子 Agent 实时活动（主进程 eventBus 转发 delegation_progress → atom），按子 Agent 分组
-  // 关联方式：优先按父会话委派工具的 toolUseId（block.id）匹配（委派执行中即可显示）；
-  // 兜底从 tool_result JSON 解析 delegationId（历史消息/重载场景）
+  // 关联方式：发起行（delegate）按父会话委派工具的 toolUseId（block.id）匹配；
+  // byResult（tool_result JSON 解析）兜底仅用于发起行历史/重启恢复场景；
+  // wait/list/get 行不显示活动卡片（活动/报告只归属 delegate 发起行，wait 行仅重启后无展示时兜底报告）
   const delegationActivityMap = useAtomValue(delegationActivityAtom)
   const matchedDelegationIds = React.useMemo(() => {
+    if (!isDelegateStartTool) return []
     // 按 parentToolUseId 匹配的活动（本工具行发起）
     const byToolUse = new Set<string>()
     for (const [delegationId, list] of delegationActivityMap) {
       if (list.some((a) => a.parentToolUseId === block.id)) byToolUse.add(delegationId)
     }
-    // 从 tool_result 解析的 delegationId（兜底）
+    // 从 tool_result 解析的 delegationId（兜底：重启后无实时活动时仍能关联上历史数据）
     const byResult = delegationIds
     return [...new Set([...byToolUse, ...byResult])]
-  }, [delegationActivityMap, block.id, delegationIds])
+  }, [isDelegateStartTool, delegationActivityMap, block.id, delegationIds])
   const delegationActivityGroups = React.useMemo(() => {
     if (!isDelegationTool || matchedDelegationIds.length === 0) return []
     const groups: Array<{
@@ -1008,7 +1017,15 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {/* SubAgent 完成信息（委派工具：显示友好摘要而非原始 JSON） */}
             {isCompleted && (
               isDelegationTool ? (
-                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} hideStatus={delegationActivityGroups.length > 0} isStale={isDelegationTool && isCompleted && delegationActivityGroups.length === 0 && parsedRunningOnly(resultText)} />
+                <DelegationFooter
+                  resultText={toolResult?.result}
+                  activities={delegationActivities}
+                  hideStatus={delegationActivityGroups.length > 0}
+                  isStale={isDelegateStartTool && delegationActivityGroups.length === 0 && parsedRunningOnly(resultText)}
+                  // wait/list/get 行不显示报告（报告只归属 delegate 发起行：实时 final 活动 + localStorage 恢复），
+                  // 只显示收敛状态摘要
+                  suppressReports={isDelegateWaitTool}
+                />
               ) : (
                 <SubAgentFooter
                   meta={subAgentMeta}
