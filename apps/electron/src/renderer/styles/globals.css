@@ -3129,6 +3129,12 @@ html.theme-custom body {
   color: var(--area-code-color, inherit);
 }
 
+/* 代码块颜色设置生效：用户显式设置 --area-code-color 时，token 高亮色与用户代码色 50% 混合——
+   保留语法高亮层次，同时整体向用户代码色靠拢（柔和统一）；未设置时保留完整 Shiki 高亮 */
+.area-code-color-set .shiki span[style*="color"] {
+  color: color-mix(in srgb, var(--area-code-color) 55%, currentColor) !important;
+}
+
 :root:not(.ui-classic) .rich-text-input,
 :root.ui-classic .rich-text-input {
   font-size: var(--area-input-font-size, inherit);
