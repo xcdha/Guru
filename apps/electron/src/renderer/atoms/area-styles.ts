@@ -62,8 +62,10 @@ export function applyAreaStylesToDOM(styles: AreaStyleMap): void {
     }
     if (style?.color) {
       root.setProperty(vars.color, style.color)
+      if (area === 'code') document.documentElement.classList.add('area-code-color-set')
     } else {
       root.removeProperty(vars.color)
+      if (area === 'code') document.documentElement.classList.remove('area-code-color-set')
     }
   }
   applyUiColorCustomClass(styles)
