@@ -20,6 +20,7 @@ import {
   Wrench,
   Bot,
   CheckCircle2,
+  History,
 } from 'lucide-react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
@@ -176,6 +177,18 @@ interface ParsedDelegationResult {
   errors: string[]
 }
 
+/** 结果 JSON 是否“全是 running”（启动快照，重启后无 final 事件更新时为 true，属过期状态） */
+function parsedRunningOnly(resultText?: string): boolean {
+  if (!resultText) return false
+  try {
+    const parsed = JSON.parse(resultText) as { delegation?: { status?: string }; delegations?: Array<{ status?: string }> }
+    const items = parsed.delegation ? [parsed.delegation] : (parsed.delegations ?? [])
+    return items.length > 0 && items.every((d) => d.status === 'running')
+  } catch {
+    return false
+  }
+}
+
 /** 从委派工具结果 JSON 提取友好摘要 */
 function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   const empty: ParsedDelegationResult = { statuses: [], resultSummaries: [], errors: [] }
@@ -201,7 +214,7 @@ function parseDelegationResult(resultText?: string): ParsedDelegationResult {
   }
 }
 
-function DelegationFooter({ resultText, activities, hideStatus }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string; role?: string }>; hideStatus?: boolean }): React.ReactElement | null {
+function DelegationFooter({ resultText, activities, hideStatus, isStale }: { resultText?: string; activities?: Array<{ phase: string; result?: string; isError?: boolean; title?: string; role?: string }>; hideStatus?: boolean; isStale?: boolean }): React.ReactElement | null {
   const parsed = React.useMemo(() => {
     // 优先使用主进程终态事件携带的 resultSummary（完整报告）——收集全部 final（批量委派多个子 Agent）
     const finalActivities = activities?.filter((a) => a.phase === 'final' && a.result)
@@ -226,10 +239,13 @@ function DelegationFooter({ resultText, activities, hideStatus }: { resultText?:
   const showAll = reportsExpanded || parsed.resultSummaries.length <= 1
   const canCollapse = reportsExpanded && parsed.resultSummaries.length > 1
 
+  // 过期快照（重启后）：不显示误导的“0/3 运行中”，提示结果位置
+  const staleOnly = isStale && parsed.resultSummaries.length === 0 && parsed.errors.length === 0
+
   return (
     <div className="mt-3 pt-2 border-t-2 border-border/30 space-y-2">
       {/* 状态摘要：醒目（仅当没有活动区状态头时显示，避免重复） */}
-      {!hideStatus && (
+      {!hideStatus && !staleOnly && (
         <div className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground/80">
           <CheckCircle2 className="size-4 text-emerald-500/90" />
           <span>
@@ -241,6 +257,12 @@ function DelegationFooter({ resultText, activities, hideStatus }: { resultText?:
                     : `已完成 ${total} 个子 Agent`)
               : '委派已完成'}
           </span>
+        </div>
+      )}
+      {staleOnly && (
+        <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground/80">
+          <History className="size-3.5 shrink-0 text-muted-foreground/60" />
+          本次会话重启前的委派——详细结果见下方「等待子会话完成」工具行
         </div>
       )}
 
@@ -656,8 +678,14 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
     return parseTaskListResult(resultText)
   }, [block.name, resultText, isError])
   const isAgentTool = block.name === 'Agent' || block.name === 'Task'
-  // 协作委派工具（mcp__collaboration__delegate_agent / delegate_agents）也视为子 Agent 容器
-  const isDelegationTool = block.name === 'mcp__collaboration__delegate_agent' || block.name === 'mcp__collaboration__delegate_agents'
+  // 协作委派工具（delegate_agent / delegate_agents / wait_for_delegations 等）也视为子 Agent 容器：
+  // delegate 行显示实时活动；wait/list/get 行可从自身 tool_result JSON 恢复各子 Agent 完整报告（重启后仍可用）
+  const isDelegationTool =
+    block.name === 'mcp__collaboration__delegate_agent'
+    || block.name === 'mcp__collaboration__delegate_agents'
+    || block.name === 'mcp__collaboration__wait_for_delegations'
+    || block.name === 'mcp__collaboration__list_delegations'
+    || block.name === 'mcp__collaboration__get_delegation_results'
   // 用户设置：是否显示子 Agent 执行 UI（关闭则不渲染，功能照常）
   const showDelegationUi = useAtomValue(showDelegationUiAtom)
   const hasChildren = (isAgentTool || isDelegationTool) && childBlocks && childBlocks.length > 0
@@ -959,7 +987,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
             {/* SubAgent 完成信息（委派工具：显示友好摘要而非原始 JSON） */}
             {isCompleted && (
               isDelegationTool ? (
-                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} hideStatus={delegationActivityGroups.length > 0} />
+                <DelegationFooter resultText={toolResult?.result} activities={delegationActivities} hideStatus={delegationActivityGroups.length > 0} isStale={isDelegationTool && isCompleted && delegationActivityGroups.length === 0 && parsedRunningOnly(resultText)} />
               ) : (
                 <SubAgentFooter
                   meta={subAgentMeta}
