@@ -289,7 +289,7 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale, suppres
               </span>
               {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
             </div>
-            <div className="px-3 py-2 text-[13px] leading-relaxed text-muted-foreground/80 max-w-full">
+            <div className="px-3 py-2 max-w-full">
               <MessageResponse>{summary.text}</MessageResponse>
             </div>
           </div>
