@@ -254,7 +254,11 @@ export function CodeBlock({ children, onCopy }: CodeBlockProps): React.ReactElem
       <pre
         className="shiki overflow-x-auto p-4 m-0 text-[0.875em] leading-[1.6] bg-[hsl(var(--code-bg))]"
         style={{
-          color: tokenResult?.fgColor ?? '#e1e4e8',
+          // 无语言/无高亮（langOrText === 'text'）：单色模式——用户设置的代码块颜色或主题默认浅色；
+          // 有语言（语法高亮）：沿用 Shiki 主题前景色（token 各自着色，层次保留）
+          color: langOrText === 'text'
+            ? 'var(--area-code-color, var(--md-code-color, #e1e4e8))'
+            : (tokenResult?.fgColor ?? '#e1e4e8'),
           borderRadius: '0 0 8px 8px',
         }}
       >
