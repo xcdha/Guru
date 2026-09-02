@@ -242,30 +242,29 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
       </div>
 
       {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题） */}
-      {parsed.resultSummaries.map((summary, i) => (
+      {!showAll && parsed.resultSummaries.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setReportsExpanded(true)}
+          className="flex items-center gap-1 text-[12px] font-medium text-primary/80 hover:text-primary transition-colors"
+        >
+          <ChevronDown className="size-3" />
+          还有 {parsed.resultSummaries.length - 1} 份报告，点击展开全部
+        </button>
+      )}
+      {parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
         <div key={i} className="min-w-0">
-          {i > 0 && !showAll && (
-            <button
-              type="button"
-              onClick={() => setReportsExpanded(true)}
-              className="text-[12px] text-primary/70 hover:text-primary transition-colors"
-            >
-              还有 {parsed.resultSummaries.length - 1} 份报告，点击展开全部
-            </button>
-          )}
-          {showAll && (
-            <div className="rounded-md border border-border/25 bg-background/40 px-3 py-2">
-              {summary.title && (
-                <div className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-foreground/80">
-                  <Bot className="size-3 text-primary/60" />
-                  {summary.title}
-                </div>
-              )}
-              <div className="text-muted-foreground/70 max-w-full">
-                <MessageResponse>{summary.text}</MessageResponse>
+          <div className="overflow-hidden rounded-lg border border-border/25 bg-background/40">
+            {summary.title && (
+              <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5 text-[12px] font-semibold text-foreground/90">
+                <Bot className="size-3 shrink-0 text-primary/70" />
+                <span className="truncate">{summary.title}</span>
               </div>
+            )}
+            <div className="px-3 py-2 text-[13px] leading-relaxed text-muted-foreground/80 max-w-full">
+              <MessageResponse>{summary.text}</MessageResponse>
             </div>
-          )}
+          </div>
         </div>
       ))}
 
@@ -283,20 +282,17 @@ function DelegationFooter({ resultText, activities }: { resultText?: string; act
 // ===== 委派活动列表（工具启动+结果配对成一行，可展开查看输出） =====
 
 /** 子 Agent 角色 → 视觉颜色（一眼区分不同角色） */
-const ROLE_STYLES: Record<string, { border: string; header: string; badge: string }> = {
-  research: { border: 'border-sky-500/30', header: 'bg-sky-500/10', badge: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
-  implement: { border: 'border-violet-500/30', header: 'bg-violet-500/10', badge: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
-  review: { border: 'border-amber-500/30', header: 'bg-amber-500/10', badge: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
-  explore: { border: 'border-emerald-500/30', header: 'bg-emerald-500/10', badge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-  custom: { border: 'border-rose-500/30', header: 'bg-rose-500/10', badge: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+const ROLE_STYLES: Record<string, { border: string; header: string; badge: string; accent: string }> = {
+  research: { border: 'border-sky-500/25', header: 'bg-gradient-to-r from-sky-500/10 to-transparent', badge: 'bg-sky-500/15 text-sky-600 dark:text-sky-400', accent: 'bg-sky-500/70' },
+  implement: { border: 'border-violet-500/25', header: 'bg-gradient-to-r from-violet-500/10 to-transparent', badge: 'bg-violet-500/15 text-violet-600 dark:text-violet-400', accent: 'bg-violet-500/70' },
+  review: { border: 'border-amber-500/25', header: 'bg-gradient-to-r from-amber-500/10 to-transparent', badge: 'bg-amber-500/15 text-amber-600 dark:text-amber-400', accent: 'bg-amber-500/70' },
+  explore: { border: 'border-emerald-500/25', header: 'bg-gradient-to-r from-emerald-500/10 to-transparent', badge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400', accent: 'bg-emerald-500/70' },
+  custom: { border: 'border-rose-500/25', header: 'bg-gradient-to-r from-rose-500/10 to-transparent', badge: 'bg-rose-500/15 text-rose-600 dark:text-rose-400', accent: 'bg-rose-500/70' },
 }
-const DEFAULT_ROLE_STYLE = { border: 'border-primary/25', header: 'bg-primary/8', badge: 'bg-muted text-muted-foreground' }
-function roleStyle(role?: string): { border: string; header: string; badge: string } {
+const DEFAULT_ROLE_STYLE = { border: 'border-primary/25', header: 'bg-gradient-to-r from-primary/10 to-transparent', badge: 'bg-muted text-muted-foreground', accent: 'bg-primary/70' }
+function roleStyle(role?: string): { border: string; header: string; badge: string; accent: string } {
   return (role && ROLE_STYLES[role]) || DEFAULT_ROLE_STYLE
 }
-function roleBorderClass(role?: string): string { return roleStyle(role).border }
-function roleHeaderBgClass(role?: string): string { return roleStyle(role).header }
-function roleBadgeClass(role?: string): string { return roleStyle(role).badge }
 interface DelegationActivityItem {
   seq: number
   ts: number
@@ -373,13 +369,20 @@ function DelegationActivityList({ activities, isCompleted }: { activities: Deleg
                 hasContent ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default',
               )}
             >
-              {row.status === 'running' ? (
-                <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/70" />
-              ) : row.status === 'error' ? (
-                <XCircle className="size-3.5 shrink-0 text-destructive/80" />
-              ) : (
-                <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500/80" />
-              )}
+              <span
+                className={cn(
+                  'flex size-4 shrink-0 items-center justify-center rounded-full',
+                  row.status === 'running' ? 'bg-primary/10' : row.status === 'error' ? 'bg-destructive/10' : 'bg-emerald-500/10',
+                )}
+              >
+                {row.status === 'running' ? (
+                  <Loader2 className="size-3 animate-spin text-primary/70" />
+                ) : row.status === 'error' ? (
+                  <XCircle className="size-3 text-destructive/80" />
+                ) : (
+                  <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
+                )}
+              </span>
               <span className="min-w-0 flex-1 truncate text-foreground/85">
                 {row.toolName}
                 {row.brief && <span className="text-muted-foreground/60"> · {row.brief}</span>}
@@ -882,33 +885,43 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
 
             {/* 子 Agent 实时活动（委派工具：主进程转发 delegation_progress），按子 Agent 分组 */}
             {isDelegationTool && delegationActivityGroups.length > 0 && (
-              <div className="space-y-2">
-                {/* 状态头：大而醒目 */}
+              <div className="mt-1.5 space-y-2">
+                {/* 状态头：渐变胶囊条 */}
                 <div className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium',
-                  isCompleted ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-primary/10 text-primary',
+                  'flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold shadow-sm backdrop-blur',
+                  isCompleted
+                    ? 'bg-gradient-to-r from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary',
                 )}>
                   {isCompleted ? (
                     <CheckCircle2 className="size-4 shrink-0" />
                   ) : (
                     <Loader2 className="size-4 shrink-0 animate-spin" />
                   )}
-                  {isCompleted ? `子 Agent 执行完成（${delegationActivityGroups.length} 个）` : (delegationActivities.length > 0 ? `子 Agent 执行中（${delegationActivityGroups.length} 个）` : '等待子 Agent 启动…')}
+                  <span className="truncate">
+                    {isCompleted ? `子 Agent 执行完成（${delegationActivityGroups.length} 个）` : (delegationActivities.length > 0 ? `子 Agent 执行中（${delegationActivityGroups.length} 个）` : '等待子 Agent 启动…')}
+                  </span>
+                  {isCompleted && (
+                    <span className="ml-auto hidden items-center gap-0.5 rounded-full bg-emerald-500/15 px-1.5 py-px text-[11px] font-medium text-emerald-600 dark:text-emerald-400 sm:flex">
+                      {delegationActivityGroups.filter((g) => g.activities.some((a) => a.phase === 'final' && !a.isError)).length}/{delegationActivityGroups.length} 成功
+                    </span>
+                  )}
                 </div>
                 {delegationActivityGroups.map((group, gi) => (
                   <div key={group.delegationId} className={cn(
-                    'overflow-hidden rounded-lg border',
-                    roleBorderClass(group.role),
-                    'bg-background/40',
+                    'overflow-hidden rounded-xl border bg-background/60 shadow-sm backdrop-blur transition-colors',
+                    roleStyle(group.role).border,
+                    'hover:bg-background/80',
                     gi > 0 && 'mt-1.5',
                   )}>
-                    {/* 子 Agent 标题栏 */}
-                    <div className={cn('flex items-center gap-2 px-2.5 py-1.5', roleHeaderBgClass(group.role))}>
-                      <Bot className="size-4 shrink-0 text-foreground/80" />
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
-                      {group.role && <span className={cn('shrink-0 rounded-full px-2 py-px text-[11px] font-medium', roleBadgeClass(group.role))}>{group.role}</span>}
+                    {/* 子 Agent 标题栏：左彩色条 + 渐变底 */}
+                    <div className={cn('relative flex items-center gap-2 px-3 py-2', roleStyle(group.role).header)}>
+                      <span className={cn('absolute left-0 top-0 h-full w-[3px]', roleStyle(group.role).accent)} />
+                      <Bot className="size-4 shrink-0 text-foreground/70" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
+                      <span className={cn('shrink-0 rounded-full px-2 py-[1.5px] text-[10.5px] font-semibold uppercase tracking-wider', roleStyle(group.role).badge)}>{group.role ?? 'agent'}</span>
                     </div>
-                    <div className="p-1.5">
+                    <div className="px-2 py-1.5">
                       <DelegationActivityList activities={group.activities} isCompleted={isCompleted} />
                     </div>
                   </div>
