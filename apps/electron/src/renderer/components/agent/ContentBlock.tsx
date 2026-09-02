@@ -171,6 +171,14 @@ function parseAgentResultText(raw: string): ParsedAgentResult {
 
 // ===== 委派完成信息尾部（友好摘要，替代原始 JSON） =====
 
+/** 报告标题：优先子 Agent 标题；缺失时从正文提取首个 Markdown 标题；再无则序号兜底 */
+function getReportTitle(summary: { title?: string; text: string }, index: number, total: number): string {
+  if (summary.title && summary.title.trim()) return summary.title
+  const heading = summary.text.match(/^#{1,3}\s+(.+)$/m)
+  if (heading?.[1]) return heading[1].trim()
+  return total > 1 ? `子 Agent 报告 ${index + 1}` : '子 Agent 报告'
+}
+
 interface ParsedDelegationResult {
   statuses: string[]
   resultSummaries: Array<{ title?: string; role?: string; text: string }>
@@ -267,33 +275,46 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale }: { res
       )}
 
       {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题） */}
-      {parsed.resultSummaries.length > 1 && (
-        <button
-          type="button"
-          onClick={() => setReportsExpanded((v) => !v)}
-          className="flex items-center gap-1 text-[12px] font-medium text-primary/80 hover:text-primary transition-colors"
-        >
-          {canCollapse ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-          {canCollapse ? '收起全部报告' : `还有 ${parsed.resultSummaries.length - 1} 份报告，点击展开全部`}
-        </button>
-      )}
       {parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
         <div key={i} className="min-w-0">
           <div className="overflow-hidden rounded-lg border border-border/25 bg-background/40">
-            {summary.title && (
-              <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5 text-[12px] font-semibold text-foreground/90">
-                <span className={cn('size-2 shrink-0 rounded-full', roleStyle(summary.role).accent)} />
-                <Bot className="size-3 shrink-0 text-primary/70" />
-                <span className="truncate">{summary.title}</span>
-                {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5">
+              <span className={cn('size-2 shrink-0 rounded-full', roleStyle(summary.role).accent)} />
+              <Bot className="size-3 shrink-0 text-primary/70" />
+              <span className="truncate text-[12px] font-semibold text-foreground/90">
+                {getReportTitle(summary, i, parsed.resultSummaries.length)}
+              </span>
+              {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
+            </div>
             <div className="px-3 py-2 text-[13px] leading-relaxed text-muted-foreground/80 max-w-full">
               <MessageResponse>{summary.text}</MessageResponse>
             </div>
           </div>
         </div>
       ))}
+
+      {/* 展开全部按钮：放在报告列表之后（看完第一份再决定是否展开） */}
+      {!showAll && parsed.resultSummaries.length > 1 && (
+        <button
+          type="button"
+          onClick={() => setReportsExpanded(true)}
+          className="mx-auto flex items-center gap-1 rounded-full border border-border/30 bg-background/40 px-3 py-1 text-[12px] font-medium text-primary/80 hover:bg-primary/5 hover:text-primary transition-colors"
+        >
+          <ChevronDown className="size-3" />
+          还有 {parsed.resultSummaries.length - 1} 份报告，点击展开全部
+        </button>
+      )}
+
+      {canCollapse && (
+        <button
+          type="button"
+          onClick={() => setReportsExpanded(false)}
+          className="mx-auto flex items-center gap-1 rounded-full border border-border/30 bg-background/40 px-3 py-1 text-[12px] font-medium text-muted-foreground/70 hover:text-foreground transition-colors"
+        >
+          <ChevronUp className="size-3" />
+          收起全部报告
+        </button>
+      )}
 
       {/* 错误 */}
       {parsed.errors.map((err, i) => (
