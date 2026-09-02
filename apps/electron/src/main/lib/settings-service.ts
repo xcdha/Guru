@@ -88,15 +88,20 @@ export function getSettings(): AppSettings {
       lastTerminalProfile: legacyLastTerminalProfile,
       ...settings
     } = data
-    // dev 模式：生产设置中用户已配置、但 dev 缺失的外观/排版字段回退（不覆盖 dev 已有值）
-    // 只回退正文排版与区域样式（解决 dev 正文发白）；themePacks 不回退（dev 有默认包，避免主题突变）
+    // dev 模式：生产设置中用户已配置的外观/排版应跟随（dev 未重新配置时）。
+    // dev 的 themePacks 若非用户主动改过（默认值为 null/缺失），回退生产包（含 GitHub Dark 代码主题）；
+    // 此处用“dev 无该字段”判定（dev 文件里默认包的写入不会覆盖用户后续在生产版改的主题）。
     const prodFallback = readProductionSettingsFallback()
     const typography = data.typography ?? prodFallback?.typography
     const areaStyles = data.areaStyles ?? prodFallback?.areaStyles
+    // themePacks：dev 有值（默认包）时仍回退生产包——用户外观预期以生产版为准，
+    // 否则代码块高亮/背景用默认而不是生产配置的 GitHub Dark。
+    const themePacks = prodFallback?.themePacks ?? data.themePacks
     return {
       ...settings,
       typography,
       areaStyles,
+      themePacks,
       themeMode: data.themeMode || DEFAULT_THEME_MODE,
       interfaceVariant: data.interfaceVariant || DEFAULT_INTERFACE_VARIANT,
       iconSkin: data.iconSkin ?? DEFAULT_ICON_SKIN,
