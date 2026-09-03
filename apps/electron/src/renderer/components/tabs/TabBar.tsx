@@ -25,6 +25,7 @@ import {
   currentSessionSidePanelOpenAtom,
   agentWorkspacesAtom,
   currentAgentWorkspaceIdAtom,
+  unviewedCompletedDelegatedSessionIdsAtom,
 } from '@/atoms/agent-atoms'
 import { tearOffPreviewToSplit } from '@/components/diff/preview-opener'
 import { Button } from '@/components/ui/button'
@@ -151,6 +152,8 @@ export function TabBar(): React.ReactElement {
     return ids
   }, [agentSessions])
 
+  const unviewedDelegatedCompletionIds = useAtomValue(unviewedCompletedDelegatedSessionIdsAtom)
+
   // 拖拽状态
   const dragState = React.useRef<{
     dragging: boolean
@@ -209,6 +212,7 @@ export function TabBar(): React.ReactElement {
         workspaceNameBySessionId={workspaceNameBySessionId}
         automationSessionIds={automationSessionIds}
         delegationSessionIds={delegationSessionIds}
+        unviewedDelegatedCompletionIds={unviewedDelegatedCompletionIds}
         needsMacTrafficLightGap={needsMacTrafficLightGap}
         sidebarCollapsed={sidebarCollapsed}
         onActivate={handleActivate}
@@ -232,6 +236,7 @@ function TabBarInner({
   workspaceNameBySessionId,
   automationSessionIds,
   delegationSessionIds,
+  unviewedDelegatedCompletionIds,
   needsMacTrafficLightGap,
   sidebarCollapsed,
   onActivate,
@@ -245,6 +250,7 @@ function TabBarInner({
   workspaceNameBySessionId: Map<string, string>
   automationSessionIds: Set<string>
   delegationSessionIds: Set<string>
+  unviewedDelegatedCompletionIds: Set<string>
   needsMacTrafficLightGap: boolean
   sidebarCollapsed: boolean
   onActivate: (tabId: string) => void
@@ -518,6 +524,7 @@ function TabBarInner({
             workspaceName={tab.type === 'agent' ? workspaceNameBySessionId.get(tab.sessionId) : undefined}
             isAutomation={tab.type === 'agent' && automationSessionIds.has(tab.sessionId)}
             isDelegation={tab.type === 'agent' && delegationSessionIds.has(tab.sessionId)}
+            hasUnviewedDelegationCompletion={tab.type === 'agent' && unviewedDelegatedCompletionIds.has(tab.sessionId)}
             isActive={tab.id === activeTabId}
             isStreaming={streamingMap.get(tab.id) ?? 'idle'}
             isHovered={hoveredTabId === tab.id}

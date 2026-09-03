@@ -45,6 +45,7 @@ import {
   workspaceAttachedDirectoriesMapAtom,
   workspaceAttachedFilesMapAtom,
   unviewedCompletedSessionIdsAtom,
+  unviewedCompletedDelegatedSessionIdsAtom,
   agentPendingPromptAtom,
   agentSessionPathMapAtom,
   agentDiffRefreshVersionAtom,
@@ -79,7 +80,7 @@ import { buildTodoAgentPrompt } from '@/lib/todo-agent-prompt'
 import { getAgentCompletionMarkers, notifyAgentCompletion } from '@/lib/agent-completion-presence'
 import { getPlanModeChangeFromToolName, updatePlanModeSessionSet } from '@/lib/agent-plan-mode'
 import { detectIsWindows } from '@/lib/platform'
-import { getSessionFileChangeKind, upsertSessionFileChange } from '@/lib/session-file-changes'
+import { getSessionFileChangeKind, removeSessionFileChange, upsertSessionFileChange } from '@/lib/session-file-changes'
 import { removeQueuedMessage, restoreQueuedMessageToFront, createQueuedAgentStreamState } from '@/lib/agent-message-queue'
 import { createAgentStreamEventBatcher } from '@/lib/agent-stream-event-batcher'
 
@@ -1330,7 +1331,19 @@ export function useGlobalAgentListeners(): void {
               })
               if (writtenPath) {
                 buildWrittenFilePreviewInfo(sessionId, writtenPath).then((previewFile) => {
-                  if (!previewFile) return
+                  if (!previewFile) {
+                    // 文件已不存在（如 Write/Edit 落盘后被并发删除、或相对路径指向
+                    // 无法解析的目标）：反向清理该会话已记录的同路径残留，避免改动面板
+                    // 一直展示“先创建再删除”的陈旧条目。
+                    store.set(agentNonGitFileChangesAtom, (prev) => {
+                      const current = prev.get(sessionId)
+                      if (!current?.some((change) => change.path === writtenPath)) return prev
+                      const map = new Map(prev)
+                      map.set(sessionId, removeSessionFileChange(current, writtenPath))
+                      return map
+                    })
+                    return
+                  }
 
                   store.set(agentDiffUnseenChangesAtom, (prev) => {
                     const m = new Map(prev); m.set(sessionId, true); return m
@@ -1603,6 +1616,14 @@ export function useGlobalAgentListeners(): void {
         } else if (!backgroundTasksPending) {
           // 当前聚焦会话已在主应用可见；同步确认，避免 CodeClaw 把这次完成继续当未读。
           void window.electronAPI.codeClaw.markSessionViewed(data.sessionId).catch(console.error)
+        }
+        // 委派子会话（collaboration）完成且用户未查看时，标记委派级未读（父会话/队友条提示）。
+        if (completionMarkers.markUnviewedDelegatedCompleted && !backgroundTasksPending) {
+          store.set(unviewedCompletedDelegatedSessionIdsAtom, (prev: Set<string>) => {
+            const next = new Set(prev)
+            next.add(data.sessionId)
+            return next
+          })
         }
 
         // 对齐本次会话的主动打断状态，无需借助全量列表刷新重建整个 Set。

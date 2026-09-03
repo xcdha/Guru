@@ -1034,6 +1034,9 @@ export type SessionIndicatorStatus = 'idle' | 'running' | 'blocked' | 'completed
 /** 已完成但用户尚未查看的会话 ID 集合 */
 export const unviewedCompletedSessionIdsAtom = atom<Set<string>>(new Set<string>())
 
+/** 已完成但用户尚未查看的委派子会话 ID 集合（collaboration 子 Agent，独立于顶层未读，不计入 Dock 角标） */
+export const unviewedCompletedDelegatedSessionIdsAtom = atom<Set<string>>(new Set<string>())
+
 let lastIndicatorSignature = ''
 let lastIndicatorMap = new Map<string, SessionIndicatorStatus>()
 
@@ -1643,6 +1646,19 @@ export function cleanupDeletedAgentSessionAtoms(store: Store, sessionId: string)
     return next
   })
   store.set(stoppedByUserSessionsAtom, (prev) => {
+    if (!prev.has(sessionId)) return prev
+    const next = new Set(prev)
+    next.delete(sessionId)
+    return next
+  })
+  // 删除/归档会话时同步移除其未读完成标记（顶层 + 委派级）。
+  store.set(unviewedCompletedSessionIdsAtom, (prev) => {
+    if (!prev.has(sessionId)) return prev
+    const next = new Set(prev)
+    next.delete(sessionId)
+    return next
+  })
+  store.set(unviewedCompletedDelegatedSessionIdsAtom, (prev) => {
     if (!prev.has(sessionId)) return prev
     const next = new Set(prev)
     next.delete(sessionId)

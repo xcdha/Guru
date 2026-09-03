@@ -40,6 +40,8 @@ export interface TabBarItemProps {
   isAutomation?: boolean
   /** 该 Tab 对应的会话是否由父 Agent 协作委派创建 */
   isDelegation?: boolean
+  /** 委派子会话有未查看的完成结果 */
+  hasUnviewedDelegationCompletion?: boolean
   /** hover 进入 Tab */
   onHoverEnter: () => void
   /** hover 离开 Tab */
@@ -66,6 +68,7 @@ export function TabBarItem({
   onDragStart,
   isAutomation,
   isDelegation,
+  hasUnviewedDelegationCompletion,
   onHoverEnter,
   onHoverLeave,
   onPanelHoverEnter,
@@ -150,6 +153,9 @@ export function TabBarItem({
             <span className="min-w-0 truncate">{title}</span>
             {draftText.trim().length > 0 && (
               <span className="size-1.5 shrink-0 rounded-full bg-amber-500" title="有未发送内容" />
+            )}
+            {hasUnviewedDelegationCompletion && (
+              <span className="size-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_2px_hsl(var(--content-area))]" title="委派子 Agent 已完成，点击查看" />
             )}
           </span>
         )}

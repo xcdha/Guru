@@ -4,7 +4,8 @@
  */
 
 import * as React from 'react'
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useStore } from 'jotai'
+import { toast } from 'sonner'
 import {
   Pin,
   PinOff,
@@ -23,12 +24,20 @@ import {
   GitBranch,
   Check,
   Settings,
+  GripVertical,
+  Info,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { MarqueeText } from '@/components/ui/marquee-text'
-import { agentSessionDraftAtomFamily } from '@/atoms/agent-atoms'
+import { agentSessionDraftAtomFamily, currentAgentSessionIdAtom } from '@/atoms/agent-atoms'
 import type { SessionIndicatorStatus } from '@/atoms/agent-atoms'
+import {
+  clearSessionReferenceDragState,
+  insertSessionReferenceMention,
+  setSessionReferenceDragData,
+} from '@/lib/session-reference-drag'
 import {
   SessionMiniMapPopover,
   useSessionMiniMapHover,
@@ -400,6 +409,7 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
   const sessionHoverPreviewEnabled = useAtomValue(sessionHoverPreviewEnabledAtom)
   // 未发送内容（切片订阅：只有本行随输入按键重渲染）；非当前会话时显示行标记
   const draftText = useAtomValue(agentSessionDraftAtomFamily(session.id))
+  const store = useStore()
   const preview = useSessionMiniMapHover(600, !sessionHoverPreviewEnabled || disableMiniMap || menuOpen)
 
   const startEdit = (): void => {
@@ -435,6 +445,30 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
 
   const canMove = indicatorStatus === 'idle' || indicatorStatus === 'completed'
 
+  /** 三点菜单/右键菜单「引用此会话」：插到当前 Agent 输入框（复用键盘 & mention chip 逻辑） */
+  const handleReferenceSession = (): void => {
+    const targetSessionId = store.get(currentAgentSessionIdAtom)
+    if (!targetSessionId) {
+      toast.info('请先打开一个 Agent 会话', {
+        description: '会话引用会插入当前 Agent 输入框。',
+      })
+      return
+    }
+    if (targetSessionId === session.id) {
+      toast.warning('不能引用当前会话')
+      return
+    }
+    const inserted = insertSessionReferenceMention(targetSessionId, {
+      sessionId: session.id,
+      title: session.title,
+    })
+    if (!inserted) {
+      toast.warning('当前输入框不可编辑')
+      return
+    }
+    toast.success('已插入会话引用')
+  }
+
   const hasDelegatedChildren = delegationChildCount > 0
   const pinLabel = session.pinned ? '取消置顶' : '置顶会话'
   const cascadePinLabel = session.pinned
@@ -451,6 +485,30 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
     MenuSubContent: typeof ContextMenuSubContent | typeof DropdownMenuSubContent,
   ) => (
     <>
+      <MenuItem className="text-xs py-1 [&>svg]:size-3.5" onSelect={handleReferenceSession}>
+        <MessageSquare size={14} />
+        <span className="min-w-0 flex-1">引用此会话</span>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <span
+              role="img"
+              aria-label="引用此会话说明"
+              className="inline-flex size-5 items-center justify-center rounded text-foreground/40 hover:bg-foreground/[0.08] hover:text-foreground/70"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+              }}
+            >
+              <Info size={13} />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-64">
+            将此会话插入当前 Agent 输入框作为引用；也可以直接把会话拖到输入框中。
+          </TooltipContent>
+        </Tooltip>
+      </MenuItem>
+      <MenuSeparator className="my-0.5" />
       <MenuItem className="text-xs py-1 [&>svg]:size-3.5" onSelect={() => void onToggleStar(session.id)}>
         <Star size={14} fill={session.starred ? 'currentColor' : 'none'} className={session.starred ? 'text-amber-500' : undefined} />
         {session.starred ? '取消星标' : '添加星标'}
@@ -581,17 +639,51 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
           data-session-switch-id={session.id}
           data-session-switch-title={session.title}
           data-session-switch-type="agent"
+          draggable={!editing}
+          onDragStart={(event) => {
+            const target = event.target as HTMLElement
+            // 拖拽动作与行内按钮/输入框互斥：从按钮发起时不启动会话引用拖拽
+            if (target.closest('button, input')) {
+              event.preventDefault()
+              clearSessionReferenceDragState()
+              return
+            }
+            preview.closeNow()
+            setSessionReferenceDragData(event.dataTransfer, {
+              sessionId: session.id,
+              title: session.title,
+            })
+          }}
+          onDragEnd={clearSessionReferenceDragState}
           onClick={() => onSelect(session.id, session.title)}
           onMouseEnter={preview.handleMouseEnter}
           onMouseLeave={preview.handleMouseLeave}
           className={cn(
             'session-quick-switch-row group relative w-full flex items-center gap-1.5 rounded-md py-1 pl-2 pr-1.5 transition-colors duration-fast titlebar-no-drag text-left',
+            !editing && 'cursor-grab active:cursor-grabbing group-hover:pl-6',
             'hover:bg-foreground/[0.03]',
             active && 'agent-session-item-active',
             // 选中态背景：浅色叠加深色变深、深色叠加浅色变浅，自动适配主题。
             active && 'bg-foreground/[0.08]',
           )}
         >
+          {/* 会话引用拖拽手柄：仅非编辑态显示，hover 行时浮现（absolute 叠在行左缘，不占位） */}
+          {!editing && (
+            <Tooltip delayDuration={2000}>
+              <TooltipTrigger asChild>
+                <span
+                  aria-label="拖拽会话引用"
+                  className="absolute left-1 top-1/2 z-10 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded text-foreground/35 opacity-0 transition-opacity duration-fast group-hover:opacity-100"
+                  onMouseEnter={preview.closeNow}
+                >
+                  <GripVertical size={12} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-64">
+                支持直接拖拽会话到当前输入框，实现对会话的引用。
+              </TooltipContent>
+            </Tooltip>
+          )}
           {/* 状态小圆点（对齐 Claude）：idle=空心占位，running=蓝脉冲，blocked=橙，completed=绿 */}
           <span
             aria-hidden="true"

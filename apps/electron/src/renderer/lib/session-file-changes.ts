@@ -96,6 +96,43 @@ export function upsertSessionFileChange(
   );
 }
 
+export function removeSessionFileChange(
+  changes: readonly SessionFileChange[],
+  path: string,
+  caseInsensitive = false,
+): SessionFileChange[] {
+  return changes.filter((change) => !arePathsEqual(change.path, path, caseInsensitive));
+}
+
+/**
+ * Returns tracked file paths touched by a watcher event for sessions that are
+ * no longer running. Running sessions are handled by the normal watcher path,
+ * while stopped sessions need their stale records pruned explicitly.
+ *
+ * 本地 Guru 的会话文件变更走 tool 事件路径（tool_start/tool_result），无 watcher
+ * 归属；本函数为未来 watcher 接入保留，与 upstream 保持一致。
+ */
+export function getInactiveSessionFileChangePaths(
+  changesBySession: ReadonlyMap<string, readonly SessionFileChange[]>,
+  changedPaths: readonly string[],
+  activeSessionIds: ReadonlySet<string>,
+  caseInsensitive = false,
+): string[] {
+  const matching: string[] = []
+  for (const [sessionId, changes] of changesBySession) {
+    if (activeSessionIds.has(sessionId)) continue
+    for (const change of changes) {
+      if (
+        changedPaths.some((changedPath) => arePathsEqual(change.path, changedPath, caseInsensitive))
+        && !matching.some((path) => arePathsEqual(path, change.path, caseInsensitive))
+      ) {
+        matching.push(change.path)
+      }
+    }
+  }
+  return matching
+}
+
 export function groupSessionFileChanges(
   changes: readonly SessionFileChange[],
   currentRunId: string | undefined,
