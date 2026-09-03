@@ -14,6 +14,22 @@ export interface AgentCompletionPresenceInput {
 
 export interface AgentCompletionMarkers {
   markUnviewedCompleted: boolean
+  /** 委派子会话完成且用户尚未查看：父会话/队友条需要未读提示（不进入顶层角标） */
+  markUnviewedDelegatedCompleted: boolean
+}
+
+/** 委派子会话是否应当产生「委派级未读完成」提示：
+ *  仅 sourceDelegationId 子会话（collaboration 委派）在用户未查看时标记；
+ *  taskNode 子会话由 Task/看板汇总，不在此列。 */
+export function isDelegatedChildCompletion(input: AgentCompletionPresenceInput): boolean {
+  return Boolean(input.session?.sourceDelegationId) && !input.session?.taskNodeId
+}
+
+/** 计算委派子会话完成后是否需要在父会话/队友条上显示未读提示 */
+export function shouldMarkUnviewedDelegatedCompletion(input: AgentCompletionPresenceInput): boolean {
+  if (!isDelegatedChildCompletion(input)) return false
+  // 与顶层会话一致的语义：窗口无焦点或当前未激活该子会话 → 需要未读提示
+  return !isAgentSessionActiveForCompletion(input)
 }
 
 export interface AgentCompletionNotificationInput {
@@ -52,6 +68,8 @@ export function getAgentCompletionMarkers(input: AgentCompletionPresenceInput): 
   return {
     // 委派子会话 / Task 节点由父会话汇总，不进入用户级未读完成角标（与 shouldNotifyAgentCompletion 语义一致）。
     markUnviewedCompleted: !input.session?.sourceDelegationId && !input.session?.taskNodeId && !isActiveSession,
+    // 委派子会话（collaboration）完成且未查看时，在父会话/队友条上做未读提示。
+    markUnviewedDelegatedCompleted: shouldMarkUnviewedDelegatedCompletion(input),
   }
 }
 

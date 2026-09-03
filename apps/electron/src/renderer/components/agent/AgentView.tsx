@@ -125,6 +125,15 @@ import { DEFAULT_AGENT_THINKING_LEVEL, getSessionThinkingLevel, inferAgentSdkCon
 import { fileToBase64, formatFileNames, getFileParentPath } from '@/lib/file-utils'
 import { schedulePersistAgentDrafts } from '@/lib/agent-draft-persistence'
 import { getFilePanelDragData, INSERT_FILE_MENTION_EVENT, type FilePanelDragItem } from '@/lib/file-panel-drag'
+import {
+  canReferenceDraggedSession,
+  clearSessionReferenceDragState,
+  getActiveSessionReferenceDragId,
+  getSessionReferenceDragData,
+  INSERT_SESSION_REFERENCE_MENTION_EVENT,
+  isSessionReferenceDrag,
+  type InsertSessionReferenceMentionDetail,
+} from '@/lib/session-reference-drag'
 import { buildQuotedSelectionBlock, expandAgentHistoryQuoteMentions } from '@/lib/quoted-selection'
 import { createClipboardPendingFile, createClipboardTextDraft, makeUniqueAttachmentName } from '@/lib/clipboard-text-attachment'
 import { copyTextToClipboard } from '@/lib/clipboard'
@@ -802,6 +811,9 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     // Pi 为唯一 runtime，支持所有协议，任何已启用渠道都可用
     return globalChannels.some((c) => c.enabled && c.models.some((m) => m.enabled))
   }, [globalChannels])
+  // 无 Agent 渠道或无可用模型时输入框整体禁用：拖放引用也要受同一保护。
+  // （本地 legacy transcript 输入框仍可编辑、仅发送被拦截，故不并入禁用条件）
+  const isComposerDisabled = !agentChannelId || !hasAvailableModel
   React.useEffect(() => {
     if (!agentChannelId || agentModelId) return
 
@@ -1880,8 +1892,19 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
   const handleDragOver = React.useCallback((e: React.DragEvent): void => {
     e.preventDefault()
     e.stopPropagation()
+    const sessionReferenceDrag = isSessionReferenceDrag(e.dataTransfer)
+    const draggedSessionId = getActiveSessionReferenceDragId(e.dataTransfer)
+    if (
+      sessionReferenceDrag
+      && (draggedSessionId === sessionId || isComposerDisabled)
+    ) {
+      e.dataTransfer.dropEffect = 'none'
+      setIsDragOver(false)
+      return
+    }
+    e.dataTransfer.dropEffect = 'copy'
     setIsDragOver(true)
-  }, [])
+  }, [isComposerDisabled, sessionId])
 
   const handleDragLeave = React.useCallback((e: React.DragEvent): void => {
     e.preventDefault()
@@ -1893,6 +1916,19 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     e.preventDefault()
     e.stopPropagation()
     setIsDragOver(false)
+    clearSessionReferenceDragState()
+
+    // 左侧 Agent 会话行拖入：复用键盘 & 菜单生成的 session mention chip。
+    const draggedSession = getSessionReferenceDragData(e.dataTransfer)
+    if (draggedSession) {
+      if (isComposerDisabled) return
+      if (!canReferenceDraggedSession(draggedSession, sessionId)) {
+        toast.warning('不能引用当前会话')
+        return
+      }
+      richTextInputRef.current?.insertSessionMention(draggedSession)
+      return
+    }
 
     // 优先识别右侧文件面板的自定义拖拽载荷（会话文件 / 项目文件引用）
     // 文件直接插入引用；文件夹先附加到会话（Agent 可访问），附加成功后才插入引用，
@@ -2025,7 +2061,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
       // 无路径信息：回退，所有项按普通文件处理
       addFilesAsAttachments(droppedFiles)
     }
-  }, [sessionId, addFilesAsAttachments, addPanelDirectory, setAttachedDirsMap, workspaces, currentWorkspaceId])
+  }, [sessionId, addFilesAsAttachments, addPanelDirectory, setAttachedDirsMap, workspaces, currentWorkspaceId, isComposerDisabled])
 
   /** ModelSelector 选择回调 */
   const handleModelSelect = React.useCallback((option: ModelOption): void => {
@@ -2871,6 +2907,19 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
     return () => window.removeEventListener(INSERT_FILE_MENTION_EVENT, handler)
   }, [])
 
+  // 监听侧栏三点菜单「引用此会话」事件：仅处理指向本会话的请求，
+  // 复用同一份会话 mention 插入逻辑；回写 inserted 供调用方决定是否 toast。
+  React.useEffect(() => {
+    const handleInsertSessionReference = (event: Event): void => {
+      const detail = (event as CustomEvent<InsertSessionReferenceMentionDetail>).detail
+      if (!detail || detail.targetSessionId !== sessionId) return
+      if (!canReferenceDraggedSession(detail.item, sessionId)) return
+      detail.inserted = richTextInputRef.current?.insertSessionMention(detail.item) ?? false
+    }
+    window.addEventListener(INSERT_SESSION_REFERENCE_MENTION_EVENT, handleInsertSessionReference)
+    return () => window.removeEventListener(INSERT_SESSION_REFERENCE_MENTION_EVENT, handleInsertSessionReference)
+  }, [sessionId])
+
   const allAskUserRequests = useAtomValue(allPendingAskUserRequestsAtom)
   const allPermissionRequests = useAtomValue(allPendingPermissionRequestsAtom)
   const allExitPlanRequests = useAtomValue(allPendingExitPlanRequestsAtom)
@@ -3436,7 +3485,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
                     ? '请先在设置中选择 Agent 供应商'
                     : '暂无可用模型，请先在设置中启用渠道'
               }
-              disabled={!agentChannelId || !hasAvailableModel}
+              disabled={isComposerDisabled}
               autoFocusTrigger={sessionId}
               collapsible
               enableMentions
