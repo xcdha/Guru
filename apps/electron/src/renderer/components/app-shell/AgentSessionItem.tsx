@@ -24,7 +24,6 @@ import {
   GitBranch,
   Check,
   Settings,
-  GripVertical,
   Info,
   MessageSquare,
 } from 'lucide-react'
@@ -660,30 +659,13 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
           onMouseLeave={preview.handleMouseLeave}
           className={cn(
             'session-quick-switch-row group relative w-full flex items-center gap-1.5 rounded-md py-1 pl-2 pr-1.5 transition-colors duration-fast titlebar-no-drag text-left',
-            !editing && 'cursor-grab active:cursor-grabbing group-hover:pl-6',
+            !editing && 'cursor-grab active:cursor-grabbing',
             'hover:bg-foreground/[0.03]',
             active && 'agent-session-item-active',
             // 选中态背景：浅色叠加深色变深、深色叠加浅色变浅，自动适配主题。
             active && 'bg-foreground/[0.08]',
           )}
         >
-          {/* 会话引用拖拽手柄：仅非编辑态显示，hover 行时浮现（absolute 叠在行左缘，不占位） */}
-          {!editing && (
-            <Tooltip delayDuration={2000}>
-              <TooltipTrigger asChild>
-                <span
-                  aria-label="拖拽会话引用"
-                  className="absolute left-1 top-1/2 z-10 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded text-foreground/35 opacity-0 transition-opacity duration-fast group-hover:opacity-100"
-                  onMouseEnter={preview.closeNow}
-                >
-                  <GripVertical size={12} />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-64">
-                支持直接拖拽会话到当前输入框，实现对会话的引用。
-              </TooltipContent>
-            </Tooltip>
-          )}
           {/* 状态小圆点（对齐 Claude）：idle=空心占位，running=蓝脉冲，blocked=橙，completed=绿 */}
           <span
             aria-hidden="true"
