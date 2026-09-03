@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useAtom } from 'jotai'
 import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, CircleHelp, Folder, FolderOpen, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { VaultCandidate, VaultFileEntry, VaultFocus, VaultReadResult, VaultSummary } from '@guru/shared'
+import type { VaultCandidate, VaultFileEntry, VaultFocus, VaultReadResult, VaultSummary, VaultTreeEntry } from '@guru/shared'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -38,7 +38,7 @@ function displayDocumentTitle(filename: string): string {
 }
 
 function VaultFileList({
-  files,
+  entries,
   selectedPath,
   focusedFolder,
   onSelect,
@@ -49,7 +49,7 @@ function VaultFileList({
   canCreate,
   treeAction,
 }: {
-  files: VaultFileEntry[]
+  entries: VaultTreeEntry[]
   selectedPath: string | null
   focusedFolder: string | null
   onSelect: (relativePath: string) => void
@@ -60,7 +60,7 @@ function VaultFileList({
   canCreate: boolean
   treeAction: { type: 'expand' | 'collapse'; version: number }
 }): React.ReactElement {
-  const tree = React.useMemo(() => buildVaultTree(files), [files])
+  const tree = React.useMemo(() => buildVaultTree(entries), [entries])
   const allFolderPaths = React.useMemo(() => {
     const paths: string[] = []
     const visit = (folder: VaultFolderNode): void => {
@@ -210,8 +210,8 @@ function VaultFileList({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 scrollbar-thin titlebar-no-drag">
-      {files.length === 0
-        ? <p className="px-4 py-6 text-center text-xs leading-relaxed text-muted-foreground">没有可显示的 Markdown 笔记</p>
+      {entries.length === 0
+        ? <p className="px-4 py-6 text-center text-xs leading-relaxed text-muted-foreground">没有可显示的 Markdown 笔记或文件夹</p>
         : renderEntries(tree, 0)}
     </div>
   )
@@ -378,7 +378,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
   const [candidates, setCandidates] = React.useState<VaultCandidate[]>([])
   const [vaultSwitcherOpen, setVaultSwitcherOpen] = React.useState(false)
   const [candidatesLoading, setCandidatesLoading] = React.useState(false)
-  const [files, setFiles] = React.useState<VaultFileEntry[]>([])
+  const [entries, setEntries] = React.useState<VaultTreeEntry[]>([])
   const [loading, setLoading] = React.useState(false)
   const [fileLoading, setFileLoading] = React.useState(false)
   const [selectedFile, setSelectedFile] = useAtom(selectedVaultFileAtom)
@@ -479,23 +479,31 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
       console.log('[VaultView] getVaultConfig done:', nextConfig ? 'config present' : 'null')
       setConfig(nextConfig)
       console.log('[VaultView] calling listVaultFiles...')
-      const nextFiles = nextConfig ? await window.electronAPI.listVaultFiles() : []
-      console.log('[VaultView] listVaultFiles done, count:', nextFiles.length)
-      setFiles((current) => hasSameVaultTreeEntries(current, nextFiles) ? current : nextFiles)
+      const nextEntries = nextConfig ? await window.electronAPI.listVaultFiles() : []
+      console.log('[VaultView] listVaultFiles done, count:', nextEntries.length)
+      setEntries((current) => hasSameVaultTreeEntries(current, nextEntries) ? current : nextEntries)
       if (!nextConfig) {
         setSelectedFile(null)
         setReadResult(null)
       } else if (selectedFileRef.current) {
         const relativePath = selectedFileRef.current
-        const requestId = ++readRequestRef.current
-        try {
-          const result = await window.electronAPI.readVaultFile(relativePath)
-          if (requestId === readRequestRef.current) setReadResult(result)
-        } catch {
-          if (requestId === readRequestRef.current) {
-            setSelectedFile(null)
-            setReadResult(null)
-            toast.message('已打开的笔记不存在或无法刷新')
+        if (!nextEntries.some((entry) => entry.kind === 'file' && entry.relativePath === relativePath)) {
+          // 已打开的笔记已不存在（重命名/删除/外部移除）：清空选择与编辑器。
+          selectedFileRef.current = null
+          setSelectedFile(null)
+          setReadResult(null)
+          toast.message('已打开的笔记不存在或无法刷新')
+        } else {
+          const requestId = ++readRequestRef.current
+          try {
+            const result = await window.electronAPI.readVaultFile(relativePath)
+            if (requestId === readRequestRef.current) setReadResult(result)
+          } catch {
+            if (requestId === readRequestRef.current) {
+              setSelectedFile(null)
+              setReadResult(null)
+              toast.message('已打开的笔记不存在或无法刷新')
+            }
           }
         }
       }
@@ -633,6 +641,10 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
       const relativePath = newFolderParentPath ? `${newFolderParentPath}/${name}` : name
       await window.electronAPI.createVaultFolder(relativePath)
       setNewFolderParentPath(null)
+      // Reveal the new folder even when its parent was collapsed. The same
+      // focus is sent to the Agent so the sidebar and session context agree.
+      setFocusedFolder(relativePath)
+      updateAgentFocus({ kind: 'folder', relativePath })
       setRefreshToken((value) => value + 1)
       toast.success(`已创建文件夹 ${name}`)
     } catch (error) {
@@ -669,8 +681,8 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
         sha256: result.sha256,
         modifiedAt: result.modifiedAt,
       })
-      const nextFiles = await window.electronAPI.listVaultFiles()
-      setFiles((current) => hasSameVaultTreeEntries(current, nextFiles) ? current : nextFiles)
+      const nextEntries = await window.electronAPI.listVaultFiles()
+      setEntries((current) => hasSameVaultTreeEntries(current, nextEntries) ? current : nextEntries)
       if (!silent) toast.success(`已保存到 ${VAULT_NAME}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '保存失败')
@@ -817,7 +829,7 @@ export function VaultView({ embedded = false, sessionId }: { embedded?: boolean;
                 </div>
               </header>
               <VaultFileList
-                files={files}
+                entries={entries}
                 selectedPath={selectedFile}
                 focusedFolder={focusedFolder}
                 onSelect={(path) => { setFocusedFolder(null); void openFile(path) }}
