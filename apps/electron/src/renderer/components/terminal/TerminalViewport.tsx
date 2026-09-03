@@ -23,6 +23,7 @@ import { resolvedThemeAtom } from '@/atoms/theme'
 import { agentSessionsAtom } from '@/atoms/agent-atoms'
 import { terminalStateMapAtom } from '@/atoms/terminal-atoms'
 import { cn } from '@/lib/utils'
+import { copyTextToClipboard } from '@/lib/clipboard'
 import { buildTerminalContextKey, shouldReopenTerminal } from './terminal-context-tracking'
 
 const RESIZE_DEBOUNCE_MS = 120
@@ -155,7 +156,7 @@ export function TerminalViewport({ sessionId, terminalId, instanceId, visible, c
 
     const fontFamily = readCodeFont()
     const term = new Terminal({
-      fontSize: 12,
+      fontSize: 14,
       ...(fontFamily ? { fontFamily } : {}),
       lineHeight: 1.2,
       cursorBlink: true,
@@ -196,8 +197,49 @@ export function TerminalViewport({ sessionId, terminalId, instanceId, visible, c
       }
     })
 
-    // 用户输入 → pty
+    // 键盘级拦截：Ctrl+Shift+V（浏览器/终端惯例粘贴）不交给 pty，直接读剪贴板粘贴。
+    // Ctrl+C/Ctrl+V 的常规 ASCII 路径由下方 onData 处理（Windows 下 Ctrl+Shift+V 可能被
+    // 宿主捕获为系统粘贴或产生 CSI-u 序列，这里统一兜底）。
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown') return true
+      const ctrl = event.ctrlKey || event.metaKey
+      const pasteShortcut = event.key.toLowerCase() === 'v' && ctrl && event.shiftKey
+      if (pasteShortcut) {
+        event.preventDefault()
+        void window.electronAPI
+          .readClipboardText()
+          .then((text) => {
+            if (text && termRef.current) {
+              void window.electronAPI.writeAgentTerminal({ terminalId, data: text }).catch(() => undefined)
+            }
+          })
+          .catch(() => undefined)
+        return false
+      }
+      return true
+    })
+
+    // 用户输入 → pty。
+    // - Ctrl+C（\x03）：存在选区时优先复制选区（避免误中断运行中命令），无选区才发送中断信号。
+    // - Ctrl+V（\x16）：读取系统剪贴板并粘贴到 pty（Windows Terminal 惯例，PowerShell/CMD 直接可用）。
     const inputDisposable = term.onData((data) => {
+      if (data === '\x03' && term.hasSelection()) {
+        const selection = term.getSelection()
+        term.clearSelection()
+        void copyTextToClipboard(selection).catch(() => undefined)
+        return
+      }
+      if (data === '\x16') {
+        void window.electronAPI
+          .readClipboardText()
+          .then((text) => {
+            if (text && termRef.current) {
+              void window.electronAPI.writeAgentTerminal({ terminalId, data: text }).catch(() => undefined)
+            }
+          })
+          .catch(() => undefined)
+        return
+      }
       void window.electronAPI.writeAgentTerminal({ terminalId, data }).catch(() => undefined)
     })
 
