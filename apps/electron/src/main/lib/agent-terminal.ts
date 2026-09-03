@@ -69,9 +69,11 @@ const IDLE_CHECK_INTERVAL_MS = 60 * 1000
 /** 解析默认 shell 路径（macOS 优先用户 SHELL，Windows 用 PowerShell）；支持 profile 覆盖。 */
 function resolveShellPath(profile?: TerminalProfile): { shell: string; args: string[] } {
   if (process.platform === 'win32') {
+    // 注意：不要在此加 chcp 65001——conpty 下切换代码页会触发整屏行清除（每行输出 \x1b[K\r\n），
+    // 导致终端打开后 prompt 上方出现大量空白行。PowerShell 侧设置 OutputEncoding 已保证 UTF-8。
     switch (profile) {
-      case 'pwsh': return { shell: 'pwsh.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
-      case 'powershell': return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
+      case 'pwsh': return { shell: 'pwsh.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8'] }
+      case 'powershell': return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8'] }
       case 'cmd': return { shell: 'cmd.exe', args: ['/K'] }
       case 'git-bash': {
         // 尝试常见 Git Bash 安装路径，找不到回退 PowerShell。
@@ -88,7 +90,7 @@ function resolveShellPath(profile?: TerminalProfile): { shell: string; args: str
         return { shell: 'powershell.exe', args: ['-NoLogo'] }
       }
       case 'wsl': return { shell: 'wsl.exe', args: ['--cd', '~'] }
-      default: return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8; chcp 65001 > $null'] }
+      default: return { shell: 'powershell.exe', args: ['-NoLogo', '-NoExit', '-Command', '[Console]::OutputEncoding=[Text.Encoding]::UTF8; $OutputEncoding=[Text.Encoding]::UTF8'] }
     }
   }
   const shell = process.env.SHELL?.trim() || '/bin/zsh'
