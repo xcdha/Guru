@@ -26,6 +26,7 @@ import {
   agentSessionsAtom,
   currentAgentWorkspaceIdAtom,
   unviewedCompletedSessionIdsAtom,
+  unviewedCompletedDelegatedSessionIdsAtom,
 } from '@/atoms/agent-atoms'
 import {
   channelFormDirtyAtom,
@@ -52,6 +53,7 @@ export function useOpenSession(): OpenSessionFn {
   const agentSessions = useAtomValue(agentSessionsAtom)
   const setCurrentAgentWorkspaceId = useSetAtom(currentAgentWorkspaceIdAtom)
   const setUnviewedCompleted = useSetAtom(unviewedCompletedSessionIdsAtom)
+  const setUnviewedDelegated = useSetAtom(unviewedCompletedDelegatedSessionIdsAtom)
   const settingsOpen = useAtomValue(settingsOpenAtom)
   const channelFormDirty = useAtomValue(channelFormDirtyAtom)
   const setSettingsOpen = useSetAtom(settingsOpenAtom)
@@ -96,6 +98,13 @@ export function useOpenSession(): OpenSessionFn {
           next.delete(sessionId)
           return next
         })
+        // 委派子会话：打开查看后清除委派级未读提示。
+        setUnviewedDelegated((prev) => {
+          if (!prev.has(sessionId)) return prev
+          const next = new Set(prev)
+          next.delete(sessionId)
+          return next
+        })
 
         // 同步 workspaceId，确保与 TabBar 切换行为一致
         const session = agentSessions.find((s) => s.id === sessionId)
@@ -111,6 +120,6 @@ export function useOpenSession(): OpenSessionFn {
         setCurrentAgentSessionId(null)
       }
     },
-    [tabs, setTabs, setActiveTabId, setAutomationForm, setActiveView, setAppMode, setCurrentConversationId, setCurrentAgentSessionId, setCodeMainView, agentSessions, setCurrentAgentWorkspaceId, setUnviewedCompleted, settingsOpen, channelFormDirty, setSettingsOpen, setPendingSessionNavigation],
+    [tabs, setTabs, setActiveTabId, setAutomationForm, setActiveView, setAppMode, setCurrentConversationId, setCurrentAgentSessionId, setCodeMainView, agentSessions, setCurrentAgentWorkspaceId, setUnviewedCompleted, setUnviewedDelegated, settingsOpen, channelFormDirty, setSettingsOpen, setPendingSessionNavigation],
   )
 }

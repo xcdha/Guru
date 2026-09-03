@@ -1281,11 +1281,14 @@ export interface ElectronAPI {
   /** 解析文件路径并读取内容（供内联预览使用） */
   resolveAndReadFile: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<{ resolvedPath: string; content: string; isBinary: boolean; isTooLarge: boolean } | null>
 
+  /** 批量检查文件是否仍存在（用于清理已删除的会话文件变更记录） */
+  filterExistingFilePaths: (filePaths: string[], access?: import('@guru/shared').FileAccessOptions) => Promise<string[]>
+
   /** 写入文本文件（供 Markdown 内联编辑使用） */
   writeTextFile: (filePath: string, content: string, access?: import('@guru/shared').FileAccessOptions) => Promise<boolean>
 
   /** 仅解析文件路径（供 PDF/图片等用 file:// 加载） */
-  resolveFilePath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').ResolvedFileUrl | null>
+  resolveFilePath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<(import('@guru/shared').ResolvedFileUrl & { resolvedPath?: string }) | null>
 
   /** 解析 HTML 预览路径，并授权加载同目录的相对资源 */
   resolveHtmlPreviewPath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => Promise<import('@guru/shared').ResolvedFileUrl | null>
@@ -3172,12 +3175,16 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke('file:resolve-and-read', filePath, access) as Promise<{ resolvedPath: string; content: string; isBinary: boolean; isTooLarge: boolean } | null>
   },
 
+  filterExistingFilePaths: (filePaths: string[], access?: import('@guru/shared').FileAccessOptions) => {
+    return ipcRenderer.invoke('file:exists-batch', filePaths, access) as Promise<string[]>
+  },
+
   writeTextFile: (filePath: string, content: string, access?: import('@guru/shared').FileAccessOptions) => {
     return ipcRenderer.invoke('file:write-text', filePath, content, access) as Promise<boolean>
   },
 
   resolveFilePath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {
-    return ipcRenderer.invoke('file:resolve-path', filePath, access) as Promise<import('@guru/shared').ResolvedFileUrl | null>
+    return ipcRenderer.invoke('file:resolve-path', filePath, access) as Promise<(import('@guru/shared').ResolvedFileUrl & { resolvedPath?: string }) | null>
   },
 
   resolveHtmlPreviewPath: (filePath: string, access?: import('@guru/shared').FileAccessOptions) => {

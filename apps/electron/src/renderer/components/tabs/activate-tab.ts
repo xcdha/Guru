@@ -22,6 +22,7 @@ import {
   currentAgentSessionIdAtom,
   currentAgentWorkspaceIdAtom,
   unviewedCompletedSessionIdsAtom,
+  unviewedCompletedDelegatedSessionIdsAtom,
 } from '@/atoms/agent-atoms'
 import { appModeAtom } from '@/atoms/app-mode'
 import { automationFormAtom } from '@/atoms/automation-atoms'
@@ -46,6 +47,13 @@ export function activateTab(store: Store, tabId: string): void {
 
     // 用户打开查看后只清除未读角标；是否完成由用户通过对勾确认。
     store.set(unviewedCompletedSessionIdsAtom, (prev) => {
+      if (!prev.has(tab.sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(tab.sessionId)
+      return next
+    })
+    // 委派子会话：打开查看后清除委派级未读提示。
+    store.set(unviewedCompletedDelegatedSessionIdsAtom, (prev) => {
       if (!prev.has(tab.sessionId)) return prev
       const next = new Set(prev)
       next.delete(tab.sessionId)
