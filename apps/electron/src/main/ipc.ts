@@ -1457,6 +1457,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // 从系统剪贴板读取纯文本（终端 Ctrl+V 粘贴等场景）
+  ipcMain.handle(
+    IPC_CHANNELS.READ_CLIPBOARD_TEXT,
+    async (): Promise<string> => clipboard.readText()
+  )
+
   // 用系统默认应用打开任意文件（appName 需在 KNOWN_EDITORS 白名单内）
   ipcMain.handle(
     IPC_CHANNELS.SYSTEM_OPEN_FILE,
