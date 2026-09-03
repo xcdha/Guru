@@ -391,6 +391,12 @@ export function normalizeReasoningCapabilityLevel(
   const requested = level ?? capability.defaultLevel
   if (capability.levels.includes(requested)) return requested
 
+  // 部分模型（如 Fable 5.1）始终进行思考、不提供 off 档位；把产品遗留的
+  // “禁用”设置映射为显式的高档位请求，而不是静默降级到最低档。
+  if (requested === 'off') {
+    return capability.levels.includes('high') ? 'high' : capability.defaultLevel
+  }
+
   const requestedIndex = PI_EXTENDED_THINKING_LEVELS.indexOf(requested)
   if (requestedIndex === -1) return capability.levels[0]
   for (let index = requestedIndex; index < PI_EXTENDED_THINKING_LEVELS.length; index += 1) {

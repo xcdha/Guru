@@ -415,7 +415,17 @@ function getClaudeFamilyKey(modelRef: string, allowMajorOnly = false): string | 
 function findClaudeCatalogModel(models: readonly PiCatalogModel[], modelId: string): PiCatalogModel | undefined {
   const familyKey = getClaudeFamilyKey(modelId)
   if (!familyKey) return undefined
-  return models.find((model) => getClaudeFamilyKey(model.id, true) === familyKey || getClaudeFamilyKey(model.name, true) === familyKey)
+  const catalogModel = models.find((model) =>
+    getClaudeFamilyKey(model.id, true) === familyKey || getClaudeFamilyKey(model.name, true) === familyKey)
+  if (catalogModel) return catalogModel
+
+  // Fable 5.x 小版本模型可能先于 catalog 的 major 版本条目出现；只复用匹配的
+  // Fable major 家族，其余 Claude 家族仍需精确 major/minor 匹配，避免继承错误
+  // 的 thinking 或协议标志。
+  const fableMajorKey = familyKey.match(/^fable-(\d+)-\d+$/)?.[0].replace(/-\d+$/, '')
+  if (!fableMajorKey) return undefined
+  return models.find((model) =>
+    getClaudeFamilyKey(model.id, true) === fableMajorKey || getClaudeFamilyKey(model.name, true) === fableMajorKey)
 }
 
 async function getCatalogModels(provider: KnownProvider): Promise<readonly PiCatalogModel[]> {
