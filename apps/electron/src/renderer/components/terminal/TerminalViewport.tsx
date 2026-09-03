@@ -197,13 +197,21 @@ export function TerminalViewport({ sessionId, terminalId, instanceId, visible, c
       }
     })
 
-    // 键盘级拦截：Ctrl+Shift+V（浏览器/终端惯例粘贴）不交给 pty，直接读剪贴板粘贴。
-    // Ctrl+C/Ctrl+V 的常规 ASCII 路径由下方 onData 处理（Windows 下 Ctrl+Shift+V 可能被
-    // 宿主捕获为系统粘贴或产生 CSI-u 序列，这里统一兜底）。
+    // 键盘级拦截（xterm 内部 keydown，早于 onData）：
+    // - Ctrl+C 且有选区：复制选区，不发送中断（返回 false 阻止 xterm 转 \x03）。
+    // - Ctrl+Shift+V / Ctrl+V：读剪贴板粘贴（兜底路径，Ctrl+V 常规走下方 onData \x16）。
     term.attachCustomKeyEventHandler((event) => {
       if (event.type !== 'keydown') return true
       const ctrl = event.ctrlKey || event.metaKey
-      const pasteShortcut = event.key.toLowerCase() === 'v' && ctrl && event.shiftKey
+      const key = event.key.toLowerCase()
+      if (ctrl && key === 'c' && term.hasSelection()) {
+        event.preventDefault()
+        const selection = term.getSelection()
+        term.clearSelection()
+        void copyTextToClipboard(selection).catch(() => undefined)
+        return false
+      }
+      const pasteShortcut = (key === 'v' && ctrl && event.shiftKey)
       if (pasteShortcut) {
         event.preventDefault()
         void window.electronAPI
