@@ -495,6 +495,8 @@ export const IPC_CHANNELS = {
 
   /** 在系统剪贴板中写入纯文本 */
   WRITE_CLIPBOARD_TEXT: 'clipboard:write-text',
+  /** 从系统剪贴板读取纯文本（终端粘贴等场景） */
+  READ_CLIPBOARD_TEXT: 'clipboard:read-text',
   /** 截图导出：将 HTML 渲染为 PNG 图片 */
   SCREENSHOT_CAPTURE: 'screenshot:capture',
 } as const
