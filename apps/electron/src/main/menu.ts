@@ -86,16 +86,30 @@ export function createApplicationMenu(): Menu {
         { role: 'undo' as const, label: '撤销' },
         { role: 'redo' as const, label: '重做' },
         { type: 'separator' as const },
-        { role: 'cut' as const, label: '剪切' },
-        { role: 'copy' as const, label: '复制' },
-        { role: 'paste' as const, label: '粘贴' },
+        // Windows/Linux：禁用这些 role 的菜单 accelerator（registerAccelerator: false），
+        // 让 Ctrl+C/V/X/A 落到页面——否则 Electron 菜单会抢先消费快捷键：
+        // 1) 终端(xterm)有选区时 Ctrl+C 被菜单 copy 吃掉 → 无法复制；
+        // 2) Ctrl+V 粘贴被菜单 paste 吃掉 → 无法粘贴命令；
+        // 3) Ctrl+A 被 selectAll 吃掉 → 终端里无法跳到行首。
+        // 普通输入框/文本域的复制粘贴由 Chromium 原生编辑命令处理，不受影响。
+        // macOS 保持默认（Cmd+C/V 语义与终端 Ctrl+C 中断不冲突）。
         ...(isMac
           ? [
+              { role: 'cut' as const, label: '剪切' },
+              { role: 'copy' as const, label: '复制' },
+              { role: 'paste' as const, label: '粘贴' },
               { role: 'pasteAndMatchStyle' as const, label: '粘贴并匹配样式' },
               { role: 'delete' as const, label: '删除' },
               { role: 'selectAll' as const, label: '全选' },
             ]
-          : [{ role: 'delete' as const, label: '删除' }, { type: 'separator' as const }, { role: 'selectAll' as const, label: '全选' }]),
+          : [
+              { role: 'cut' as const, label: '剪切', registerAccelerator: false },
+              { role: 'copy' as const, label: '复制', registerAccelerator: false },
+              { role: 'paste' as const, label: '粘贴', registerAccelerator: false },
+              { role: 'delete' as const, label: '删除' },
+              { type: 'separator' as const },
+              { role: 'selectAll' as const, label: '全选', registerAccelerator: false },
+            ]),
       ],
     },
 
