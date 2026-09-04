@@ -179,6 +179,12 @@ function getReportTitle(summary: { title?: string; text: string }, index: number
   return total > 1 ? `子 Agent 报告 ${index + 1}` : '子 Agent 报告'
 }
 
+/** 报告正文若没有任何 Markdown 标题，则在开头注入 `# {title}`，保证每份报告视觉层级统一 */
+function ensureReportHeading(text: string, title: string): string {
+  if (/^\s*#{1,6}\s+/m.test(text)) return text
+  return `# ${title}\n\n${text}`
+}
+
 interface ParsedDelegationResult {
   statuses: string[]
   resultSummaries: Array<{ title?: string; role?: string; text: string }>
@@ -290,7 +296,7 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale, suppres
               {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
             </div>
             <div className="px-3 py-2 max-w-full">
-              <MessageResponse>{summary.text}</MessageResponse>
+              <MessageResponse>{ensureReportHeading(summary.text, getReportTitle(summary, i, parsed.resultSummaries.length))}</MessageResponse>
             </div>
           </div>
         </div>
@@ -518,7 +524,7 @@ function SubAgentFooter({
       {/* 最终输出文本（Markdown 渲染） */}
       {cleanText && (
         <div className="text-muted-foreground/70">
-          <MessageResponse>{cleanText}</MessageResponse>
+          <MessageResponse>{ensureReportHeading(cleanText, '子 Agent 报告')}</MessageResponse>
         </div>
       )}
 
