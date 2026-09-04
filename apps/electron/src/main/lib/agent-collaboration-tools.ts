@@ -989,7 +989,9 @@ function startDelegation(
         markDelegationFinished(record, 'completed', { resultSummary })
       },
       onTitleUpdated: (updatedTitle) => {
-        record.title = updatedTitle
+        // 只同步子会话 meta（侧栏/标签页标题），不覆盖 record.title——
+        // 委派卡片/报告标题应保持委派时指定的原始标题，避免子 Agent 自动
+        // 改标题后卡片标题漂移（如“A-上游检查”变成“子 Agent A 检查结果”）。
         try { updateAgentSessionMeta(record.childSessionId, { title: updatedTitle }) } catch { /* 持久化失败不影响运行 */ }
       },
     },
@@ -1437,7 +1439,7 @@ export function buildPiCollaborationTools(
               markDelegationFinished(record, 'completed', { resultSummary })
             },
             onTitleUpdated: (updatedTitle) => {
-              record.title = updatedTitle
+              // 与 startDelegation 一致：不覆盖 record.title，委派卡片保持原始标题
               try { updateAgentSessionMeta(record.childSessionId, { title: updatedTitle }) } catch { /* 持久化失败不影响运行 */ }
             },
           },
