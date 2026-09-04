@@ -286,6 +286,7 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale, suppres
               cardStyle(i).header,
             )}>
               <span className={cn('absolute left-0 top-0 h-full w-[3px]', cardStyle(i).accent)} />
+              <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', cardStyle(i).badge)}>{i + 1}</span>
               <span className={cn('size-2 shrink-0 rounded-full', cardStyle(i).accent)} />
               <Bot className="size-3.5 shrink-0 text-primary/70" />
               <span className="truncate text-[12.5px] font-semibold text-foreground">
@@ -345,8 +346,15 @@ const ROLE_STYLES: Record<string, { border: string; header: string; badge: strin
   custom: { border: 'border-rose-500/25', header: 'bg-gradient-to-r from-rose-500/10 to-transparent', badge: 'bg-rose-500/15 text-rose-600 dark:text-rose-400', accent: 'bg-rose-500/70' },
 }
 
+/** 扩展调色板：8 色（含增补的洋红/靛蓝/青色），5、7 个子 Agent 也能每张不同色 */
+const EXTRA_STYLES: Array<{ border: string; header: string; badge: string; accent: string }> = [
+  { border: 'border-fuchsia-500/25', header: 'bg-gradient-to-r from-fuchsia-500/10 to-transparent', badge: 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400', accent: 'bg-fuchsia-500/70' },
+  { border: 'border-indigo-500/25', header: 'bg-gradient-to-r from-indigo-500/10 to-transparent', badge: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400', accent: 'bg-indigo-500/70' },
+  { border: 'border-cyan-500/25', header: 'bg-gradient-to-r from-cyan-500/10 to-transparent', badge: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400', accent: 'bg-cyan-500/70' },
+]
+
 /**
- * 子 Agent 卡片配色：按索引轮换调色板，多张卡颜色各不相同（即使同为 research），
+ * 子 Agent 卡片配色：按索引轮换 8 色调色板，多张卡颜色各不相同（即使同为 research），
  * 与普通工具行/正文的单一色调区分开，避免审美疲劳。
  */
 const CARD_PALETTE: Array<{ border: string; header: string; badge: string; accent: string }> = [
@@ -355,6 +363,7 @@ const CARD_PALETTE: Array<{ border: string; header: string; badge: string; accen
   ROLE_STYLES.review!,
   ROLE_STYLES.explore!,
   ROLE_STYLES.custom!,
+  ...EXTRA_STYLES,
 ]
 function cardStyle(index: number): { border: string; header: string; badge: string; accent: string } {
   // 按索引轮换调色板：即使多张卡同为 research/implement，第 2/3 张也会变 violet/amber，
@@ -1002,6 +1011,7 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                     {/* 子 Agent 标题栏：左彩色条 + 渐变底 */}
                     <div className={cn('relative flex items-center gap-2 px-3 py-2', cardStyle(gi).header)}>
                       <span className={cn('absolute left-0 top-0 h-full w-[3px]', cardStyle(gi).accent)} />
+                      <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', cardStyle(gi).badge)}>{gi + 1}</span>
                       <Bot className="size-4 shrink-0 text-foreground/70" />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
                       {!isCompleted && group.activities.some((a) => a.phase === 'tool_start') && !group.activities.some((a) => a.phase === 'final') && (
