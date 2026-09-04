@@ -21,6 +21,17 @@ import {
   Bot,
   CheckCircle2,
   History,
+  BookOpen,
+  Search,
+  Code2,
+  FlaskConical,
+  Globe,
+  Database,
+  Camera,
+  Lightbulb,
+  FileSearch,
+  PenLine,
+  Rocket,
 } from 'lucide-react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { thinkingExpandedAtom } from '@/atoms/chat-atoms'
@@ -278,28 +289,31 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale, suppres
       )}
 
       {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题）——wait 行实时场景 suppress 时隐藏（报告归属 delegate 行） */}
-      {!suppressReports && parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
+      {!suppressReports && parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => {
+        const rStyle = cardStyle(i)
+        const Icon = rStyle.icon
+        return (
         <div key={i} className={cn('min-w-0', i > 0 && 'mt-3')}>
           <div className="overflow-hidden rounded-lg border border-border/40 bg-background/70 shadow-sm">
             <div className={cn(
               'relative flex items-center gap-1.5 border-b border-border/20 px-3 py-2',
-              cardStyle(i).header,
+              rStyle.header,
             )}>
-              <span className={cn('absolute left-0 top-0 h-full w-[3px]', cardStyle(i).accent)} />
-              <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', cardStyle(i).badge)}>{i + 1}</span>
-              <span className={cn('size-2 shrink-0 rounded-full', cardStyle(i).accent)} />
-              <Bot className="size-3.5 shrink-0 text-primary/70" />
+              <span className={cn('absolute left-0 top-0 h-full w-[3px]', rStyle.accent)} />
+              <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', rStyle.badge)}>{i + 1}</span>
+              <Icon className="size-3.5 shrink-0" />
               <span className="truncate text-[12.5px] font-semibold text-foreground">
                 {getReportTitle(summary, i, parsed.resultSummaries.length)}
               </span>
-              {summary.role && <span className={cn('ml-auto shrink-0 rounded-full px-2 py-[1.5px] text-[10px] font-semibold uppercase tracking-wider', cardStyle(i).badge)}>{summary.role}</span>}
+              {summary.role && <span className={cn('ml-auto shrink-0 rounded-full px-2 py-[1.5px] text-[10px] font-semibold uppercase tracking-wider', rStyle.badge)}>{summary.role}</span>}
             </div>
             <div className="px-3 py-2.5 max-w-full">
               <MessageResponse>{summary.text}</MessageResponse>
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
 
       {/* 展开全部按钮：放在报告列表之后（看完第一份再决定是否展开） */}
       {!suppressReports && !showAll && parsed.resultSummaries.length > 1 && (
@@ -365,10 +379,29 @@ const CARD_PALETTE: Array<{ border: string; header: string; badge: string; accen
   ROLE_STYLES.custom!,
   ...EXTRA_STYLES,
 ]
-function cardStyle(index: number): { border: string; header: string; badge: string; accent: string } {
-  // 按索引轮换调色板：即使多张卡同为 research/implement，第 2/3 张也会变 violet/amber，
+
+/** 卡片图标池：12 个差异化 lucide 图标，与颜色轮换组合，几十张卡也能用图标+颜色双重区分 */
+const CARD_ICONS = [
+  BookOpen,
+  Search,
+  Code2,
+  FlaskConical,
+  Globe,
+  Database,
+  Camera,
+  Lightbulb,
+  FileSearch,
+  PenLine,
+  Rocket,
+  MessageSquareText,
+]
+function cardStyle(index: number): { border: string; header: string; badge: string; accent: string; icon: React.ComponentType<{ className?: string }> } {
+  // 按索引轮换调色板+图标：即使多张卡同为 research/implement，第 2/3 张也会变 violet/amber + 不同图标，
   // 多份报告一眼区分；角色徽章文字仍显示真实 role。
-  return CARD_PALETTE[(index % CARD_PALETTE.length)]!
+  return {
+    ...CARD_PALETTE[(index % CARD_PALETTE.length)]!,
+    icon: CARD_ICONS[(index % CARD_ICONS.length)]!,
+  }
 }
 interface DelegationActivityItem {
   seq: number
@@ -1001,29 +1034,33 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                     </span>
                   )}
                 </div>
-                {delegationActivityGroups.map((group, gi) => (
+                {delegationActivityGroups.map((group, gi) => {
+                  const gStyle = cardStyle(gi)
+                  const Icon = gStyle.icon
+                  return (
                   <div key={group.delegationId} className={cn(
                     'overflow-hidden rounded-xl border bg-background/70 shadow-sm backdrop-blur transition-colors',
-                    cardStyle(gi).border,
+                    gStyle.border,
                     'hover:bg-background/80',
                     gi > 0 && 'mt-3',
                   )}>
                     {/* 子 Agent 标题栏：左彩色条 + 渐变底 */}
-                    <div className={cn('relative flex items-center gap-2 px-3 py-2', cardStyle(gi).header)}>
-                      <span className={cn('absolute left-0 top-0 h-full w-[3px]', cardStyle(gi).accent)} />
-                      <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', cardStyle(gi).badge)}>{gi + 1}</span>
-                      <Bot className="size-4 shrink-0 text-foreground/70" />
+                    <div className={cn('relative flex items-center gap-2 px-3 py-2', gStyle.header)}>
+                      <span className={cn('absolute left-0 top-0 h-full w-[3px]', gStyle.accent)} />
+                      <span className={cn('flex size-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', gStyle.badge)}>{gi + 1}</span>
+                      <Icon className="size-4 shrink-0" />
                       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">{group.title ?? group.delegationId.slice(0, 8)}</span>
                       {!isCompleted && group.activities.some((a) => a.phase === 'tool_start') && !group.activities.some((a) => a.phase === 'final') && (
                         <Loader2 className="size-3.5 shrink-0 animate-spin text-primary/70" />
                       )}
-                      <span className={cn('shrink-0 rounded-full px-2 py-[1.5px] text-[10.5px] font-semibold uppercase tracking-wider', cardStyle(gi).badge)}>{group.role ?? 'agent'}</span>
+                      <span className={cn('shrink-0 rounded-full px-2 py-[1.5px] text-[10.5px] font-semibold uppercase tracking-wider', gStyle.badge)}>{group.role ?? 'agent'}</span>
                     </div>
                     <div className="px-2 py-1.5">
                       <DelegationActivityList activities={group.activities} isCompleted={isCompleted} />
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
