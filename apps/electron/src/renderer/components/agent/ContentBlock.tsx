@@ -279,17 +279,21 @@ function DelegationFooter({ resultText, activities, hideStatus, isStale, suppres
 
       {/* 结果摘要（Markdown 渲染，每份带子 Agent 标题）——wait 行实时场景 suppress 时隐藏（报告归属 delegate 行） */}
       {!suppressReports && parsed.resultSummaries.slice(0, showAll ? undefined : 1).map((summary, i) => (
-        <div key={i} className="min-w-0">
-          <div className="overflow-hidden rounded-lg border border-border/25 bg-background/40">
-            <div className="flex items-center gap-1.5 border-b border-border/10 bg-muted/30 px-3 py-1.5">
+        <div key={i} className={cn('min-w-0', i > 0 && 'mt-3')}>
+          <div className="overflow-hidden rounded-lg border border-border/40 bg-background/70 shadow-sm">
+            <div className={cn(
+              'relative flex items-center gap-1.5 border-b border-border/20 px-3 py-2',
+              roleStyle(summary.role).header,
+            )}>
+              <span className={cn('absolute left-0 top-0 h-full w-[3px]', roleStyle(summary.role).accent)} />
               <span className={cn('size-2 shrink-0 rounded-full', roleStyle(summary.role).accent)} />
-              <Bot className="size-3 shrink-0 text-primary/70" />
-              <span className="truncate text-[12px] font-semibold text-foreground/90">
+              <Bot className="size-3.5 shrink-0 text-primary/70" />
+              <span className="truncate text-[12.5px] font-semibold text-foreground">
                 {getReportTitle(summary, i, parsed.resultSummaries.length)}
               </span>
-              {summary.role && <span className="ml-auto shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">{summary.role}</span>}
+              {summary.role && <span className={cn('ml-auto shrink-0 rounded-full px-2 py-[1.5px] text-[10px] font-semibold uppercase tracking-wider', roleStyle(summary.role).badge)}>{summary.role}</span>}
             </div>
-            <div className="px-3 py-2 max-w-full">
+            <div className="px-3 py-2.5 max-w-full">
               <MessageResponse>{summary.text}</MessageResponse>
             </div>
           </div>
@@ -977,10 +981,10 @@ function ToolUseBlock({ block, allMessages, animate = false, index = 0, dimmed =
                 </div>
                 {delegationActivityGroups.map((group, gi) => (
                   <div key={group.delegationId} className={cn(
-                    'overflow-hidden rounded-xl border bg-background/60 shadow-sm backdrop-blur transition-colors',
+                    'overflow-hidden rounded-xl border bg-background/70 shadow-sm backdrop-blur transition-colors',
                     roleStyle(group.role).border,
                     'hover:bg-background/80',
-                    gi > 0 && 'mt-1.5',
+                    gi > 0 && 'mt-3',
                   )}>
                     {/* 子 Agent 标题栏：左彩色条 + 渐变底 */}
                     <div className={cn('relative flex items-center gap-2 px-3 py-2', roleStyle(group.role).header)}>
