@@ -156,7 +156,7 @@ export function TerminalViewport({ sessionId, terminalId, instanceId, visible, c
 
     const fontFamily = readCodeFont()
     const term = new Terminal({
-      fontSize: 13,
+      fontSize: 14,
       ...(fontFamily ? { fontFamily } : {}),
       lineHeight: 1.2,
       cursorBlink: true,
