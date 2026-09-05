@@ -281,14 +281,9 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     const entry = mcpConfig.servers[name]
     if (entry?.isBuiltin) return
     try {
-      const newServers = { ...mcpConfig.servers }
-      delete newServers[name]
-      const newConfig: WorkspaceMcpConfig = { servers: newServers }
-      if (mcpIsProjectOverride && scopeProjectId) {
-        await window.electronAPI.saveProjectMcpConfig(workspaceSlug, scopeProjectId, newConfig)
-      } else {
-        await window.electronAPI.saveGlobalMcpConfig(newConfig)
-      }
+      // 基于主进程当前配置原子删除，避免本渲染层旧快照整体回写时覆盖
+      // 其他条目的新状态（如其他 MCP 的启用/验证状态）。
+      const newConfig = await window.electronAPI.deleteMcp(workspaceSlug, name, mcpIsProjectOverride ? scopeProjectId : null)
       setMcpConfig(newConfig)
       bumpCapabilitiesVersion((v) => v + 1)
       toast.success(`已删除连接器：${name}`)

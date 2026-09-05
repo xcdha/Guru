@@ -233,6 +233,11 @@ jobs:
         run: bun run electron:build
         working-directory: .
 
+      - name: 准备运行时依赖
+        run: |
+          bun run --filter='@guru/electron' sync:runtime-deps
+          bun run --filter='@guru/electron' rebuild:node-pty
+
       - name: 打包并发布 (Windows)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -49,6 +49,7 @@ import { workspaceFilesVersionAtom, fileBrowserAutoRevealAtom, recentlyModifiedP
 import type { FileAccessOptions, FileEntry } from '@guru/shared'
 import { FileTypeIcon } from './FileTypeIcon'
 import { DefaultAppMenuItem } from './DefaultAppMenuItem'
+import { useFileTreeExpanded } from './use-file-tree-expanded'
 import {
   computeTreeRowLayout,
   AncestorGuides,
@@ -110,9 +111,11 @@ interface FileBrowserProps {
    * 目录条目不参与分组，始终排在分组之前。
    */
   groupByType?: boolean
+  /** 展开状态隔离键：同一 rootPath 的树在不同会话/附加根下互不串扰；缺省用 currentAgentSessionId 或 standalone。 */
+  stateKey?: string
 }
 
-export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access, onAddToChat, onFilePreview, onOpenDirectoryTerminal, groupByType }: FileBrowserProps): React.ReactElement {
+export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access, onAddToChat, onFilePreview, onOpenDirectoryTerminal, groupByType, stateKey }: FileBrowserProps): React.ReactElement {
   const [entries, setEntries] = React.useState<FileEntry[]>([])
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -146,6 +149,8 @@ export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access
   // ===== 最近修改的文件路径（60s 内显示左侧竖条） =====
   const recentlyModifiedMap = useAtomValue(recentlyModifiedPathsAtom)
   const currentSessionId = useAtomValue(currentAgentSessionIdAtom)
+  // 展开状态隔离键：显式 stateKey > 会话级（同一会话内按 rootPath 保持展开记忆）。
+  const effectiveStateKey = stateKey ?? (currentSessionId ? currentSessionId + '\u0002files\u0000' + rootPath : 'standalone')
   const recentlyModifiedSet = React.useMemo<Set<string>>(() => {
     if (!currentSessionId) return new Set()
     const inner = recentlyModifiedMap.get(currentSessionId)
@@ -325,6 +330,7 @@ export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access
     <FileTreeItem
       key={entry.path}
       entry={entry}
+      stateKey={effectiveStateKey}
       depth={0}
       selectedPaths={selectedPaths}
       selectedCount={selectedCount}
@@ -456,6 +462,7 @@ export function FileBrowser({ rootPath, hideToolbar, embedded, hideEmpty, access
 
 interface FileTreeItemProps {
   entry: FileEntry
+  stateKey: string
   depth: number
   selectedPaths: Set<string>
   selectedCount: number
@@ -487,6 +494,7 @@ interface FileTreeItemProps {
 
 function FileTreeItem({
   entry,
+  stateKey,
   depth,
   selectedPaths,
   selectedCount,
@@ -511,7 +519,7 @@ function FileTreeItem({
   onAddToChat,
   onFilePreview,
 }: FileTreeItemProps): React.ReactElement {
-  const [expanded, setExpanded] = React.useState(false)
+  const [expanded, setExpanded] = useFileTreeExpanded(stateKey, entry.path)
   const [children, setChildren] = React.useState<FileEntry[]>([])
   const [childrenLoaded, setChildrenLoaded] = React.useState(false)
   const [flash, setFlash] = React.useState(false)
@@ -939,6 +947,7 @@ function FileTreeItem({
             <FileTreeItem
               key={child.path}
               entry={child}
+              stateKey={stateKey}
               depth={depth + 1}
               selectedPaths={selectedPaths}
               selectedCount={selectedCount}

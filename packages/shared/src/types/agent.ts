@@ -140,6 +140,7 @@ export const CODEX_FAST_MODE_MODEL_IDS = [
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
+  'gpt-6-astra',
 ] as const
 
 /** 模型 ID 是否可通过 ChatGPT Codex OAuth 使用 Fast Mode。 */
@@ -699,6 +700,8 @@ export type GuruEvent =
   | { type: 'watchdog_timeout'; sessionId: string; timeoutMs: number }
   /** 用户主动停止当前执行；runId 防止旧运行的终态覆盖新一轮执行。 */
   | { type: 'run_stopped'; runId?: string; startedAt?: number }
+  /** 普通桌面会话已结束；供已显式配置的外部通知通道发送摘要。 */
+  | { type: 'run_completed'; source: AgentExternalRunSource | 'desktop'; stoppedByUser: boolean; startedAt?: number; runGeneration?: number }
   // 协作子会话阻塞事件上浮
   | { type: 'delegation_blocked'; delegationId: string; blockedEvent: unknown }
   // 协作子会话过程事件（工具活动/文本片段），父会话对话里实时展示子 Agent 执行过程
@@ -707,7 +710,7 @@ export type GuruEvent =
   | { type: 'automation_graduated' }
 
 /** 外部入口触发 Agent 运行的来源 */
-export type AgentExternalRunSource = 'feishu' | 'dingtalk' | 'wechat' | 'bridge' | 'delegation' | 'work'
+export type AgentExternalRunSource = 'feishu' | 'dingtalk' | 'wechat' | 'slack' | 'bridge' | 'delegation' | 'work'
 
 /** 会话级拉专家/专家团 cowork 的请求 */
 export interface SpawnExpertCoworkInput {
@@ -2247,6 +2250,8 @@ export const AGENT_IPC_CHANNELS = {
   GET_GLOBAL_MCP_CONFIG: 'agent:get-global-mcp-config',
   /** 保存全局 MCP 配置 */
   SAVE_GLOBAL_MCP_CONFIG: 'agent:save-global-mcp-config',
+  /** 原子删除单个 MCP（保留其他条目当前状态；projectId 为空删全局条目） */
+  DELETE_MCP: 'agent:delete-mcp',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
   /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
