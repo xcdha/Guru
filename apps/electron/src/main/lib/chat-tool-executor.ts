@@ -9,7 +9,6 @@ import type { ToolCall, ToolResult } from '@guru/core'
 import type { WebContents } from 'electron'
 import type { FileAttachment } from '@guru/shared'
 import { CHAT_IPC_CHANNELS } from '@guru/shared'
-import { isWebSearchToolCall, executeWebSearchTool } from './chat-tools/web-search-tool'
 import { isCustomHttpToolCall, executeHttpTool } from './chat-tools/http-tool-executor'
 import { isAgentRecommendToolCall, executeAgentRecommendTool } from './chat-tools/agent-recommend-tool'
 import { isNanoBananaToolCall, executeNanoBananaTool } from './chat-tools/nano-banana-tool'
@@ -48,9 +47,7 @@ export async function executeToolCalls(
   for (const tc of toolCalls) {
     let result: ToolResult
 
-    if (isWebSearchToolCall(tc.name)) {
-      result = await executeWebSearchTool(tc)
-    } else if (isAgentRecommendToolCall(tc.name)) {
+    if (isAgentRecommendToolCall(tc.name)) {
       result = await executeAgentRecommendTool(tc)
     } else if (isNanoBananaToolCall(tc.name)) {
       const nanoBananaContext: NanoBananaContext = {

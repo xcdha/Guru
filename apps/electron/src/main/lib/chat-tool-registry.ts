@@ -2,7 +2,7 @@
  * Chat 工具注册表
  *
  * 管理所有可用的 Chat 工具：
- * - 内置工具（记忆、联网搜索）
+ * - 内置工具（Agent 模式推荐、生图）
  * - 自定义工具（用户配置的 HTTP 工具）
  *
  * 提供统一接口获取启用的工具定义和系统提示词。
@@ -11,11 +11,6 @@
 import type { ToolDefinition, ToolParameterProperty } from '@guru/core'
 import type { ChatToolInfo, ChatToolMeta } from '@guru/shared'
 import { getChatToolsConfig } from './chat-tool-config'
-import {
-  WEB_SEARCH_TOOL_META,
-  WEB_SEARCH_TOOL_DEFINITIONS,
-  isWebSearchAvailable,
-} from './chat-tools/web-search-tool'
 import {
   AGENT_RECOMMEND_TOOL_META,
   AGENT_RECOMMEND_TOOL_DEFINITIONS,
@@ -38,11 +33,6 @@ interface BuiltinToolEntry {
 
 /** 所有内置工具 */
 const BUILTIN_TOOLS: BuiltinToolEntry[] = [
-  {
-    meta: WEB_SEARCH_TOOL_META,
-    getDefinitions: () => WEB_SEARCH_TOOL_DEFINITIONS,
-    checkAvailable: isWebSearchAvailable,
-  },
   {
     meta: AGENT_RECOMMEND_TOOL_META,
     getDefinitions: () => AGENT_RECOMMEND_TOOL_DEFINITIONS,
