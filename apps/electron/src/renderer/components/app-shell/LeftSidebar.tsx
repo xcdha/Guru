@@ -4169,12 +4169,18 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
           rows={chatActiveVirtualRows}
           activeRowId={activeSessionId ? `chat-${activeSessionId}` : null}
         />
-      ) : mode === 'agent' && viewMode === 'active' ? (
+      ) : mode === 'agent' && viewMode === 'active' && agentStatusFilter !== 'archived' ? (
         <VirtualSidebarList
           key="agent-active-list"
           className="flex-1 px-2 pb-3"
           rows={agentActiveVirtualRows}
           activeRowId={activeAgentRowId}
+        />
+      ) : mode === 'agent' && viewMode === 'active' && agentStatusFilter === 'archived' ? (
+        <VirtualSidebarList
+          key="agent-archived-list"
+          className="flex-1 px-2 pb-3"
+          rows={agentArchivedVirtualRows}
         />
       ) : (
         <>
