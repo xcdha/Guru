@@ -200,7 +200,7 @@ export async function sendMessage(
   const {
     conversationId, userMessage, channelId,
     modelId, systemMessage, contextLength, contextDividers, attachments,
-    thinkingEnabled, enabledToolIds,
+    thinkingEnabled, thinkingLevel, enabledToolIds,
   } = input
 
   // 1. 查找渠道
@@ -339,6 +339,7 @@ export async function sendMessage(
         attachments,
         readImageAttachments: getImageAttachmentData,
         thinkingEnabled,
+        thinkingLevel,
         // C1：DeepSeek 输出预算跟随编码优化总开关（64000/16384 vs 保守 32000/8192）
         optimizedCoding: resolveOptimizedCodingEnabled(getSettings()),
         tools,
@@ -417,6 +418,7 @@ export async function sendMessage(
         attachments,
         readImageAttachments: getImageAttachmentData,
         thinkingEnabled,
+        thinkingLevel,
         optimizedCoding: resolveOptimizedCodingEnabled(getSettings()),
         // 不传 tools，强制模型生成文本回复而非继续调用工具
         continuationMessages,

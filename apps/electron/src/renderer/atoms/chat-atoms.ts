@@ -8,7 +8,7 @@
 import { atom } from 'jotai'
 import { atomFamily } from 'jotai-family'
 import { atomWithStorage } from 'jotai/utils'
-import type { ConversationMeta, ChatMessage, FileAttachment, ChatToolActivity, Channel } from '@guru/shared'
+import type { ConversationMeta, ChatMessage, FileAttachment, ChatToolActivity, Channel, GeminiThinkingLevel } from '@guru/shared'
 
 /** 全局渠道列表缓存（启动时加载一次，设置变更时刷新） */
 export const channelsAtom = atom<Channel[]>([])
@@ -170,6 +170,7 @@ export const parallelModeAtom = atom<boolean>(false)
 
 /** 思考模式（持久化到 localStorage） */
 export const thinkingEnabledAtom = atomWithStorage<boolean>(
+
   'guru-thinking-enabled',
   false,
 )
@@ -287,6 +288,15 @@ export const conversationContextLengthAtom = atom<Map<string, ContextLengthValue
 
 /** 每个对话的思考模式 */
 export const conversationThinkingEnabledAtom = atom<Map<string, boolean>>(new Map())
+
+/** Gemini 3 Chat 思考深度（模型不支持时由 adapter 安全归一化）。 */
+export const thinkingLevelAtom = atomWithStorage<GeminiThinkingLevel>(
+  'guru-thinking-level',
+  'medium',
+)
+
+/** 每个对话的 Gemini 3 思考深度。 */
+export const conversationThinkingLevelAtom = atom<Map<string, GeminiThinkingLevel>>(new Map())
 
 /** 每个对话的并排模式 */
 export const conversationParallelModeAtom = atom<Map<string, boolean>>(new Map())

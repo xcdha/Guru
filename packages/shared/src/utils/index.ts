@@ -29,6 +29,12 @@ export {
   inferAgentSdkContextWindow,
   resolveAgentSdkModelId,
 } from './context-window'
+export {
+  getGeminiModelCapability,
+  normalizeGeminiThinkingLevel,
+  type GeminiModelCapability,
+  type GeminiThinkingLevel,
+} from './gemini-model-capabilities'
 export { calculateContextUsageRatio } from './context-usage'
 export { slugify } from './slug'
 export {
