@@ -1,4 +1,5 @@
 import type { ProviderType } from '../types/channel'
+import { getGeminiModelCapability } from './gemini-model-capabilities'
 
 /**
  * 模型上下文窗口推断 — 单一 source of truth。
@@ -37,6 +38,7 @@ export function inferCodexAlignedGPT5ContextWindow(modelId: string | undefined):
     case 'gpt-5.6-sol':
     case 'gpt-5.6-terra':
     case 'gpt-5.6-luna': return CODEX_GPT_56_CONTEXT_WINDOW
+    case 'gpt-6-astra': return ONE_MILLION_CONTEXT_WINDOW
     default: return undefined
   }
 }
@@ -150,6 +152,8 @@ export function inferContextWindow(model?: string): number | undefined {
   if (!model) return undefined
   const codexAlignedWindow = inferCodexAlignedGPT5ContextWindow(model)
   if (codexAlignedWindow !== undefined) return codexAlignedWindow
+  const geminiCapability = getGeminiModelCapability(model)
+  if (geminiCapability) return geminiCapability.contextWindow
   if (supports1MContext(model)) return ONE_MILLION_CONTEXT_WINDOW
   return DEFAULT_CONTEXT_WINDOW
 }

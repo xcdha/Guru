@@ -1337,6 +1337,26 @@ export function saveProjectMcpConfig(workspaceSlug: string, projectId: string, c
   console.log(`[项目 MCP] 已保存配置: ${workspaceSlug}/${projectId}`)
 }
 
+/** 原子删除全局 MCP 单个条目，基于主进程当前配置而非渲染层快照，避免覆盖并发新状态。 */
+export function removeGlobalMcpServer(name: string): WorkspaceMcpConfig {
+  const current = getGlobalMcpConfig()
+  const servers = { ...current.servers }
+  delete servers[name]
+  const next: WorkspaceMcpConfig = { servers }
+  saveGlobalMcpConfig(next)
+  return next
+}
+
+/** 原子删除项目 MCP 单个条目，基于主进程当前配置而非渲染层快照。 */
+export function removeProjectMcpServer(workspaceSlug: string, projectId: string, name: string): WorkspaceMcpConfig {
+  const current = getProjectMcpConfig(workspaceSlug, projectId)
+  const servers = { ...current.servers }
+  delete servers[name]
+  const next: WorkspaceMcpConfig = { servers }
+  saveProjectMcpConfig(workspaceSlug, projectId, next)
+  return next
+}
+
 class SkillAlreadyExistsError extends Error {
   readonly code = 'SKILL_ALREADY_EXISTS' as const
 

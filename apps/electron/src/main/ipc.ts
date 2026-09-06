@@ -9,7 +9,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { realpath, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isGuruPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, VAULT_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@guru/shared'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, SLACK_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isGuruPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, VAULT_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@guru/shared'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, EXCALIDRAW_IPC_CHANNELS, QUICK_TASK_IPC_CHANNELS, VOICE_DICTATION_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
 import type {
   QuickTaskSubmitInput,
@@ -384,6 +384,8 @@ import {
   hasProjectMcpServers,
   getProjectMcpConfig,
   saveProjectMcpConfig,
+  removeGlobalMcpServer,
+  removeProjectMcpServer,
   getOtherProjectSkills,
   batchImportSkillsToProject,
   importSkillFromWorkspace,
@@ -491,6 +493,10 @@ import { listShallowDirectory } from './lib/directory-listing'
 import { dingtalkBridgeManager } from './lib/dingtalk-bridge-manager'
 import { getWeChatConfig } from './lib/wechat-config'
 import { wechatBridge } from './lib/wechat-bridge'
+import { getSlackSettingsConfig, removeSlackBot, saveSlackBotConfig, toSlackBotSettingsConfig } from './lib/slack-config'
+import { slackBridgeManager } from './lib/slack-bridge-manager'
+import { buildSlackManifest } from './lib/slack/manifest'
+import { redactSensitiveLogValue } from './lib/bridge-log-redaction'
 import { normalizeFileAccessOptions } from './lib/file-access-policy'
 import { isSafeDeleteTarget } from './lib/destructive-file-policy'
 import { getWorkspaceMetadataDirNames } from './lib/storage-boundaries'
@@ -3340,6 +3346,18 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // 原子删除单个 MCP（projectId 为空时删全局条目），基于主进程当前配置，避免
+  // 渲染层旧快照整体回写时覆盖其他条目的新状态。
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.DELETE_MCP,
+    async (_, workspaceSlug: string, name: string, projectId?: string | null): Promise<WorkspaceMcpConfig> => {
+      if (projectId) {
+        return removeProjectMcpServer(workspaceSlug, projectId, name)
+      }
+      return removeGlobalMcpServer(name)
+    }
+  )
+
   // 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_OTHER_PROJECT_SKILLS,
@@ -5598,6 +5616,73 @@ export function registerIpcHandlers(): void {
     const { deleteVideoCache } = await import('./lib/content-service')
     deleteVideoCache(itemId, version)
   })
+
+  // ===== Slack 集成 =====
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.GET_CONFIG,
+    async (): Promise<import('@guru/shared').SlackSettingsConfig> => {
+      return getSlackSettingsConfig()
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.SAVE_BOT_CONFIG,
+    async (_event, input: import('@guru/shared').SlackBotConfigInput) => {
+      const saved = saveSlackBotConfig(input)
+      if (saved.enabled && saved.botToken && saved.appToken) {
+        void slackBridgeManager.restartBot(saved.id).catch((error) => {
+          console.error(`[Slack IPC] Bot "${saved.name}" 重启失败:`, redactSensitiveLogValue(error))
+        })
+      } else {
+        void slackBridgeManager.stopBot(saved.id)
+      }
+      return toSlackBotSettingsConfig(saved)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.REMOVE_BOT,
+    async (_event, botId: string) => {
+      await slackBridgeManager.stopBot(botId)
+      return removeSlackBot(botId)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.GET_MANIFEST,
+    async (_event, options?: { botName?: string }) => {
+      return buildSlackManifest(options)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.TEST_CONNECTION,
+    async (_event, botToken: string): Promise<import('@guru/shared').SlackTestResult> => {
+      return slackBridgeManager.testConnection(botToken)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.START_BOT,
+    async (_event, botId: string): Promise<void> => {
+      await slackBridgeManager.startBot(botId)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.STOP_BOT,
+    async (_event, botId: string): Promise<void> => {
+      await slackBridgeManager.stopBot(botId)
+    },
+  )
+
+  ipcMain.handle(
+    SLACK_IPC_CHANNELS.GET_STATUS,
+    async (): Promise<import('@guru/shared').SlackMultiBridgeState> => {
+      return slackBridgeManager.getStates()
+    },
+  )
 
   // ===== 飞书集成 =====
 

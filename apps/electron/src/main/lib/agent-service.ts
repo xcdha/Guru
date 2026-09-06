@@ -360,6 +360,15 @@ export async function runAgent(
           completedStoppedByUser,
         )
         publishRunStopped(input.sessionId, opts?.stoppedByUser, opts?.startedAt)
+        eventBus.emit(input.sessionId, {
+          kind: 'guru_event',
+          event: {
+            type: 'run_completed',
+            source: 'desktop',
+            stoppedByUser: opts?.stoppedByUser ?? false,
+            ...(opts?.startedAt != null ? { startedAt: opts.startedAt } : {}),
+          },
+        })
         if (!webContents.isDestroyed()) {
           sendAgentStreamComplete(webContents, input, {
             messages,
@@ -499,6 +508,15 @@ export async function runAgentHeadless(
           completedStoppedByUser,
         )
         publishRunStopped(runInput.sessionId, opts?.stoppedByUser, opts?.startedAt)
+        eventBus.emit(runInput.sessionId, {
+          kind: 'guru_event',
+          event: {
+            type: 'run_completed',
+            source: callbacks.source ?? 'bridge',
+            stoppedByUser: opts?.stoppedByUser ?? false,
+            ...(opts?.startedAt != null ? { startedAt: opts.startedAt } : {}),
+          },
+        })
         // 同步到渲染进程
         if (wc && !wc.isDestroyed()) {
           sendAgentStreamComplete(wc, runInput, {
@@ -555,6 +573,10 @@ export async function runAgentHeadless(
       callbacks.onError(errorMessage)
       callbacks.onComplete()
     }
+    eventBus.emit(runInput.sessionId, {
+      kind: 'guru_event',
+      event: { type: 'run_completed', source: callbacks.source ?? 'bridge', stoppedByUser: false },
+    })
     if (wc && !wc.isDestroyed()) {
       wc.send(AGENT_IPC_CHANNELS.STREAM_ERROR, { sessionId: runInput.sessionId, error: errorMessage })
       sendAgentStreamComplete(wc, runInput, {

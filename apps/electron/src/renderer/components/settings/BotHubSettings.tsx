@@ -19,8 +19,10 @@ import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { cn } from '@/lib/utils'
 import { feishuBotStatesAtom } from '@/atoms/feishu-atoms'
+import { slackBotStatesAtom } from '@/atoms/slack-atoms'
 import { wechatBridgeStateAtom } from '@/atoms/wechat-atoms'
 import { FeishuSettings } from './FeishuSettings'
+import { SlackSettings } from './SlackSettings'
 import { WeChatSettings } from './WeChatSettings'
 import { BotDefaultSettings } from './BotDefaultSettings'
 import {
@@ -41,6 +43,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import feishuLogo from '@/assets/bots/feishu.png'
+import slackLogo from '@/assets/bots/slack.png'
 import wechatLogo from '@/assets/bots/wechat.png'
 
 // ===== 类型 =====
@@ -109,17 +112,9 @@ const PLATFORMS: readonly BotPlatformDef[] = [
   {
     id: 'slack',
     name: 'Slack',
-    comingSoon: true,
-    iconChar: 'S',
-    iconBgClass: 'bg-purple-500/15',
-    iconTextClass: 'text-purple-600 dark:text-purple-400',
+    iconSrc: slackLogo,
+    iconBgClass: 'bg-violet-500/15',
     description: '在 Slack 工作区中与 Guru Agent 对话，用 @提及 唤起协作。',
-    plannedFeatures: [
-      'Slack App OAuth 接入',
-      '@提及 触发对话',
-      '频道与会话绑定',
-      '任务通知推送到频道',
-    ],
   },
   {
     id: 'discord',
@@ -220,9 +215,10 @@ function normalizeWeChatStatus(status: string): string {
 }
 
 /** 渠道连接状态（feishu/wechat 归一化到通用状态，未知渠道回退 disconnected） */
-function getLiveStatus(platformId: BotPlatformId, feishuBotStates: Record<string, { status: string }>, wechatStatus: string): string {
+function getLiveStatus(platformId: BotPlatformId, feishuBotStates: Record<string, { status: string }>, slackBotStates: Record<string, { status: string }>, wechatStatus: string): string {
   const statusMap: Record<string, string> = {
     feishu: getPlatformStatus(feishuBotStates),
+    slack: getPlatformStatus(slackBotStates),
     wechat: normalizeWeChatStatus(wechatStatus),
   }
   const raw = statusMap[platformId]
@@ -290,8 +286,9 @@ function LiveChannelCard({
   onOpen: () => void
 }): React.ReactElement {
   const feishuBotStates = useAtomValue(feishuBotStatesAtom)
+  const slackBotStates = useAtomValue(slackBotStatesAtom)
   const wechatState = useAtomValue(wechatBridgeStateAtom)
-  const status = getLiveStatus(platform.id, feishuBotStates, wechatState.status)
+  const status = getLiveStatus(platform.id, feishuBotStates, slackBotStates, wechatState.status)
 
   return (
     <button
@@ -324,9 +321,10 @@ function LiveChannelCard({
 /** 详情页渠道状态徽标（内部订阅各 Bridge 状态） */
 function DetailStatusBadge({ platformId }: { platformId: BotPlatformId }): React.ReactElement | null {
   const feishuBotStates = useAtomValue(feishuBotStatesAtom)
+  const slackBotStates = useAtomValue(slackBotStatesAtom)
   const wechatState = useAtomValue(wechatBridgeStateAtom)
-  if (platformId !== 'feishu' && platformId !== 'wechat') return null
-  return <StatusBadge status={getLiveStatus(platformId, feishuBotStates, wechatState.status)} />
+  if (platformId !== 'feishu' && platformId !== 'slack' && platformId !== 'wechat') return null
+  return <StatusBadge status={getLiveStatus(platformId, feishuBotStates, slackBotStates, wechatState.status)} />
 }
 
 /** 即将上线占位卡片 */
@@ -472,6 +470,7 @@ export function BotHubSettings(): React.ReactElement {
         {detailPlatform ? (
           <div className="mx-auto w-full max-w-6xl px-8 pb-16 pt-2">
             {detailPlatform.id === 'feishu' && <FeishuSettings />}
+            {detailPlatform.id === 'slack' && <SlackSettings />}
             {detailPlatform.id === 'wechat' && <WeChatSettings />}
           </div>
         ) : (

@@ -7,7 +7,7 @@
 
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { PROJECT_IPC_CHANNELS, TASK_IPC_CHANNELS, SESSION_COMMAND_CHANNEL, SESSION_GROUP_IPC_CHANNELS, EXPERT_IPC_CHANNELS } from '@guru/shared/channels'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, VAULT_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@guru/shared'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, SLACK_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, VAULT_IPC_CHANNELS, CODECLAW_IPC_CHANNELS } from '@guru/shared'
 import type { TaskAggregateSummary, TaskMetadataPatch, TaskWorkflow } from '@guru/shared/tasks'
 import type { StartTodoAgentInput, StartTodoAgentResult, TodoAgentSessionActivation, PlanningWorkspaceScope } from '@guru/shared'
 import { LABEL_IPC_CHANNELS } from '@guru/shared/channels'
@@ -995,6 +995,9 @@ export interface ElectronAPI {
   getProjectMcpConfig: (workspaceSlug: string, projectId: string) => Promise<WorkspaceMcpConfig>
   /** 保存项目级 MCP 配置 */
   saveProjectMcpConfig: (workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig) => Promise<void>
+
+  /** 原子删除单个 MCP（projectId 为空时删全局条目），保留其他条目当前状态 */
+  deleteMcp: (workspaceSlug: string, name: string, projectId?: string | null) => Promise<WorkspaceMcpConfig>
   /** 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project） */
   getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => Promise<import('@guru/shared').OtherProjectSkillsGroup[]>
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */
@@ -1539,6 +1542,18 @@ export interface ElectronAPI {
   getWeChatStatus: () => Promise<WeChatBridgeState>
   /** 订阅微信 Bridge 状态变化 */
   onWeChatStatusChanged: (callback: (state: WeChatBridgeState) => void) => () => void
+
+  // ===== Slack 集成 =====
+
+  getSlackConfig: () => Promise<import('@guru/shared').SlackSettingsConfig>
+  saveSlackBotConfig: (input: import('@guru/shared').SlackBotConfigInput) => Promise<import('@guru/shared').SlackBotSettingsConfig>
+  removeSlackBot: (botId: string) => Promise<boolean>
+  getSlackManifest: (options?: { botName?: string }) => Promise<import('@guru/shared').SlackAppManifestResult>
+  testSlackConnection: (botToken: string) => Promise<import('@guru/shared').SlackTestResult>
+  startSlackBot: (botId: string) => Promise<void>
+  stopSlackBot: (botId: string) => Promise<void>
+  getSlackStatus: () => Promise<import('@guru/shared').SlackMultiBridgeState>
+  onSlackStatusChanged: (callback: (state: import('@guru/shared').SlackBotBridgeState) => void) => () => void
 
   /** 订阅菜单关闭标签页事件（Cmd+W 被菜单拦截后转发） */
   onMenuCloseTab: (callback: () => void) => () => void
@@ -2715,6 +2730,10 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SAVE_PROJECT_MCP_CONFIG, workspaceSlug, projectId, config)
   },
 
+  deleteMcp: (workspaceSlug: string, name: string, projectId?: string | null) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_MCP, workspaceSlug, name, projectId) as Promise<WorkspaceMcpConfig>
+  },
+
   getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_OTHER_PROJECT_SKILLS, workspaceSlug, currentProjectId)
   },
@@ -3583,6 +3602,32 @@ const electronAPI: ElectronAPI = {
     const listener = (_event: Electron.IpcRendererEvent, state: WeChatBridgeState): void => callback(state)
     ipcRenderer.on(WECHAT_IPC_CHANNELS.STATUS_CHANGED, listener)
     return () => { ipcRenderer.removeListener(WECHAT_IPC_CHANNELS.STATUS_CHANGED, listener) }
+  },
+
+  // ===== Slack 集成 =====
+
+  getSlackConfig: () => ipcRenderer.invoke(SLACK_IPC_CHANNELS.GET_CONFIG),
+
+  saveSlackBotConfig: (input: import('@guru/shared').SlackBotConfigInput) =>
+    ipcRenderer.invoke(SLACK_IPC_CHANNELS.SAVE_BOT_CONFIG, input),
+
+  removeSlackBot: (botId: string) => ipcRenderer.invoke(SLACK_IPC_CHANNELS.REMOVE_BOT, botId),
+
+  getSlackManifest: (options?: { botName?: string }) =>
+    ipcRenderer.invoke(SLACK_IPC_CHANNELS.GET_MANIFEST, options),
+
+  testSlackConnection: (botToken: string) => ipcRenderer.invoke(SLACK_IPC_CHANNELS.TEST_CONNECTION, botToken),
+
+  startSlackBot: (botId: string) => ipcRenderer.invoke(SLACK_IPC_CHANNELS.START_BOT, botId),
+
+  stopSlackBot: (botId: string) => ipcRenderer.invoke(SLACK_IPC_CHANNELS.STOP_BOT, botId),
+
+  getSlackStatus: () => ipcRenderer.invoke(SLACK_IPC_CHANNELS.GET_STATUS),
+
+  onSlackStatusChanged: (callback: (state: import('@guru/shared').SlackBotBridgeState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: import('@guru/shared').SlackBotBridgeState): void => callback(state)
+    ipcRenderer.on(SLACK_IPC_CHANNELS.STATUS_CHANGED, listener)
+    return () => { ipcRenderer.removeListener(SLACK_IPC_CHANNELS.STATUS_CHANGED, listener) }
   },
 
   // ===== 钉钉集成 =====
