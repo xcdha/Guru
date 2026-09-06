@@ -70,7 +70,8 @@ describe('主进程稳定性生命周期约束', () => {
   test('协作阻塞事件在解决和委派淘汰后释放', () => {
     const source = readMainSource('lib/agent-collaboration-tools.ts')
     const finishStart = source.indexOf('function markDelegationFinished(')
-    const finishBody = source.slice(finishStart, finishStart + 700)
+    // markDelegationFinished 含注释/事件转发/try 块，体长超 700 字符，取足 1400 覆盖到清理行
+    const finishBody = source.slice(finishStart, finishStart + 1400)
 
     expect(source).toContain('blockedEvents.delete(be.id)')
     expect(finishBody).toContain('deleteBlockedEventsForDelegation(record.delegationId)')

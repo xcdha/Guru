@@ -2174,7 +2174,9 @@ ${workContext}`
       const canAutoRetry = (attempt: number): boolean => attempt <= MAX_AUTO_RETRIES && retryDelayElapsedMs < MAX_AUTO_RETRY_WAIT_MS
       // Pi runtime 使用其 session 内的 native retry（agent.continue），能保留已完成的
       // tool_result；禁止外层以原 prompt 重开 query，但保留 session-not-found 等显式恢复。
-      const canReplayPromptForRetry = (attempt: number): boolean => false && canAutoRetry(attempt)
+      // 注意：这里故意恒返回 false（等价于禁用该重试分支），不要“修复”为 canAutoRetry(attempt)，
+      // 否则外层重开 query 会丢弃已完成的 tool_result，退化为 M17 已修复过的问题。
+      const canReplayPromptForRetry = (_attempt: number): boolean => false
 
       const canTryThinkingSignatureRecovery = (attempt: number): boolean => !thinkingSignatureRecoveryAttempted && canAutoRetry(attempt) && !!(existingSdkSessionId || capturedSdkSessionId || queryOptions.resumeSessionId)
       const canTryPromptTooLongRecovery = (attempt: number): boolean => !promptTooLongRecoveryAttempted && canAutoRetry(attempt) && !!(existingSdkSessionId || capturedSdkSessionId || queryOptions.resumeSessionId)

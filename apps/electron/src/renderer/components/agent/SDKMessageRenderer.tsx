@@ -1241,6 +1241,8 @@ export function AssistantErrorTail({
         setModelSelectorOpen(true)
         break
       case 'open_external':
+        // payload 来自主进程预置的固定按钮（如 Git 官网下载链接），非 AI 自由输出，
+        // 不走外链确认；AI 生成内容里的链接由 message.tsx/reasoning.tsx 的守卫覆盖。
         if (action.payload) {
           window.electronAPI.openExternal(action.payload)
         }
