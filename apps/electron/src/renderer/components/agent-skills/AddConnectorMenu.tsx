@@ -1,5 +1,5 @@
 /**
- * AddConnectorMenu — 「添加连接器」下拉：本地/远程服务 或 自定义 HTTP。
+ * AddConnectorMenu — 「添加连接器」下拉：本地/远程服务、自定义 HTTP、官方搜索 MCP。
  * 不假装能从市场安装 GitHub/Notion。
  *
  * 实现说明：早期用 Radix DropdownMenu，用户环境反馈点击后菜单不出现
@@ -8,18 +8,22 @@
  */
 
 import * as React from 'react'
-import { ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Plus, Globe, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { SearchMcpPresetId } from '@/lib/mcp-search-presets'
 
 interface AddConnectorMenuProps {
   onAddMcp: () => void
   onAddHttp: () => void
+  /** 选择一个官方搜索 MCP 模板（Brave/Tavily），由上层预填连接表单 */
+  onAddPreset?: (presetId: SearchMcpPresetId) => void
   className?: string
 }
 
 export function AddConnectorMenu({
   onAddMcp,
   onAddHttp,
+  onAddPreset,
   className,
 }: AddConnectorMenuProps): React.ReactElement {
   const [open, setOpen] = React.useState(false)
@@ -77,10 +81,37 @@ export function AddConnectorMenu({
             type="button"
             role="menuitem"
             onClick={() => { setOpen(false); onAddHttp() }}
-            className="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
+            className="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
           >
             自定义 HTTP
           </button>
+          {onAddPreset && (
+            <>
+              <div className="my-1 border-t border-border/60" />
+              <div className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-muted-foreground/70">
+                <Sparkles size={11} />
+                官方搜索 MCP（填 API Key 即可）
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setOpen(false); onAddPreset('brave-search') }}
+                className="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
+              >
+                <Globe size={14} className="shrink-0 text-foreground/40" />
+                Brave 搜索
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setOpen(false); onAddPreset('tavily-search') }}
+                className="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
+              >
+                <Globe size={14} className="shrink-0 text-foreground/40" />
+                Tavily 搜索
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
