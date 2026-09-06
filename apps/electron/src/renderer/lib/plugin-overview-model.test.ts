@@ -190,7 +190,6 @@ describe('plugin-overview-model', () => {
     })
     expect(overview.recommendations.map((item) => item.actionConnectorId)).toEqual([
       'builtin:chrome-devtools',
-      'api:web-search',
       'builtin:nano-banana',
     ])
   })
