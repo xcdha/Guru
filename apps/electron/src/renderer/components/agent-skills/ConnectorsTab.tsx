@@ -35,6 +35,8 @@ interface ConnectorsTabProps {
   onDismissHints: () => void
   onAddMcp: () => void
   onAddHttp: () => void
+  /** 选择一个官方搜索 MCP 模板（Brave/Tavily），由上层预填连接表单 */
+  onAddPreset?: (presetId: import('@/lib/mcp-search-presets').SearchMcpPresetId) => void
   onToggleBuiltin: (id: string, enabled: boolean) => Promise<void> | void
   onToggleMcp: (name: string, enabled: boolean) => Promise<void> | void
   workspaceSlug: string
@@ -56,6 +58,7 @@ export function ConnectorsTab({
   onDismissHints,
   onAddMcp,
   onAddHttp,
+  onAddPreset,
   onToggleBuiltin,
   onToggleMcp,
   workspaceSlug,
@@ -173,7 +176,7 @@ export function ConnectorsTab({
 
   let body: React.ReactNode
   if (items.length === 0) {
-    body = <EmptyConnectors onAddMcp={onAddMcp} onAddHttp={onAddHttp} />
+    body = <EmptyConnectors onAddMcp={onAddMcp} onAddHttp={onAddHttp} onAddPreset={onAddPreset} />
   } else if (filtered.length === 0) {
     body = <EmptySearch />
   } else if (chip === 'all' && !query.trim()) {
@@ -367,9 +370,11 @@ function NeedsConfigGuide({
 function EmptyConnectors({
   onAddMcp,
   onAddHttp,
+  onAddPreset,
 }: {
   onAddMcp: () => void
   onAddHttp: () => void
+  onAddPreset?: (presetId: import('@/lib/mcp-search-presets').SearchMcpPresetId) => void
 }): React.ReactElement {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 pt-24 text-center">
@@ -382,7 +387,7 @@ function EmptyConnectors({
           添加自定义连接，或配置内置搜索 / 生图 / 浏览器能力。
         </p>
       </div>
-      <AddConnectorMenu onAddMcp={onAddMcp} onAddHttp={onAddHttp} className="mt-2" />
+      <AddConnectorMenu onAddMcp={onAddMcp} onAddHttp={onAddHttp} onAddPreset={onAddPreset} className="mt-2" />
     </div>
   )
 }

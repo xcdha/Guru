@@ -58,6 +58,7 @@ import { SkillCard } from './SkillCard'
 import { SkillDetailSheet } from './SkillDetailSheet'
 import { McpDetailSheet } from './McpDetailSheet'
 import { AddConnectorMenu } from './AddConnectorMenu'
+import { getSearchMcpPreset } from '@/lib/mcp-search-presets'
 import { CustomHttpConnectorDialog } from './CustomHttpConnectorDialog'
 import { ImportSkillDialog } from './ImportSkillDialog'
 
@@ -538,6 +539,12 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
           <AddConnectorMenu
             onAddMcp={() => { setEditingMcp(null); setMcpSheetOpen(true) }}
             onAddHttp={() => setHttpDialogOpen(true)}
+            onAddPreset={(presetId) => {
+              const preset = getSearchMcpPreset(presetId)
+              if (!preset) return
+              setEditingMcp({ name: preset.serverName, entry: preset.buildEntry('') })
+              setMcpSheetOpen(true)
+            }}
           />
         )}
       </div>
@@ -608,6 +615,12 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
               onToggleMcp={data.toggleMcp}
               onAddMcp={() => { setEditingMcp(null); setMcpSheetOpen(true) }}
               onAddHttp={() => setHttpDialogOpen(true)}
+              onAddPreset={(presetId) => {
+                const preset = getSearchMcpPreset(presetId)
+                if (!preset) return
+                setEditingMcp({ name: preset.serverName, entry: preset.buildEntry('') })
+                setMcpSheetOpen(true)
+              }}
               workspaceSlug={data.workspaceSlug}
               projectId={mcpWriteProjectId}
               onUserMcpChanged={() => {
