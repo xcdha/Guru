@@ -172,15 +172,6 @@ export function buildPluginOverviewModel(input: PluginOverviewInput): PluginOver
         actionLabel: '查看',
       },
       {
-        id: 'web-search',
-        title: '联网搜索',
-        description: '为 Agent 提供实时网页搜索。',
-        action: 'open-connector',
-        actionTab: 'connectors',
-        actionConnectorId: 'api:web-search',
-        actionLabel: '查看',
-      },
-      {
         id: 'nano-banana',
         title: 'AI 生图',
         description: '生成和编辑图片（Gemini / GPT-Image 双协议）。',
