@@ -11,7 +11,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { NanoBananaSettings, WebSearchSettings } from '@/components/settings/ToolSettings'
+import { NanoBananaSettings } from '@/components/settings/ToolSettings'
 import { McpServerForm } from '@/components/settings/McpServerForm'
 import { chatToolsAtom } from '@/atoms/chat-tool-atoms'
 import { getConnectorIcon } from '@/lib/builtin-mcp-icons'
@@ -295,7 +295,6 @@ function DetailBody({
         </div>
       )}
 
-      {credentialForm === 'web-search' && <WebSearchSettings embedded />}
       {credentialForm === 'nano-banana' && <NanoBananaSettings embedded onChanged={reloadImageProvider} />}
 
       {item.kind === 'user-mcp' && userEntry && (
@@ -368,8 +367,7 @@ function DetailBody({
   )
 }
 
-function credentialFormOf(item: ConnectorItem): 'web-search' | 'nano-banana' | null {
-  if (item.id === 'api:web-search') return 'web-search'
+function credentialFormOf(item: ConnectorItem): 'nano-banana' | null {
   if (item.id === 'builtin:nano-banana') return 'nano-banana'
   return null
 }
