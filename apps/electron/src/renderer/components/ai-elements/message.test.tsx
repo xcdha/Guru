@@ -1,9 +1,15 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { Message, MessageContent, MessageResponse, UserMessageContent } from './message'
 
 function renderMessage(markdown: string): string {
-  return renderToStaticMarkup(<MessageResponse>{markdown}</MessageResponse>)
+  // FilePathChip 内部用了 Tooltip（悬停显示完整路径），SSR 渲染必须包 TooltipProvider
+  return renderToStaticMarkup(
+    <TooltipProvider>
+      <MessageResponse>{markdown}</MessageResponse>
+    </TooltipProvider>,
+  )
 }
 
 describe('Message layout density', () => {

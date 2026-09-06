@@ -3815,7 +3815,7 @@ export function registerIpcHandlers(): void {
 
   // ===== Agent 后台任务管理 =====
 
-  // 获取任务输出（保留接口，供未来扩展）
+  // 获取任务输出（保留接口，供未来扩展；Shell/后台任务输出能力尚未实现）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_TASK_OUTPUT,
     async (_, input: GetTaskOutputInput): Promise<GetTaskOutputResult> => {
@@ -7127,6 +7127,11 @@ export function registerIpcHandlers(): void {
           })
         } catch (error) {
           console.warn(`[专家] 跳过损坏的专家模板 ${entry.name}:`, error)
+          // 损坏文件改名备份，避免每次启动重复解析失败，也保留用户数据恢复的可能
+          try {
+            renameSync(join(templatesDir, entry.name), join(templatesDir, `${entry.name}.corrupt-${Date.now()}.bak`))
+          } catch { /* 备份失败不阻断列表 */ }
+          continue
         }
       }
       return templates.sort((a, b) => a.slug.localeCompare(b.slug))

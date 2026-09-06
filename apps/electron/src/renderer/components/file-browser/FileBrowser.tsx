@@ -530,9 +530,11 @@ function FileTreeItem({
   // 当 refreshVersion 变化时，已展开的文件夹自动重新加载子项
   React.useEffect(() => {
     if (expanded && childrenLoaded && entry.isDirectory) {
+      let cancelled = false
       window.electronAPI.listDirectory(entry.path, access)
-        .then((items) => setChildren(items))
-        .catch((err) => console.error('[FileTreeItem] 刷新子目录失败:', err))
+        .then((items) => { if (!cancelled) setChildren(items) })
+        .catch((err) => { if (!cancelled) console.error('[FileTreeItem] 刷新子目录失败:', err) })
+      return () => { cancelled = true }
     }
   }, [refreshVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -610,10 +612,18 @@ function FileTreeItem({
 
         // 首次展开空目录时，延迟重试一次（应对 Agent 正在写入文件的时序问题）
         if (items.length === 0) {
+          const retryPath = entry.path
           setTimeout(async () => {
             try {
-              const retryItems = await window.electronAPI.listDirectory(entry.path, access)
-              if (retryItems.length > 0) setChildren(retryItems)
+              const retryItems = await window.electronAPI.listDirectory(retryPath, access)
+              // 延迟返回时若用户已收起目录则丢弃；必须走函数式更新读“当前”展开值，
+              // 不能闭包里读 expanded（800ms 前的旧值），否则收起动作会被旧值覆盖。
+              if (retryItems.length > 0) {
+                setExpanded((prev) => {
+                  if (prev) setChildren(retryItems)
+                  return prev
+                })
+              }
             } catch { /* 静默忽略 */ }
           }, 800)
         }
