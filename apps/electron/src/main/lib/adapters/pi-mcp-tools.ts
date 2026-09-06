@@ -18,6 +18,8 @@ import type { TextContent, ImageContent } from '@earendil-works/pi-ai'
 import type { TSchema } from 'typebox'
 import { Type } from 'typebox'
 import { sanitizeToolResultImageContent } from '../image-content-validation'
+import { getEffectiveProxyUrl } from '../proxy-settings-service'
+import { getFetchFn } from '../proxy-fetch'
 
 const DEFAULT_MCP_REQUEST_TIMEOUT_MS = 60_000
 const DEFAULT_MCP_STARTUP_TIMEOUT_MS = 30_000
@@ -112,7 +114,7 @@ function getTimeoutMs(config: PiMcpServerConfig): number {
   return timeoutSec * 1000
 }
 
-function createTransport(name: string, config: PiMcpServerConfig): Transport | undefined {
+function createTransport(name: string, config: PiMcpServerConfig, fetchFn?: typeof globalThis.fetch): Transport | undefined {
   const type = config.type
   if (type === 'stdio') {
     if (typeof config.command !== 'string' || !config.command.trim()) {
@@ -138,6 +140,8 @@ function createTransport(name: string, config: PiMcpServerConfig): Transport | u
     const headers = getHeaders(config)
     return new StreamableHTTPClientTransport(new URL(config.url), {
       requestInit: headers ? { headers } : undefined,
+      // 代理感知 fetch：让需要代理才能访问的远程 MCP（如 Tavily）在 GFW 等网络下可用
+      ...(fetchFn ? { fetch: fetchFn } : {}),
     })
   }
 
@@ -149,6 +153,8 @@ function createTransport(name: string, config: PiMcpServerConfig): Transport | u
     const headers = getHeaders(config)
     return new SSEClientTransport(new URL(config.url), {
       requestInit: headers ? { headers } : undefined,
+      // SSE 分支同样支持代理感知 fetch（构造时由 createConnection 解析代理后传入）
+      ...(fetchFn ? { fetch: fetchFn } : {}),
       eventSourceInit: headers
         ? ({
           fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, {
@@ -412,7 +418,22 @@ class PiMcpClientManager {
     config: PiMcpServerConfig,
     onClose: () => void,
   ): Promise<McpConnection> {
-    const transport = createTransport(serverName, config)
+    // 远程 MCP（http/sse）需要代理才能访问时，用代理感知 fetch；stdio 不走网络。
+    // 优先 Guru 代理设置（手动/系统模式）；未启用时回退 Electron net.fetch（Chromium 网络栈
+    // 自动读取 Windows/macOS 系统代理，GFW 环境下无需在 Guru 里单独配代理）。
+    let fetchFn: typeof globalThis.fetch | undefined
+    try {
+      const proxyUrl = await getEffectiveProxyUrl()
+      fetchFn = proxyUrl ? getFetchFn(proxyUrl) : undefined
+      if (!fetchFn) {
+        // 懒加载：bun test 环境下顶层 import electron 会报错，必须函数内导入
+        const { net } = await import('electron')
+        fetchFn = net.fetch.bind(net) as typeof globalThis.fetch
+      }
+    } catch {
+      fetchFn = undefined
+    }
+    const transport = createTransport(serverName, config, fetchFn)
     if (!transport) throw new Error(`无法创建 MCP transport: ${serverName}`)
 
     const client = new Client({ name: 'guru-pi-agent-mcp-bridge', version: '0.1.0' }, { capabilities: {} })
