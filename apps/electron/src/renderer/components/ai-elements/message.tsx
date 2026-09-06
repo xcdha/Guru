@@ -29,6 +29,7 @@ import { normalizeLatexDelimiters } from '@/lib/normalize-latex'
 import { normalizeMalformedStrongDelimiters } from '@/lib/markdown-emphasis'
 import { splitMarkdownIntoBlocks } from '@/lib/markdown-blocks'
 import { copyTextToClipboard } from '@/lib/clipboard'
+import { openExternalLinkWithConfirm } from '@/lib/external-link-guard'
 import { createMentionPattern } from '@/lib/mention-patterns'
 import { Button } from '@/components/ui/button'
 import { ImageLightbox, type LightboxImage } from '@/components/ui/image-lightbox'
@@ -533,7 +534,8 @@ const MarkdownLink = React.memo(function MarkdownLink({
         e.preventDefault()
         if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
           if (agentBrowserLink) agentBrowserLink.openLink(href)
-          else void window.electronAPI.openExternal(href)
+          // 受管浏览器内打开走应用隔离环境；调起系统浏览器时对非白名单域名弹确认
+          else openExternalLinkWithConfirm(href)
         }
       }}
       title={href}

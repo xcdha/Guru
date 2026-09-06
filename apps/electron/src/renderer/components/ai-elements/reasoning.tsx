@@ -23,6 +23,7 @@ import {
   CollapsibleContent,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import { openExternalLinkWithConfirm } from '@/lib/external-link-guard'
 import { normalizeLatexDelimiters } from '@/lib/normalize-latex'
 import type { ComponentProps, ReactNode } from 'react'
 
@@ -227,7 +228,7 @@ export const ReasoningContent = React.memo(
                   onClick={(e) => {
                     e.preventDefault()
                     if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-                      window.electronAPI.openExternal(href)
+                      openExternalLinkWithConfirm(href)
                     }
                   }}
                   title={href}

@@ -867,7 +867,8 @@ export interface ElectronAPI {
   /** 主进程 deferred queue 状态变更（started / failed） */
   onAgentQueuedMessageStatus: (callback: (status: AgentQueuedMessageStatus) => void) => () => void
 
-  // ===== Agent 后台任务管理 =====
+  // ===== Agent 后台任务管理（Shell/后台任务输出与停止能力尚未实现，主进程返回空输出/空操作；
+  // useBackgroundTasks 的 stopTask 是唯一调用方，目前无 UI 入口调用它——恢复声明避免 typecheck 断裂） =====
 
   /** 获取任务输出 */
   getTaskOutput: (input: GetTaskOutputInput) => Promise<GetTaskOutputResult>
@@ -2563,7 +2564,8 @@ const electronAPI: ElectronAPI = {
     return () => { ipcRenderer.removeListener(AGENT_IPC_CHANNELS.QUEUED_MESSAGE_STATUS, listener) }
   },
 
-  // Agent 后台任务管理
+  // Agent 后台任务管理（Shell/后台任务输出与停止能力尚未实现，主进程返回空输出/空操作；
+  // 渲染层目前无任何调用，新增调用前必须先实现主进程逻辑）
   getTaskOutput: (input: GetTaskOutputInput) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_TASK_OUTPUT, input)
   },
