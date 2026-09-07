@@ -149,6 +149,7 @@ import { setAppVersion } from '@guru/core'
 import { IPC_CHANNELS } from '@guru/shared'
 import { canRecoverRenderer, RENDERER_RECOVERY_WINDOW_MS } from './lib/renderer-process-recovery'
 import { TRAY_IPC_CHANNELS } from '../types'
+import { applyWindowZoomIn, applyWindowZoomOut, resetWindowZoom } from './lib/window-zoom'
 
 function startCodeClawSurface(): void {
   // 不再启动时预创建桌宠窗口：CodeClaw 是可选企业桌面助手，默认关闭。
@@ -386,19 +387,30 @@ export function getMainWindow(): BrowserWindow | null {
   return getStoredMainWindow()
 }
 
-function installWindowsZoomInFallback(win: BrowserWindow): void {
+function installWindowsZoomKeyboardFallback(win: BrowserWindow): void {
   if (process.platform !== 'win32') return
 
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown' || !input.control || input.alt || input.meta) return
 
-    // Windows 下主键盘的 Ctrl++ 常会以 Ctrl+= 上报；小键盘加号也需要兜底。
+    // Windows 下菜单栏隐藏时，role zoomIn/zoomOut/resetZoom 的 accelerator 不生效，
+    // 只能在这里统一拦截。主键盘 Ctrl++ 常以 Ctrl+= 上报，小键盘加/减也一并覆盖。
     const key = input.key.toLowerCase()
-    if (!['=', '+', 'numadd', 'add'].includes(key)) return
-
-    event.preventDefault()
-    const currentZoomLevel = win.webContents.getZoomLevel()
-    win.webContents.setZoomLevel(Math.min(currentZoomLevel + 0.5, 9))
+    if (['=', '+', 'numadd', 'add'].includes(key)) {
+      event.preventDefault()
+      applyWindowZoomIn(win)
+      return
+    }
+    if (['-', '_', 'numsub', 'subtract'].includes(key)) {
+      event.preventDefault()
+      applyWindowZoomOut(win)
+      return
+    }
+    if (key === '0') {
+      event.preventDefault()
+      resetWindowZoom(win)
+      return
+    }
   })
 }
 
@@ -548,7 +560,7 @@ function createWindow(): void {
     .catch((error: unknown) => {
       console.warn('[TaskRunner] 冷启动恢复失败:', error instanceof Error ? error.message : error)
     })
-  installWindowsZoomInFallback(mainWindow)
+  installWindowsZoomKeyboardFallback(mainWindow)
   installZoomFactorBroadcast(mainWindow)
   browserController.setOwnerWindow(mainWindow)
   agentTerminalController.setOwnerWindow(mainWindow)
