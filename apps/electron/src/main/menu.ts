@@ -1,4 +1,11 @@
 import { Menu, shell, BrowserWindow } from 'electron'
+import { applyWindowZoomIn, applyWindowZoomOut, resetWindowZoom } from './lib/window-zoom'
+
+function zoomFocusedWindow(apply: (win: BrowserWindow) => void): void {
+  const win = BrowserWindow.getFocusedWindow()
+  if (!win || win.isDestroyed()) return
+  apply(win)
+}
 
 export function createApplicationMenu(): Menu {
   const isMac = process.platform === 'darwin'
@@ -127,9 +134,21 @@ export function createApplicationMenu(): Menu {
         },
         { role: 'toggleDevTools' as const, label: '切换开发者工具' },
         { type: 'separator' as const },
-        { role: 'resetZoom' as const, label: '重置缩放' },
-        { role: 'zoomIn' as const, label: '放大' },
-        { role: 'zoomOut' as const, label: '缩小' },
+        {
+          label: '重置缩放',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => zoomFocusedWindow(resetWindowZoom),
+        },
+        {
+          label: '放大',
+          accelerator: isMac ? 'CmdOrCtrl+Plus' : 'CmdOrCtrl+=',
+          click: () => zoomFocusedWindow(applyWindowZoomIn),
+        },
+        {
+          label: '缩小',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => zoomFocusedWindow(applyWindowZoomOut),
+        },
         { type: 'separator' as const },
         { role: 'togglefullscreen' as const, label: '切换全屏' },
       ],
