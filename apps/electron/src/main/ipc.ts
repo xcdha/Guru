@@ -189,6 +189,7 @@ import {
 } from './lib/git-diff-service'
 import { listGitBranchesForSession, prepareSessionGitContext, refreshSessionGitBranch } from './lib/git-session-context-service'
 import { registerGuruDirectoryPath, registerGuruFilePath } from './lib/local-file-protocol'
+import { applyWindowZoomIn, applyWindowZoomOut } from './lib/window-zoom'
 import {
   authorizeDiscoveredVault,
   configureVault,
@@ -6617,10 +6618,8 @@ export function registerIpcHandlers(): void {
     const wc = event.sender
     const win = BrowserWindow.fromWebContents(wc)
     if (!win || win.isDestroyed()) return
-    const step = delta > 0 ? 0.15 : -0.15
-    const nextLevel = Math.max(-8, Math.min(9, wc.getZoomLevel() + step))
-    wc.setZoomLevel(nextLevel)
-    wc.send(IPC_CHANNELS.WINDOW_ZOOM_FACTOR_CHANGED, wc.getZoomFactor())
+    if (delta > 0) applyWindowZoomIn(win)
+    else applyWindowZoomOut(win)
   })
 
   ipcMain.handle(PLANNING_IPC_CHANNELS.SNOOZE_REMINDER, async (_, input: SnoozePlanningReminderInput): Promise<PlanningReminder | undefined> => {

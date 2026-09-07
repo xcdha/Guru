@@ -96,6 +96,7 @@ import { chatToolsAtom } from './atoms/chat-tool-atoms'
 import { appModeAtom } from './atoms/app-mode'
 import type { FeishuBotBridgeState, FeishuBridgeState, DingTalkBotBridgeState, DingTalkBridgeState } from '@guru/shared'
 import { Toaster } from './components/ui/sonner'
+import { ZoomIndicator } from './components/window-zoom/ZoomIndicator'
 import { toast } from 'sonner'
 import { ArrowUpRight } from 'lucide-react'
 import {
@@ -1210,6 +1211,7 @@ if (isQuickTaskWindow) {
         <MarkdownFontSizeInitializer />
         <WheelZoomListener />
         <DetachedPreviewApp />
+        <ZoomIndicator />
         <Toaster position="bottom-right" />
       </React.StrictMode>
     )
@@ -1257,6 +1259,7 @@ if (isQuickTaskWindow) {
       <UiPreferencesInitializer />
       <MarkdownFontSizeInitializer />
       <WheelZoomListener />
+      <ZoomIndicator />
       <SidebarModuleInitializer />
       <SessionListPreferenceInitializer />
       <ChatToolsInitializer />
