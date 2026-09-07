@@ -1689,7 +1689,7 @@ export class AgentOrchestrator {
       }
 
       // Plan 模式下允许的只读工具（不包含 Write/Edit/Bash 等写操作）
-      const PLAN_MODE_ALLOWED_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'TodoRead', 'TodoWrite', 'TaskOutput', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'ListMcpResourcesTool', 'ReadMcpResourceTool'])
+      const PLAN_MODE_ALLOWED_TOOLS = new Set(['Read', 'Glob', 'Grep', 'TodoRead', 'TodoWrite', 'TaskOutput', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet', 'ListMcpResourcesTool', 'ReadMcpResourceTool'])
       const DEFERRED_OR_PROACTIVE_TOOLS = new Set(['REPL', 'Workflow', 'ScheduleWakeup', 'Monitor', 'PushNotification', 'CronCreate', 'CronDelete', 'RemoteTrigger'])
       const PLAN_MODE_READ_ONLY_CHROME_DEVTOOLS = new Set(['mcp__chrome_devtools__list_pages', 'mcp__chrome_devtools__take_snapshot', 'mcp__chrome_devtools__take_screenshot', 'mcp__chrome_devtools__list_network_requests', 'mcp__chrome_devtools__performance_stop_trace'])
       // Planning 是本地用户数据：计划模式只允许查询，严禁创建、更新、删除或确认/推迟提醒。

@@ -42,7 +42,7 @@ interface ConnectorsTabProps {
   workspaceSlug: string
   projectId?: string | null
   onUserMcpChanged?: () => void
-  /** 要自动打开的连接器完整 id（带 kind 命名空间，如 api:web-search / builtin:chrome-devtools） */
+  /** 要自动打开的连接器完整 id（带 kind 命名空间，如 builtin:chrome-devtools） */
   openConnectorId?: string | null
   onOpenConnectorConsumed?: () => void
   onRequestDeleteMcp?: (name: string) => void

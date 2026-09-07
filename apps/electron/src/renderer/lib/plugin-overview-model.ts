@@ -48,7 +48,7 @@ export interface PluginOverviewModel {
 
 function connectorPendingItem(item: ConnectorItem): PluginOverviewItem {
   return {
-    // id 与 actionConnectorId 均用带 kind 命名空间的完整 id（如 api:web-search / mcp:web-search），
+    // id 与 actionConnectorId 均用带 kind 命名空间的完整 id（如 builtin:chrome-devtools），
     // 避免自建 MCP 与内置/API 连接器同名时误路由或 React key 冲突（PR #111 同源教训）。
     id: `connector:${item.id}`,
     title: item.name,
