@@ -59,33 +59,41 @@ import {
 import { setFilePanelDragData, dispatchInsertFileMention } from '@/lib/file-panel-drag'
 import { groupOutboxFilesByType } from './outbox-file-grouping'
 
-/** 计算目标路径相对 rootPath 的祖先目录集合（不含 rootPath 自身、含目标的所有上级） */
+/** 路径比较归一化：统一分隔符为 / 并转小写（Windows 大小写不敏感、正反斜杠等价）
+ *
+ * rootPath（来自项目/worktree 注册表）与 listDirectory 返回的 entry.path（Node resolve
+ * 后的反斜杠）风格可能不一致，祖先集合与 FileTreeItem 比较都必须用同一归一化键。 */
+export function normalizePathKey(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase()
+}
+
+/** 计算目标路径相对 rootPath 的祖先目录集合（不含 rootPath 自身、含目标的所有上级）。
+ * 返回归一化键（正斜杠 + 小写），FileTreeItem 需用 normalizePathKey(entry.path) 比对。 */
 export function computeRevealAncestors(rootPath: string, targetPath: string): Set<string> {
   const ancestors = new Set<string>()
   if (!rootPath || !targetPath) return ancestors
-  // 归一化：移除尾部分隔符
-  const root = rootPath.replace(/[/\\]+$/, '')
-  if (targetPath === root) return ancestors
-  const sep = targetPath.includes('\\') ? '\\' : '/'
-  if (!targetPath.startsWith(root + sep)) return ancestors
-  // 取相对 root 的部分，逐级累加
-  const relative = targetPath.slice(root.length + sep.length)
-  const parts = relative.split(/[/\\]/).filter(Boolean)
+  const rootNorm = normalizePathKey(rootPath).replace(/\/$/, '')
+  const targetNorm = normalizePathKey(targetPath)
+  if (targetNorm === rootNorm) return ancestors
+  if (!targetNorm.startsWith(rootNorm + '/')) return ancestors
+  const relative = targetNorm.slice(rootNorm.length + 1)
+  const parts = relative.split('/').filter(Boolean)
   // 文件本身不算祖先，只到父目录
-  let current = root
+  let current = rootNorm
   for (let i = 0; i < parts.length - 1; i++) {
-    current = current + sep + parts[i]
+    current = current + '/' + parts[i]
     ancestors.add(current)
   }
   return ancestors
 }
 
-/** 判断目标路径是否落在 rootPath 内 */
+/** 判断目标路径是否落在 rootPath 内（大小写不敏感 + 分隔符无关） */
 export function isPathUnderRoot(rootPath: string, targetPath: string): boolean {
   if (!rootPath || !targetPath) return false
-  const root = rootPath.replace(/[/\\]+$/, '')
-  if (targetPath === root) return true
-  return targetPath.startsWith(root + '/') || targetPath.startsWith(root + '\\')
+  const rootNorm = normalizePathKey(rootPath).replace(/\/$/, '')
+  const targetNorm = normalizePathKey(targetPath)
+  if (targetNorm === rootNorm) return true
+  return targetNorm.startsWith(rootNorm + '/')
 }
 
 interface FileBrowserProps {
@@ -543,8 +551,8 @@ function FileTreeItem({
     if (revealTs === 0) return
 
     const cleanups: Array<() => void> = []
-    const isAncestor = revealAncestors.has(entry.path)
-    const isTarget = revealTarget !== null && entry.path === revealTarget
+    const isAncestor = revealAncestors.has(normalizePathKey(entry.path))
+    const isTarget = revealTarget !== null && normalizePathKey(entry.path) === normalizePathKey(revealTarget)
 
     const scrollToTarget = (): void => {
       requestAnimationFrame(() => {
