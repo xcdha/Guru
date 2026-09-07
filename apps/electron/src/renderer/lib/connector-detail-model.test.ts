@@ -54,14 +54,7 @@ describe('connector-detail-model', () => {
     expect(meta.nextStep).toContain('去配置')
   })
 
-  test('describes web search and nano-banana by config method, not MCP', () => {
-    expect(describeConnectorDetail(item({
-      kind: 'api-tool',
-      sourceId: 'web-search',
-      name: '联网搜索',
-      typeLabel: 'API',
-    })).configMethodLabel).toContain('Tavily')
-
+  test('describes nano-banana by config method, not MCP', () => {
     expect(describeConnectorDetail(item({
       kind: 'builtin-mcp',
       sourceId: 'nano-banana',

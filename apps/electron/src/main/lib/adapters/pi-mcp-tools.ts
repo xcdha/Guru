@@ -151,13 +151,17 @@ function createTransport(name: string, config: PiMcpServerConfig, fetchFn?: type
       return undefined
     }
     const headers = getHeaders(config)
+    // SSE 分支同样支持代理感知 fetch（构造时由 createConnection 解析代理后传入）。
+    // EventSource 长连接流必须与 POST 握手走同一 fetch：SDK 里
+    // fetchImpl = eventSourceInit?.fetch ?? _fetch ?? fetch，若不在此处用 fetchFn，
+    // SSE 事件流会退回到裸全局 fetch（不读代理）导致 GFW 下连不上。
+    const baseFetch = fetchFn ?? fetch
     return new SSEClientTransport(new URL(config.url), {
       requestInit: headers ? { headers } : undefined,
-      // SSE 分支同样支持代理感知 fetch（构造时由 createConnection 解析代理后传入）
       ...(fetchFn ? { fetch: fetchFn } : {}),
       eventSourceInit: headers
         ? ({
-          fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, {
+          fetch: (input: RequestInfo | URL, init?: RequestInit) => baseFetch(input, {
             ...init,
             headers: {
               ...(init?.headers as Record<string, string> | undefined),

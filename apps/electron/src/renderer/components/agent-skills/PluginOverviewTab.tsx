@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Globe,
   Plug,
-  Sparkles,
   Users,
   Wrench,
 } from 'lucide-react'
@@ -246,8 +245,6 @@ function RecommendationIcon({ id }: { id: string }): React.ReactElement {
   switch (id) {
     case 'chrome-devtools':
       return <Globe size={16} />
-    case 'web-search':
-      return <Sparkles size={16} />
     case 'nano-banana':
       return <Plug size={16} />
     default:

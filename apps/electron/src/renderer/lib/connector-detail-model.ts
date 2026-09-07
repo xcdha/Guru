@@ -12,7 +12,7 @@ export function describeConnectorDetail(
   /** AI 生图当前协议（仅 builtin:nano-banana 使用；不传按 gemini） */
   imageProvider: 'gemini' | 'openai-images' = 'gemini',
 ): ConnectorDetailMeta {
-  // 按带 kind 命名空间的完整 id 判定，避免用户自建同名 MCP（如 mcp:web-search）误拿内置连接器的配置文案。
+  // 按带 kind 命名空间的完整 id 判定，避免用户自建同名 MCP（如 mcp:xxx）误拿内置连接器的配置文案。
   switch (item.id) {
     case 'builtin:chrome-devtools':
       return {
@@ -35,13 +35,6 @@ export function describeConnectorDetail(
             capabilities: ['按描述生成图片', '在已有图片上继续编辑'],
             nextStep: nextStepOf(item, '填写 Gemini API Key，然后启用'),
           }
-    case 'api:web-search':
-      return {
-        permissionLabel: '网络 · 调用搜索 API',
-        configMethodLabel: 'Tavily API Key',
-        capabilities: ['搜索互联网获取实时信息'],
-        nextStep: nextStepOf(item, '填写 Tavily API Key，然后启用'),
-      }
     default:
       break
   }
