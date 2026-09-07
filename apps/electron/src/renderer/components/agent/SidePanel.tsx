@@ -455,6 +455,8 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
 
   // Agent 写文件触发自动定位时，把 Tab 切到 Files，让"最近修改"高亮落在可见面板上。
   // 用户搜索点击（select=true）不抢占 Tab；ts 去重确保用户手动切回后不会被重新抢占。
+  // 例外：用户正停留在「文件改动(changes)」页时不被抢跳——改动的文件会实时出现在改动列表，
+  // 强制切走会打断查看；FileBrowser 的 reveal 高亮不依赖切 tab（切过去自然高亮）。
   const autoRevealSignal = useAtomValue(fileBrowserAutoRevealAtom)
   const consumedTabRevealTsRef = React.useRef(0)
   React.useEffect(() => {
@@ -475,7 +477,9 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
     if (!nextSource) return
     consumedTabRevealTsRef.current = autoRevealSignal.ts
     setFileSourceFilter(nextSource)
-    if (activeTab !== 'files' && activeTab !== 'session' && activeTab !== 'workspace') onTabChange('files')
+    // 用户在「文件改动(changes)」页时保留其视图不被抢跳（改动列表实时更新）；
+    // 其余非 files 场景（chat 等）仍切到 files 让最近修改高亮可见。
+    if (activeTab !== 'files' && activeTab !== 'session' && activeTab !== 'workspace' && activeTab !== 'changes') onTabChange('files')
   }, [autoRevealSignal, sessionId, sessionPath, projectFilesPath, attachedDirs, attachedFiles, wsAttachedDirs, wsAttachedFiles, activeTab, onTabChange, setFileSourceFilter])
 
   // RightSidePanel 完全由用户控制，不因 Agent 文件变更自动打开
