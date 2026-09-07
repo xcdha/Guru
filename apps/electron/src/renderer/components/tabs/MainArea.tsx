@@ -320,12 +320,6 @@ export function MainArea(): React.ReactElement {
   }, [splitRatio, setSplitRatio])
 
   React.useEffect(() => {
-    if (tabs.length === 0) {
-      console.warn('[FLASH-DEBUG] MainArea: tabs.length === 0, showing WelcomeView!', new Error().stack)
-    }
-  }, [tabs.length])
-
-  React.useEffect(() => {
     if (tabs.length > 0 && !activeTabId) {
       setActiveTabId(tabs[0]!.id)
     }
