@@ -10,11 +10,37 @@ body,
 }
 
 .codeclaw-root {
+  /* 默认（中）档位：220 窗口。s/l 由下方 size-* 覆盖窗口边长并调整 --cl-scale，
+   * 让整卡（含内部 mascot/status/glow）随窗口等比缩放，避免固定 220 布局在 160/280
+   * 窗口下裁切或留白（此前只有 mascot/status 单独 scale，root/card 仍 220 导致 UI 溢出）。 */
+  --cl-scale: 1;
   width: 220px;
   height: 220px;
-  display: grid;
-  place-items: center;
+  /* flex 居中：子项（.codeclaw-card 布局 200px）在 s/l 档窗口(160/280)下比容器窄或宽时
+   * 都能对称居中——grid place-items 在子项宽于容器时向 start 溢出，导致 s 档视觉偏右下、
+   * 底部被裁（实测 status 溢出窗口底边）。 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
+}
+
+/* 尺寸档位：root 边长与窗口一致（s=160 / l=280），整卡按比例缩放 */
+.codeclaw-root.size-s {
+  width: 160px;
+  height: 160px;
+  --cl-scale: 0.7273; /* 160/220 */
+}
+.codeclaw-root.size-l {
+  width: 280px;
+  height: 280px;
+  --cl-scale: 1.2727; /* 280/220 */
+}
+/* 缩放基准用中心点：origin bottom 在放大/缩小时分别向上下两侧溢出窗口（实测 s 档 status
+ * 溢出底边、l 档 mascot 溢出顶边），center 让缩放后的整卡严格居中于窗口。 */
+.codeclaw-root.size-s .codeclaw-card,
+.codeclaw-root.size-l .codeclaw-card {
+  transform-origin: center center;
 }
 
 .codeclaw-card {
@@ -27,18 +53,19 @@ body,
   cursor: grab;
   color: white;
   outline: none;
+  transform: scale(var(--cl-scale, 1));
   transform-origin: center bottom;
   transition: transform 180ms cubic-bezier(.2, 0, 0, 1), filter 180ms ease;
 }
 
 .codeclaw-card:hover {
-  transform: translateY(-4px) scale(1.015);
+  transform: translateY(-4px) scale(calc(var(--cl-scale, 1) * 1.015));
   filter: drop-shadow(0 18px 26px rgba(4, 18, 64, .32));
 }
 
 .codeclaw-card.dragging {
   cursor: grabbing;
-  transform: scale(1.03);
+  transform: scale(calc(var(--cl-scale, 1) * 1.03));
 }
 
 .codeclaw-glow {
@@ -450,13 +477,13 @@ body,
 
 /* ---- 睡眠序列：宠物下沉、去 hover 上浮、呼吸变慢 ---- */
 .codeclaw-card.codeclaw-sleep-sleeping {
-  transform: translateY(10px) scale(.96);
+  transform: translateY(10px) scale(calc(var(--cl-scale, 1) * .96));
   filter: brightness(.82) saturate(.9);
   cursor: default;
   transition: transform 900ms ease, filter 900ms ease;
 }
 .codeclaw-card.codeclaw-sleep-sleeping:hover {
-  transform: translateY(10px) scale(.96);
+  transform: translateY(10px) scale(calc(var(--cl-scale, 1) * .96));
   filter: brightness(.82) saturate(.9);
 }
 .codeclaw-card.codeclaw-sleep-sleeping .codeclaw-mascot {
@@ -485,7 +512,10 @@ body,
 
 /* ---- Mini 模式 ---- */
 .codeclaw-root.codeclaw-mini {
-  place-items: stretch;
+  /* root 已改 flex（见 .codeclaw-root），mini 时维持居中即可；
+   * mini 场景窗口保持当前 size（通常 m=220），card 固定 220 填满窗口。 */
+  align-items: center;
+  justify-content: center;
 }
 .codeclaw-root.codeclaw-mini .codeclaw-card {
   width: 220px;
@@ -493,6 +523,12 @@ body,
   transform: none;
   filter: none;
   cursor: pointer;
+}
+/* mini + 非默认尺寸：card 跟随 --cl-scale 缩放到窗口内（否则 s/l 窗口下 mini 内容溢出被裁）。
+ * 选择器与 .codeclaw-card 的 size-* 缩放同源，仅在此补回 transform 覆盖 mini 的 none。 */
+.codeclaw-root.codeclaw-mini.size-s .codeclaw-card,
+.codeclaw-root.codeclaw-mini.size-l .codeclaw-card {
+  transform: scale(var(--cl-scale, 1));
 }
 .codeclaw-root.codeclaw-mini .codeclaw-card:hover {
   transform: none;
@@ -670,28 +706,18 @@ body,
    CodeClaw v2.1 —— 尺寸档位 / DND / 会话 HUD
    ============================================ */
 
-/* ---- 尺寸档位：root 按窗口实际尺寸，内容按档位缩放 ---- */
-.codeclaw-root.size-s .codeclaw-mascot,
-.codeclaw-root.size-s .codeclaw-eye-tracked {
-  transform: scale(.72);
-  transform-origin: center bottom;
+/* ---- 尺寸档位：root 边长与窗口一致，整卡（.codeclaw-card，含 mascot/status/glow/hud-toggle/dnd-badge）
+     统一按 --cl-scale 缩放（见 .codeclaw-root 与 .codeclaw-card 定义），子元素不再单独 scale，
+     避免二次叠加。HUD/权限气泡是 root 直接子浮层（非 card 内），窗口变窄/变宽时需单独跟随缩放。 ---- */
+.codeclaw-root.size-s .codeclaw-bubble,
+.codeclaw-root.size-s .codeclaw-hud {
+  transform: translateX(-50%) scale(.75);
+  transform-origin: top center;
 }
-.codeclaw-root.size-s .codeclaw-status {
-  transform: scale(.78);
-  transform-origin: center bottom;
-}
-.codeclaw-root.size-s .codeclaw-hud-toggle,
-.codeclaw-root.size-s .codeclaw-dnd-badge {
-  transform: scale(.8);
-}
-.codeclaw-root.size-l .codeclaw-mascot,
-.codeclaw-root.size-l .codeclaw-eye-tracked {
-  transform: scale(1.28);
-  transform-origin: center bottom;
-}
-.codeclaw-root.size-l .codeclaw-status {
-  transform: scale(1.12);
-  transform-origin: center bottom;
+.codeclaw-root.size-l .codeclaw-bubble,
+.codeclaw-root.size-l .codeclaw-hud {
+  transform: translateX(-50%) scale(1.2);
+  transform-origin: top center;
 }
 
 /* ---- 免打扰标记 ---- */
