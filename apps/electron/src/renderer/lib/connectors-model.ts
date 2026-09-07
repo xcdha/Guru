@@ -168,7 +168,6 @@ function categoryLabelOfBuiltin(category: BuiltinMcpCategory): string {
 
 function categoryLabelOfTool(tool: ChatToolMeta): string {
   // custom 工具在 buildConnectorItems 里已被单独分流为「自定义」，此处只会收到 builtin 工具。
-  if (tool.id === 'web-search') return '搜索'
   if (tool.id === 'nano-banana') return '媒体'
   return '搜索'
 }

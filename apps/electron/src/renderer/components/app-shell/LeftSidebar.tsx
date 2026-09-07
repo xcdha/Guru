@@ -2919,6 +2919,19 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
 
   const agentArchivedVirtualRows = React.useMemo<VirtualSidebarRow[]>(() => {
     const rows: VirtualSidebarRow[] = []
+    // 归档列表为空时的占位提示（与活跃列表“暂无会话”空态一致；可达：进入归档视图后全部被解档）
+    if (archivedAgentSessionGroups.length === 0) {
+      rows.push({
+        id: 'agent-archived-empty',
+        estimateSize: 60,
+        content: (
+          <div className="flex h-16 items-center justify-center">
+            <div className="px-4 text-center text-[12px] leading-relaxed text-foreground/35">暂无归档会话</div>
+          </div>
+        ),
+      })
+      return rows
+    }
     for (const group of archivedAgentSessionGroups) {
       rows.push({
         id: `agent-archived-date-${group.label}`,
@@ -3330,6 +3343,19 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
     ].find((item) => treeContainsSessionId(item, activeSessionId))
     return parentItem ? `agent-${parentItem.session.id}` : null
   }, [activeSessionId, agentActiveVirtualRows, displayProjectGroups, pinnedAgentSessionTrees])
+
+  // 归档视图当前高亮行的滚动定位 id（活跃视图有 activeAgentRowId，归档分支也应支持自动滚动）
+  const activeArchivedAgentRowId = React.useMemo(() => {
+    if (!activeSessionId) return null
+    const directRow = agentArchivedVirtualRows.find((row) => (
+      row.id === `agent-archived-${activeSessionId}` || row.id === `agent-archived-child-${activeSessionId}`
+    ))
+    if (directRow) return directRow.id
+    const parentItem = archivedAgentSessionGroups
+      .flatMap((group) => group.items)
+      .find((item) => treeContainsSessionId(item, activeSessionId))
+    return parentItem ? `agent-archived-${parentItem.session.id}` : null
+  }, [activeSessionId, agentArchivedVirtualRows, archivedAgentSessionGroups])
 
   // ===== 折叠状态：精简图标视图 =====
   // 折叠/展开按钮已迁移至 TabBar（紧邻标签标题，见 TabBar.tsx），与标签栏天然对齐，
@@ -4181,6 +4207,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
           key="agent-archived-list"
           className="flex-1 px-2 pb-3"
           rows={agentArchivedVirtualRows}
+          activeRowId={activeArchivedAgentRowId}
         />
       ) : (
         <>
