@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { PROJECT_TERMS } from '@/lib/workspace-project-terminology'
-import { FileBrowser, FileDropZone, FileTypeIcon, FileSearchBar, computeRevealAncestors, isPathUnderRoot, computeTreeRowLayout, AncestorGuides, STICKY_ROW_BASE_CLASS, canBeSticky } from '@/components/file-browser'
+import { FileBrowser, FileDropZone, FileTypeIcon, FileSearchBar, computeRevealAncestors, normalizePathKey, isPathUnderRoot, computeTreeRowLayout, AncestorGuides, STICKY_ROW_BASE_CLASS, canBeSticky } from '@/components/file-browser'
 import { DiffPanelTabBar } from '@/components/diff/DiffPanelTabBar'
 import { DiffChangesList } from '@/components/diff/DiffChangesList'
 import { ChatView } from '@/components/chat/ChatView'
@@ -1175,8 +1175,8 @@ function AttachedDirItem({ entry, depth, selectedPaths, onSelect, refreshVersion
   React.useEffect(() => {
     if (revealTs === 0 || !revealTarget) return
 
-    const isAncestor = !!revealAncestors && revealAncestors.has(currentPath)
-    const isTarget = currentPath === revealTarget
+    const isAncestor = !!revealAncestors && revealAncestors.has(normalizePathKey(currentPath))
+    const isTarget = normalizePathKey(currentPath) === normalizePathKey(revealTarget)
 
     const scrollToTarget = (): void => {
       requestAnimationFrame(() => {
