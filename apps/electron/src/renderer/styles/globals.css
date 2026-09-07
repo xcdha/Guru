@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* 注：曾在此 @import Google Fonts 的 JetBrains Mono，但应用 CSP（style-src 'self' 'unsafe-inline'）
+ * 会阻止远程样式表，导致每次启动刷警告且字体从未真正加载。
+ * JetBrains Mono 依赖系统已安装字体（font-family 栈里已声明，装了即可命中），不依赖远程加载。 */
 
 @tailwind base;
 @tailwind components;

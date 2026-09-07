@@ -7,7 +7,7 @@
  */
 
 import { atom } from 'jotai'
-import { atomFamily } from 'jotai/utils'
+import { atomFamily } from 'jotai-family'
 
 /** 折叠态映射（key = `${mode}:${moduleId}`，如 `agent:projects`） */
 export const sidebarModuleCollapsedMapAtom = atom<Record<string, boolean>>({})

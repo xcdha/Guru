@@ -60,10 +60,10 @@ function TabContentView({ tabId }: TabContentProps): React.ReactElement {
     if (tab?.type === 'agent') hasShownAgentSessionRef.current = true
   }, [tab?.sessionId, tab?.type])
 
-  // [FLASH-DEBUG] 监控 tab 查找失败（说明 tabId 指向了不存在的标签）
+  // 监控 tab 查找失败（说明 tabId 指向了不存在的标签，属异常路径）
   React.useEffect(() => {
     if (!tab) {
-      console.warn(`[FLASH-DEBUG] TabContent: tab not found for tabId="${tabId}"`, { tabIds: tabs.map(t => t.id) })
+      console.warn(`[TabContent] tab not found for tabId="${tabId}"`, { tabIds: tabs.map(t => t.id) })
     }
   }, [tab, tabId, tabs])
 
