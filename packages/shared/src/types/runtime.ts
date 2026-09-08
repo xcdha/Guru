@@ -271,6 +271,8 @@ export interface DetachedPreviewWindowInput {
   workspaceSkillSlug?: string
   /** Original absolute Skill entry path used as a legacy fallback. */
   legacySkillFilePath?: string
+  /** 仅由可信 UI（文件面板用户主动选择）允许超出会话授权根预览本地文件。 */
+  unrestricted?: boolean
   /** 窗口标题 */
   title?: string
 }

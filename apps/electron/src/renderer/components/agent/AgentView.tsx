@@ -22,6 +22,7 @@ import { AgentMessages } from './AgentMessages'
 import { AgentHeader } from './AgentHeader'
 import { CoworkTeamStrip } from './CoworkTeamStrip'
 import { AgentMessageQueue } from './AgentMessageQueue'
+import { SkillMentionNamesProvider } from './SkillMentionNamesProvider'
 import { ContextUsageBadge } from './ContextUsageBadge'
 import { PermissionBanner } from './PermissionBanner'
 import { PermissionModeSelector } from './PermissionModeSelector'
@@ -3301,7 +3302,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
   // isEmptySession 已在发送逻辑前提前派生，供 Project/Git 选择器和首发准备共用。
 
   return (
-    <>
+    <SkillMentionNamesProvider workspaceSlug={workspaceSlug}>
     <AgentSessionProvider sessionId={sessionId}>
       <div
         className="agent-workbench flex h-full min-h-0 flex-1 min-w-0 max-w-[min(80rem,100%)] flex-col overflow-hidden mx-auto"
@@ -3555,7 +3556,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
         <AlertDialogHeader>
           <AlertDialogTitle>确认回退</AlertDialogTitle>
           <AlertDialogDescription>
-            回退将截断该消息之后的所有对话，并恢复文件到该时刻的状态。此操作不可撤销，确定要回退吗？
+            回退将截断该消息之后的所有对话。此操作不可撤销，确定要回退吗？
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -3569,6 +3570,6 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    </>
+    </SkillMentionNamesProvider>
   )
 }

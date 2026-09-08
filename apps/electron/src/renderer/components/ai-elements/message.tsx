@@ -42,7 +42,7 @@ import {
 import { LoadingIndicator } from '@/components/ui/loading-indicator'
 import { CodeBlock, MermaidBlock } from '@guru/ui'
 import { detectLanguage } from '@guru/core'
-import { FilePathChip, isAbsoluteFilePath, isImageFilePath, isRelativeFilePath } from './file-path-chip'
+import { FilePathChip, isAbsoluteFilePath, isImageFilePath, isLocalFileReference, isRelativeFilePath } from './file-path-chip'
 import { buildAgentHistoryQuoteLabel, parseAgentHistoryQuoteMention } from '@/lib/quoted-selection'
 import { useAgentBrowserLink } from '@/components/browser/AgentBrowserLinkProvider'
 import type { HTMLAttributes, ComponentProps, ReactNode } from 'react'
@@ -282,13 +282,19 @@ function safeDecode(raw: string): string {
 }
 
 /**
- * 附加 basePaths 上下文 — 用于把会话目录与附加目录穿透到各类文件 chip。
+ * 消息所属会话的路径解析上下文。嵌入显示子会话时，不能借用主会话的授权边界。
  */
-const BasePathsContext = React.createContext<string[] | undefined>(undefined)
+interface MessagePathResolutionContext {
+  basePaths?: string[]
+  sessionId?: string
+}
 
-/** 提供附加目录候选给所有内嵌的 MessageResponse。 */
-export function BasePathsProvider({ basePaths, children }: { basePaths?: string[]; children: React.ReactNode }): React.ReactElement {
-  return <BasePathsContext.Provider value={basePaths}>{children}</BasePathsContext.Provider>
+const BasePathsContext = React.createContext<MessagePathResolutionContext | undefined>(undefined)
+
+/** 提供会话与附加目录候选给所有内嵌的 MessageResponse。 */
+export function BasePathsProvider({ basePaths, sessionId, children }: MessagePathResolutionContext & { children: React.ReactNode }): React.ReactElement {
+  const value = React.useMemo(() => ({ basePaths, sessionId }), [basePaths, sessionId])
+  return <BasePathsContext.Provider value={value}>{children}</BasePathsContext.Provider>
 }
 
 /** 仅在普通文本中转换旧引用，避免改写 inline code、fenced code 和缩进代码块。 */
@@ -342,13 +348,14 @@ function normalizeNamedReferenceDelimiters(markdown: string): string {
 function MentionChip({ type, value }: { type: MentionType; value: string }): React.ReactElement {
   const style = MENTION_STYLES[type]
   const Icon = style.icon
+  const pathResolutionContext = React.useContext(BasePathsContext)
+  const contextBasePaths = pathResolutionContext?.basePaths
   const decoded = safeDecode(value)
-  const contextBasePaths = React.useContext(BasePathsContext)
 
   // 图片引用原先会以内联图片显示。改为 chip 后仍沿用同一文件预览入口，
   // 避免用户只能看到文件名而无法查看内容。
   if (type === 'file' && isImageFilePath(decoded)) {
-    return <FilePathChip filePath={decoded} basePaths={contextBasePaths} />
+    return <FilePathChip filePath={decoded} basePaths={contextBasePaths} sessionId={pathResolutionContext?.sessionId} />
   }
 
   const isNamedReference = type === 'session' || type === 'todo' || type === 'calendar_event'
@@ -513,6 +520,9 @@ const MarkdownLink = React.memo(function MarkdownLink({
   ...linkProps
 }: React.AnchorHTMLAttributes<HTMLAnchorElement>): React.ReactElement {
   const agentBrowserLink = useAgentBrowserLink()
+  // 会话路径解析上下文（候选 basePaths + 所属 sessionId），供本地文件 chip 穿透授权边界
+  const pathResolutionContext = React.useContext(BasePathsContext)
+  const contextBasePaths = pathResolutionContext?.basePaths
   // mention:// 协议 → 渲染为 MentionChip
   if (href) {
     const mentionMatch = MENTION_URL_RE.exec(href)
@@ -522,7 +532,7 @@ const MarkdownLink = React.memo(function MarkdownLink({
 
     const filePath = safeDecode(href)
     if (isAbsoluteFilePath(filePath)) {
-      return <FilePathChip filePath={filePath} />
+      return <FilePathChip filePath={filePath} basePaths={contextBasePaths} sessionId={pathResolutionContext?.sessionId} />
     }
   }
 
@@ -543,6 +553,63 @@ const MarkdownLink = React.memo(function MarkdownLink({
       {linkChildren}
     </a>
   )
+})
+
+/**
+ * 将 Agent Markdown 中的本地图片路径转换为经主进程授权的可加载 URL（guru-file/file 协议）。
+ *
+ * 浏览器无法直接加载 `~`、绝对本地路径或 Agent cwd 下的相对路径；必须先通过
+ * file:resolve-path 解析，避免把本地路径暴露给 renderer，也保留会话授权边界。
+ */
+const MarkdownImage = React.memo(function MarkdownImage({
+  src,
+  alt = '',
+  ...imageProps
+}: React.ImgHTMLAttributes<HTMLImageElement>): React.ReactElement | null {
+  const pathResolutionContext = React.useContext(BasePathsContext)
+  const contextBasePaths = pathResolutionContext?.basePaths
+  const [resolvedSrc, setResolvedSrc] = React.useState<string | null>(null)
+  const [failed, setFailed] = React.useState(false)
+  const decodedSrc = src ? safeDecode(src) : ''
+  const isLocalSource = isLocalFileReference(decodedSrc)
+
+  React.useEffect(() => {
+    if (!isLocalSource) {
+      setResolvedSrc(null)
+      setFailed(false)
+      return
+    }
+
+    let cancelled = false
+    setResolvedSrc(null)
+    setFailed(false)
+    void window.electronAPI.resolveFilePath(decodedSrc, {
+      sessionId: pathResolutionContext?.sessionId,
+      candidateBasePaths: contextBasePaths?.length ? contextBasePaths : undefined,
+    }).then((result) => {
+      if (cancelled) return
+      if (!result) {
+        setFailed(true)
+        return
+      }
+      setResolvedSrc(result.url)
+    }).catch(() => {
+      if (!cancelled) setFailed(true)
+    })
+
+    return () => { cancelled = true }
+  }, [contextBasePaths, decodedSrc, isLocalSource, pathResolutionContext?.sessionId])
+
+  if (!src) return null
+  if (!isLocalSource) return <img src={src} alt={alt} {...imageProps} />
+  if (!resolvedSrc) {
+    return (
+      <span className="inline-flex max-w-full rounded bg-muted px-2 py-1 text-xs text-muted-foreground" role="img" aria-label={alt || decodedSrc}>
+        {failed ? `图片无法读取：${alt || decodedSrc}` : '正在加载图片…'}
+      </span>
+    )
+  }
+  return <img src={resolvedSrc} alt={alt} {...imageProps} onError={() => { setResolvedSrc(null); setFailed(true) }} />
 })
 
 /** 递归提取纯文本（children 可能是字符串数组） */
@@ -626,8 +693,9 @@ const MarkdownInlineCode = React.memo(function MarkdownInlineCode({
   basePaths,
   ...codeProps
 }: React.HTMLAttributes<HTMLElement> & { basePath?: string; basePaths?: string[] }): React.ReactElement {
-  // 兜底：从 context 读附加 basePaths（避免穿透 SDKMessageRenderer / ContentBlock 等中间层）
-  const ctxBasePaths = React.useContext(BasePathsContext)
+  // 兜底：从 context 读附加 basePaths 与会话（避免穿透 SDKMessageRenderer / ContentBlock 等中间层）
+  const pathResolutionContext = React.useContext(BasePathsContext)
+  const ctxBasePaths = pathResolutionContext?.basePaths
   // 本轮「文件名 → 绝对路径」映射：命中时把内联裸文件名补全为绝对路径
   const turnFileMap = React.useContext(TurnFileMapContext)
   if (codeClassName) {
@@ -647,7 +715,7 @@ const MarkdownInlineCode = React.memo(function MarkdownInlineCode({
       }
     }
     if (isAbsoluteFilePath(text)) {
-      return <FilePathChip filePath={text.trim()} basePaths={merged.length > 0 ? merged : undefined} />
+      return <FilePathChip filePath={text.trim()} basePaths={merged.length > 0 ? merged : undefined} sessionId={pathResolutionContext?.sessionId} />
     }
     if (merged.length > 0 && isRelativeFilePath(text)) {
       // 命中本轮实际触及文件的映射时，用绝对路径替换裸文件名（保留行号后缀），
@@ -661,10 +729,10 @@ const MarkdownInlineCode = React.memo(function MarkdownInlineCode({
         const baseName = pathPart.split(/[\\/]/).pop() || pathPart
         const abs = turnFileMap.get(baseName)
         if (abs) {
-          return <FilePathChip filePath={abs + suffix} basePaths={merged} />
+          return <FilePathChip filePath={abs + suffix} basePaths={merged} sessionId={pathResolutionContext?.sessionId} />
         }
       }
-      return <FilePathChip filePath={trimmed} basePaths={merged} />
+      return <FilePathChip filePath={trimmed} basePaths={merged} sessionId={pathResolutionContext?.sessionId} />
     }
   }
 
@@ -718,6 +786,7 @@ export const MessageResponse = React.memo(
     // 稳定引用的 components 对象，避免 react-markdown 每帧重建组件映射
     const components = React.useMemo(() => ({
       a: MarkdownLink,
+      img: MarkdownImage,
       pre: MarkdownPre,
       table: MarkdownTable,
       code: (props: React.HTMLAttributes<HTMLElement>) => (

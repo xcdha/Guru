@@ -64,6 +64,15 @@ Guru 已提供内置 `automation` 工具（总览里的内置能力，不是连�
 - 权限模式：定时任务默认使用 `bypassPermissions` 以支持无人值守；涉及高风险操作时不要依赖权限模式解决，应缩小 prompt 的授权范围，必要时改为先汇报、等待用户确认的流程。
 - 会话模式（`sessionMode`）：默认 `daily`，同一自然日内的触发复用同一个子会话、跨日自动新建；`reuse` 始终复用同一个子会话保留长期上下文。选择策略见下文。
 
+### 在其他工作区创建任务
+
+- `create_automation.workspaceId` 是可选的**目标工作区 ID**；不传则仍使用当前会话工作区。用户说“在 B 工作区设置”时，先调用 `list_workspaces`，按名称或 slug 找到目标，再传返回的精确 ID；不要猜 UUID、用路径代替 ID 或为了查 ID 读取其他工作区的配置文件。
+- `list_workspaces` 只返回 id、name、slug、isCurrent 和 projectRootStatus。`managed` 表示 Guru 托管项目；`available` 表示本地项目根可用。`missing`、`not_directory`、`unavailable` 时先告知用户目标根不可用，不要声称任务能正常运行。名称有歧义时先请用户确认，不静默选择同名项目。
+- 跨工作区创建前仍调用 `list_automations`，按返回的 workspaceId 检查**目标工作区**是否已有同目标任务；该工具仍返回全局列表。
+- A 会话创建到 B 后，任务归属和自动运行会话都在 B；运行时加载 B 的项目文件、工作区规则、Skills、MCP 和附加目录。渠道与模型继续继承 A 的创建会话，sourceSessionId 保留来源追踪，**不会复制 A 的会话历史或附加目录**。cwd 按 B 的自动会话规则解析，不保证等于项目根目录；prompt 引用路径时使用 B 的路径或运行时注入的项目根，不能沿用 A 的绝对路径。
+- 创建结果中的 workspaceId、workspaceName、workspaceSlug 用于核对归属，向用户明确报告目标工作区。目标不存在或被删除时重新查询，不回退当前工作区。
+- 此能力仅用于**创建时选择目标**，`update_automation` 不支持迁移工作区；不要通过修改配置文件迁移。定时任务自动执行中仍禁止递归创建新任务。
+
 ### 调度类型怎么选
 
 | scheduleType | 适用场景 | 必填字段 |
