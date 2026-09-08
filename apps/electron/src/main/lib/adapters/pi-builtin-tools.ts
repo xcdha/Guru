@@ -14,7 +14,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { extname, resolve, isAbsolute, join } from 'node:path'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
 import type { AgentToolResult } from '@earendil-works/pi-agent-core'
-import type { AgentRuntime, GuruPermissionMode, TerminalProfile } from '@guru/shared'
+import type { AgentRuntime, AgentWorkspace, GuruPermissionMode, TerminalProfile } from '@guru/shared'
 import type {
   CreateAutomationInput,
   UpdateAutomationInput,
@@ -85,6 +85,12 @@ import {
 } from './automation-tool-schema'
 import type { ProductivityToolsSettings } from '../../../types'
 import { getConfiguredVaultFileSystem, getVaultConfig } from '../vault-service'
+import {
+  getAgentWorkspace,
+  getLocalProjectRootStatus,
+  listAgentWorkspaces,
+} from '../agent-workspace-manager'
+import { resolveAutomationWorkspace, summarizeAutomationWorkspace } from './automation-workspace'
 
 type PiSdk = typeof import('@earendil-works/pi-coding-agent')
 
@@ -158,7 +164,15 @@ interface AutomationSummary {
   [key: string]: unknown
 }
 
-function summarizeAutomation(a: import('@guru/shared').Automation, includeHistory: boolean): AutomationSummary {
+function summarizeAutomation(
+  a: import('@guru/shared').Automation,
+  includeHistory: boolean,
+  workspacesById?: ReadonlyMap<string, AgentWorkspace>,
+): AutomationSummary {
+  // 列表使用本次请求的索引快照；失效归属也不回退逐项磁盘读取。
+  const workspace = a.workspaceId
+    ? (workspacesById ? workspacesById.get(a.workspaceId) : getAgentWorkspace(a.workspaceId))
+    : undefined
   return {
     id: a.id,
     name: a.name,
@@ -177,6 +191,8 @@ function summarizeAutomation(a: import('@guru/shared').Automation, includeHistor
     completedAt: a.completedAt,
     sessionMode: a.sessionMode,
     workspaceId: a.workspaceId,
+    workspaceName: workspace?.name,
+    workspaceSlug: workspace?.slug,
     executionMode: a.executionMode ?? 'run_only',
     projectId: a.projectId,
     sourceSessionId: a.sourceSessionId,
@@ -247,7 +263,24 @@ function validateScheduleFields(input: Partial<CreateAutomationInput | UpdateAut
 }
 
 function buildAutomationTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefinition[] {
+  // 工作区索引快照：列表/详情归属只做装饰，不逐项回退磁盘读取。
+  const workspacesById = new Map(listAgentWorkspaces().map((workspace) => [workspace.id, workspace]))
   return [
+    sdk.defineTool({
+      name: 'mcp__automation__list_workspaces',
+      label: '列出定时任务目标工作区',
+      description: '查询可作为定时任务创建目标的工作区，仅返回 ID、名称、slug、是否当前工作区和项目根状态，不读取文件内容。跨工作区创建前先查询并用精确 ID 选择；重名时向用户确认。managed 表示托管项目；missing/not_directory/unavailable 表示本地项目根不可用。',
+      parameters: Type.Object({}),
+      async execute() {
+        const workspaces = listAgentWorkspaces().map((workspace) => {
+          const projectRootStatus = getLocalProjectRootStatus(workspace.projectRootPath)
+          return projectRootStatus ? { ...workspace, projectRootStatus } : workspace
+        })
+        return jsonToolResult({
+          workspaces: workspaces.map((workspace) => summarizeAutomationWorkspace(workspace, ctx.workspaceId)),
+        })
+      },
+    }),
     sdk.defineTool({
       name: 'mcp__automation__list_automations',
       label: '列出定时任务',
@@ -260,7 +293,7 @@ function buildAutomationTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
         const args = params as { active?: boolean; includeHistory?: boolean }
         const items = listAutomations()
           .filter((a) => args.active === undefined || a.active === args.active)
-          .map((a) => summarizeAutomation(a, args.includeHistory === true))
+          .map((a) => summarizeAutomation(a, args.includeHistory === true, workspacesById))
         return jsonToolResult({ automations: items })
       },
     }),
@@ -277,19 +310,20 @@ function buildAutomationTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
         if (!id) throw new Error('id 必填；只有定时任务自动执行中才可以省略 id')
         const automation = getAutomation(id)
         if (!automation) throw new Error(`定时任务不存在: ${id}`)
-        return jsonToolResult({ automation: summarizeAutomation(automation, true) })
+        return jsonToolResult({ automation: summarizeAutomation(automation, true, workspacesById) })
       },
     }),
     sdk.defineTool({
       name: 'mcp__automation__create_automation',
       label: '创建定时任务',
-      description: '创建 Guru 持久化定时任务。适合无人值守、有稳定价值的场景。纯提醒/闹钟、需要用户实时参与判断、或现在就该做完即终结的事不要创建。',
+      description: '创建 Guru 持久化定时任务。可通过 workspaceId 指定其他工作区，先用 list_workspaces 查询；省略则使用当前会话工作区。适合无人值守、有稳定价值的场景。纯提醒/闹钟、需要用户实时参与判断、或现在就该做完即终结的事不要创建。',
       parameters: automationCreateToolParameters,
       async execute(_toolCallId: string, params: unknown) {
         const args = params as Record<string, unknown>
         if (ctx.triggeredBy === 'automation' || getCurrentAutomationId(ctx)) {
           throw new Error('当前是定时任务自动执行，禁止递归创建新的定时任务')
         }
+        const targetWorkspace = resolveAutomationWorkspace(args.workspaceId, ctx.workspaceId, getAgentWorkspace)
         const input: CreateAutomationInput = {
           name: assertNonBlank(args.name as string, 'name'),
           prompt: assertNonBlank(args.prompt as string, 'prompt'),
@@ -305,7 +339,7 @@ function buildAutomationTools(sdk: PiSdk, ctx: PiBuiltinToolsContext): ToolDefin
           maxRuns: args.maxRuns as number | null | undefined,
           channelId: ctx.channelId,
           modelId: ctx.modelId,
-          workspaceId: ctx.workspaceId,
+          workspaceId: targetWorkspace?.id,
           projectId: (args.executionMode as string) === 'run_only' ? undefined : ((args.projectId as string | undefined) ?? ctx.projectId),
           executionMode: args.executionMode as 'create_task' | 'run_only' | undefined,
           sessionMode: args.sessionMode as 'daily' | 'reuse' | undefined,
