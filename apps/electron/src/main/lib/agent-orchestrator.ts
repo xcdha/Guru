@@ -19,7 +19,7 @@ import { homedir } from 'node:os'
 import { basename, join, dirname } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent'
-import type { AgentSendInput, AgentMessage, AgentGenerateTitleInput, AgentProviderAdapter, AgentSessionMeta, CodexOAuthCredentials, XaiOAuthCredentials, TypedError, RetryAttempt, SDKMessage, SDKAssistantMessage, AgentStreamPayload, AgentAssistantDeltaPayload, RewindSessionResult, SkillActivation } from '@guru/shared'
+import type { AgentSendInput, AgentMessage, AgentGenerateTitleInput, AgentProviderAdapter, AgentSessionMeta, CodexOAuthCredentials, GithubCopilotOAuthCredentials, XaiOAuthCredentials, TypedError, RetryAttempt, SDKMessage, SDKAssistantMessage, AgentStreamPayload, AgentAssistantDeltaPayload, RewindSessionResult, SkillActivation } from '@guru/shared'
 import { GURU_DEFAULT_PERMISSION_MODE, PROVIDER_DEFAULT_URLS, THINKING_SIGNATURE_ERROR_CODE, THINKING_SIGNATURE_ERROR_MESSAGE, THINKING_SIGNATURE_ERROR_TITLE, isPersistableSDKSystemMessage, normalizeMcpTransportType, inferAgentSdkContextWindow, inferReasoningTransport, resolveReasoningProfile, collectSkillActivations, mergeSkillActivations } from '@guru/shared'
 import type { GuruPermissionMode, AskUserRequest, ExitPlanModeRequest, SDKSystemMessage, RecoveryAction } from '@guru/shared'
 import type { PiAgentQueryOptions } from './adapters/pi-agent-adapter'
@@ -31,7 +31,7 @@ import { isTransientNetworkError, isMalformedResponseError, isSessionNotFoundErr
 import { friendlyErrorMessage, isPromptTooLongError, isThinkingSignatureError, mapSDKErrorToTypedError, extractErrorDetails, shouldKeepChannelOpen } from './agent-error-utils'
 import { getActiveRunRejectionMessage, shouldPersistInitialUserMessage } from './agent-send-message-policy'
 import { AgentEventBus } from './agent-event-bus'
-import { decryptApiKey, getChannelById, listChannels, persistCodexOAuthCredentials, persistXaiOAuthCredentials, resolveChannelRuntimeApiKey, resolveClaudeOAuthCredentials, resolveCodexOAuthCredentials, resolveXaiOAuthCredentials } from './channel-manager'
+import { decryptApiKey, getChannelById, listChannels, persistCodexOAuthCredentials, persistGithubCopilotOAuthCredentials, persistXaiOAuthCredentials, resolveChannelRuntimeApiKey, resolveClaudeOAuthCredentials, resolveCodexOAuthCredentials, resolveGithubCopilotOAuthCredentials, resolveXaiOAuthCredentials } from './channel-manager'
 import { getAdapter, fetchTitle, getAppUserAgent } from '@guru/core'
 import pkg from '../../../package.json' with { type: 'json' }
 import { getFetchFn } from './proxy-fetch'
@@ -570,7 +570,7 @@ export class AgentOrchestrator {
     if (channel.provider === 'openai-codex') {
       return this.callCodexTitleModel(channel.id, titleModelId, prompt, signal)
     }
-    if (channel.provider === 'anthropic-oauth' || channel.provider === 'xai') return null
+    if (channel.provider === 'anthropic-oauth' || channel.provider === 'xai' || channel.provider === 'github-copilot') return null
 
     const apiKey = await resolveChannelRuntimeApiKey(channel.id)
     const providerAdapter = getAdapter(channel.provider)
@@ -1098,6 +1098,7 @@ export class AgentOrchestrator {
 
     let apiKey: string
     let codexOAuthCredentials: CodexOAuthCredentials | undefined
+    let githubCopilotOAuthCredentials: GithubCopilotOAuthCredentials | undefined
     let xaiOAuthCredentials: XaiOAuthCredentials | undefined
     try {
       // 订阅 OAuth 渠道必须保留完整凭据给 Pi runtime，才能在执行中按真实 expires
@@ -1108,6 +1109,9 @@ export class AgentOrchestrator {
         apiKey = codexOAuthCredentials.access
       } else if (channel.provider === 'anthropic-oauth') {
         apiKey = (await resolveClaudeOAuthCredentials(channelId)).token
+      } else if (channel.provider === 'github-copilot') {
+        githubCopilotOAuthCredentials = await resolveGithubCopilotOAuthCredentials(channelId)
+        apiKey = githubCopilotOAuthCredentials.access
       } else if (channel.provider === 'xai') {
         xaiOAuthCredentials = await resolveXaiOAuthCredentials(channelId)
         apiKey = xaiOAuthCredentials.access
@@ -1115,12 +1119,13 @@ export class AgentOrchestrator {
         apiKey = decryptApiKey(channelId)
       }
     } catch (err) {
-      if (channel.provider === 'openai-codex' || channel.provider === 'xai') {
+      if (channel.provider === 'openai-codex' || channel.provider === 'github-copilot' || channel.provider === 'xai') {
         const isXai = channel.provider === 'xai'
+        const isGithubCopilot = channel.provider === 'github-copilot'
         reportPreflightError({
           code: 'expired_oauth_token',
-          title: isXai ? 'xAI 登录已失效' : 'ChatGPT 登录已失效',
-          message: isXai ? '无法刷新 xAI 登录凭据，登录可能已过期或被撤销。请在设置中重新登录 xAI。' : '无法刷新 ChatGPT 登录凭据，登录可能已过期或被撤销。请在设置中重新登录 ChatGPT。',
+          title: isXai ? 'xAI 登录已失效' : isGithubCopilot ? 'GitHub Copilot 登录已失效' : 'ChatGPT 登录已失效',
+          message: isXai ? '无法刷新 xAI 登录凭据，登录可能已过期或被撤销。请在设置中重新登录 xAI。' : isGithubCopilot ? '无法刷新 GitHub Copilot 登录凭据，登录可能已过期、被撤销或不再拥有 Copilot 订阅。请在设置中重新登录。' : '无法刷新 ChatGPT 登录凭据，登录可能已过期或被撤销。请在设置中重新登录 ChatGPT。',
           actions: [
             {
               key: 's',
@@ -2070,6 +2075,7 @@ ${workContext}`
         })
       }
       const piCustomTools = [...piBuiltinTools, ...piMcpTools, ...(extensions.piCustomTools ?? [])]
+      let githubCopilotCredentialsSnapshot = githubCopilotOAuthCredentials
       // 模型粒度代理：该模型配置直连时绕过全局代理
       const proxyUrl = await resolveProxyUrlForModel(channel.models, selectedModelId)
       // 存量 anthropic-oauth 渠道（迁移前创建）的 baseUrl 可能是空串，Pi runtime
@@ -2114,6 +2120,15 @@ ${workContext}`
           codexOAuthCredentials,
           onCodexOAuthCredentialsRefreshed: (credentials: CodexOAuthCredentials) => {
             persistCodexOAuthCredentials(channelId, credentials)
+          }
+        }),
+        ...(githubCopilotOAuthCredentials && {
+          githubCopilotOAuthCredentials,
+          onGithubCopilotOAuthCredentialsRefreshed: (credentials: GithubCopilotOAuthCredentials) => {
+            const expectedCredentials = githubCopilotCredentialsSnapshot
+            if (expectedCredentials && persistGithubCopilotOAuthCredentials(channelId, credentials, expectedCredentials)) {
+              githubCopilotCredentialsSnapshot = credentials
+            }
           }
         }),
         ...(xaiOAuthCredentials && {
