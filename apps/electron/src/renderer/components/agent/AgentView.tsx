@@ -3555,7 +3555,7 @@ export function AgentView({ sessionId }: { sessionId: string }): React.ReactElem
         <AlertDialogHeader>
           <AlertDialogTitle>确认回退</AlertDialogTitle>
           <AlertDialogDescription>
-            回退将截断该消息之后的所有对话，并恢复文件到该时刻的状态。此操作不可撤销，确定要回退吗？
+            回退将截断该消息之后的所有对话。此操作不可撤销，确定要回退吗？
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

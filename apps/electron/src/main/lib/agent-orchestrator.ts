@@ -3129,7 +3129,6 @@ ${workContext}`
       remainingMessages: kept.length,
       fileRewind: {
         canRewind: false,
-        error: '已回退 Pi 对话；Pi 文件回退尚未启用，当前未修改任何文件。'
       }
     }
   }
