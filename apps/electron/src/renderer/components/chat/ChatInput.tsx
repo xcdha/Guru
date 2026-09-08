@@ -334,7 +334,7 @@ export function ChatInput({ conversationId, streaming, pendingAttachments, onSet
   }, [])
 
   const toolbarItems = React.useMemo<ToolbarItem[]>(() => [
-    { key: 'model', node: <ModelSelector excludedProviders={['openai-codex', 'xai']} useSharedOpenState /> },
+    { key: 'model', node: <ModelSelector excludedProviders={['openai-codex', 'github-copilot', 'xai']} useSharedOpenState /> },
     { key: 'thinking', node: <ChatThinkingPopover modelId={selectedModel?.modelId} /> },
     {
       key: 'attach',

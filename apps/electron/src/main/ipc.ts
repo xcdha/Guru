@@ -218,10 +218,11 @@ import {
   getChannelPlanQuota,
 } from './lib/channel-manager'
 import { loginCodexOAuth, cancelCodexOAuthLogin } from './lib/codex-oauth-service'
+import { loginGithubCopilotOAuth, cancelGithubCopilotOAuthLogin } from './lib/github-copilot-oauth-service'
 import { loginXaiOAuth, cancelXaiOAuthLogin } from './lib/xai-oauth-service'
 import { resolvePiReasoningCapability } from './lib/adapters/pi-model-registry'
-import { serializeCodexCredentials, serializeClaudeOAuthCredentials, serializeXaiCredentials } from '@guru/shared'
-import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, XaiOAuthDeviceCode } from '@guru/shared'
+import { serializeCodexCredentials, serializeClaudeOAuthCredentials, serializeGithubCopilotCredentials, serializeXaiCredentials } from '@guru/shared'
+import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, GithubCopilotOAuthDeviceCode, XaiOAuthDeviceCode } from '@guru/shared'
 import { prepareClaudeOAuthLogin, exchangeClaudeOAuthCode, cancelClaudeOAuthLogin } from './lib/claude-oauth-service'
 import {
   listConversations,
@@ -1192,7 +1193,7 @@ function resolveExcalidrawCreateName(dir: string, rawTitle: string): { finalName
   return { finalName, filePath: join(dir, `${finalName}.excalidraw`) }
 }
 
-async function withOAuthDeviceCodeQr<T extends CodexOAuthDeviceCode | XaiOAuthDeviceCode>(deviceCode: T): Promise<T> {
+async function withOAuthDeviceCodeQr<T extends CodexOAuthDeviceCode | GithubCopilotOAuthDeviceCode | XaiOAuthDeviceCode>(deviceCode: T): Promise<T> {
   try {
     const QRCode = (await import('qrcode')).default
     return { ...deviceCode, qrCodeData: await QRCode.toDataURL(deviceCode.verificationUri, { width: 240, margin: 1 }) }
@@ -1658,6 +1659,36 @@ export function registerIpcHandlers(): void {
     CHANNEL_IPC_CHANNELS.CODEX_OAUTH_CANCEL,
     async (): Promise<void> => {
       cancelCodexOAuthLogin()
+    }
+  )
+
+  // 发起 GitHub Copilot OAuth device-code 登录。Pi 在完成授权后会同步当前订阅和
+  // 组织策略可用的模型；成功后的凭据沿用 Channel.apiKey 加密存储。
+  ipcMain.handle(
+    CHANNEL_IPC_CHANNELS.GITHUB_COPILOT_OAUTH_LOGIN,
+    async (event, enterpriseUrl?: string): Promise<import('@guru/shared').GithubCopilotOAuthLoginResult> => {
+      try {
+        const credentials = await loginGithubCopilotOAuth({
+          enterpriseUrl,
+          onDeviceCode: (deviceCode) => {
+            void withOAuthDeviceCodeQr(deviceCode).then((payload) => {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(CHANNEL_IPC_CHANNELS.GITHUB_COPILOT_OAUTH_DEVICE_CODE, payload)
+              }
+            }).catch((error) => console.warn('[OAuth] 发送 GitHub Copilot device code 失败:', error))
+          },
+        })
+        return { success: true, credentials: serializeGithubCopilotCredentials(credentials) }
+      } catch (error) {
+        return { success: false, message: error instanceof Error ? error.message : String(error) }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    CHANNEL_IPC_CHANNELS.GITHUB_COPILOT_OAUTH_CANCEL,
+    async (): Promise<void> => {
+      cancelGithubCopilotOAuthLogin()
     }
   )
 

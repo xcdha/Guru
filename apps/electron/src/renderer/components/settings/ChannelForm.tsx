@@ -44,6 +44,7 @@ import {
   VOLCENGINE_CODING_PLAN_MODELS,
   parseZhipuTeamCredentials,
   parseCodexCredentials,
+  parseGithubCopilotCredentials,
   parseClaudeOAuthCredentials,
   isClaudeOAuthCredentialStale,
   parseXaiCredentials,
@@ -54,6 +55,7 @@ import type {
   ChannelModel,
   ChannelTestResult,
   CodexOAuthDeviceCode,
+  GithubCopilotOAuthDeviceCode,
   FetchModelsResult,
   ProviderType,
   XaiOAuthDeviceCode,
@@ -87,7 +89,7 @@ interface ChannelFormProps {
 }
 
 /** 所有可选供应商（'qwen-anthropic' 仅为兼容存量 Anthropic 渠道保留，不再出现在新建下拉） */
-const PROVIDER_OPTIONS: ProviderType[] = ['anthropic', 'anthropic-compatible', 'anthropic-oauth', 'openai', 'openai-responses', 'openai-codex', 'xai', 'google', 'deepseek', 'kimi-api', 'kimi-coding', 'opencode-go-openai', 'zhipu', 'zhipu-coding', 'zhipu-coding-team', 'qwen', 'qwen-token-plan', 'minimax', 'ark-coding-plan', 'doubao', 'doubao-api', 'xiaomi', 'xiaomi-token-plan', 'openrouter', 'nuwa', 'custom']
+const PROVIDER_OPTIONS: ProviderType[] = ['anthropic', 'anthropic-compatible', 'anthropic-oauth', 'openai', 'openai-responses', 'openai-codex', 'github-copilot', 'xai', 'google', 'deepseek', 'kimi-api', 'kimi-coding', 'opencode-go-openai', 'zhipu', 'zhipu-coding', 'zhipu-coding-team', 'qwen', 'qwen-token-plan', 'minimax', 'ark-coding-plan', 'doubao', 'doubao-api', 'xiaomi', 'xiaomi-token-plan', 'openrouter', 'nuwa', 'custom']
 
 /** 需要用 messages 端点测试的供应商预设模型（均为官方真实存在的模型，供无用户模型时测试连接用；custom 不预设——自定义服务模型名不可知，必须由用户添加） */
 const PROVIDER_TEST_MODEL_PRESETS: Partial<Record<ProviderType, string[]>> = {
@@ -256,6 +258,9 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
   const [pendingRiskAction, setPendingRiskAction] = React.useState<'auto-save' | 'create' | 'fetch' | 'save-and-close' | 'test' | null>(null)
   const [codexLoggingIn, setCodexLoggingIn] = React.useState(false)
   const [codexDeviceCode, setCodexDeviceCode] = React.useState<CodexOAuthDeviceCode | null>(null)
+  const [githubCopilotLoggingIn, setGithubCopilotLoggingIn] = React.useState(false)
+  const [githubCopilotDeviceCode, setGithubCopilotDeviceCode] = React.useState<GithubCopilotOAuthDeviceCode | null>(null)
+  const [githubCopilotEnterpriseUrl, setGithubCopilotEnterpriseUrl] = React.useState('')
   const [xaiLoggingIn, setXaiLoggingIn] = React.useState(false)
   const [xaiDeviceCode, setXaiDeviceCode] = React.useState<XaiOAuthDeviceCode | null>(null)
   // Claude 订阅登录分两步：prepare 打开浏览器授权页 → 用户从回调页复制授权码粘贴回来
@@ -269,11 +274,16 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
 
   const setChannelFormDirty = useSetAtom(channelFormDirtyAtom)
   const codexLoggingInRef = React.useRef(false)
+  const githubCopilotLoggingInRef = React.useRef(false)
   const xaiLoggingInRef = React.useRef(false)
 
   React.useEffect(() => {
     codexLoggingInRef.current = codexLoggingIn
   }, [codexLoggingIn])
+
+  React.useEffect(() => {
+    githubCopilotLoggingInRef.current = githubCopilotLoggingIn
+  }, [githubCopilotLoggingIn])
 
   React.useEffect(() => {
     xaiLoggingInRef.current = xaiLoggingIn
@@ -284,12 +294,17 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
   }, [])
 
   React.useEffect(() => {
+    return window.electronAPI.onGithubCopilotOAuthDeviceCode(setGithubCopilotDeviceCode)
+  }, [])
+
+  React.useEffect(() => {
     return window.electronAPI.onXaiOAuthDeviceCode(setXaiDeviceCode)
   }, [])
 
   // 关闭或放弃表单时取消仍在轮询的 device-code 授权，避免后台孤立请求。
   React.useEffect(() => () => {
     if (codexLoggingInRef.current) void window.electronAPI.codexOAuthCancel()
+    if (githubCopilotLoggingInRef.current) void window.electronAPI.githubCopilotOAuthCancel()
     if (xaiLoggingInRef.current) void window.electronAPI.xaiOAuthCancel()
   }, [])
 
@@ -301,6 +316,9 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
         if (channel.provider === 'zhipu-coding-team') {
           setZhipuTeamSecret({ ...EMPTY_ZHIPU_TEAM_SECRET, ...parseZhipuTeamSecret(key) })
         }
+        if (channel.provider === 'github-copilot') {
+          setGithubCopilotEnterpriseUrl(parseGithubCopilotCredentials(key)?.enterpriseUrl ?? '')
+        }
         setApiKeyLoaded(true)
       }).catch((error) => {
         console.error('[模型配置表单] 解密 API Key 失败:', error)
@@ -311,23 +329,27 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
 
   const isZhipuTeamProvider = provider === 'zhipu-coding-team'
   const isCodexProvider = provider === 'openai-codex'
+  const isGithubCopilotProvider = provider === 'github-copilot'
   const isClaudeOAuthProvider = provider === 'anthropic-oauth'
   const isXaiProvider = provider === 'xai'
-  const isSubscriptionProvider = isCodexProvider || isClaudeOAuthProvider || isXaiProvider
+  const isSubscriptionProvider = isCodexProvider || isGithubCopilotProvider || isClaudeOAuthProvider || isXaiProvider
   const effectiveApiKey = isZhipuTeamProvider ? buildZhipuTeamSecret(zhipuTeamSecret) : apiKey
   // 订阅渠道的 apiKey state 存的是登录后拿到的凭据 JSON；能解析出有效凭据即视为已登录。
   const codexCredentials = isCodexProvider ? parseCodexCredentials(apiKey) : null
+  const githubCopilotCredentials = isGithubCopilotProvider ? parseGithubCopilotCredentials(apiKey) : null
   const claudeOAuthCredentials = isClaudeOAuthProvider ? parseClaudeOAuthCredentials(apiKey) : null
   const xaiCredentials = isXaiProvider ? parseXaiCredentials(apiKey) : null
   const hasRequiredSecret = isZhipuTeamProvider
     ? Boolean(zhipuTeamSecret.apiKey.trim())
     : isCodexProvider
       ? Boolean(codexCredentials)
-      : isClaudeOAuthProvider
-        ? Boolean(claudeOAuthCredentials)
-        : isXaiProvider
-          ? Boolean(xaiCredentials)
-          : Boolean(apiKey.trim())
+      : isGithubCopilotProvider
+        ? Boolean(githubCopilotCredentials)
+        : isClaudeOAuthProvider
+          ? Boolean(claudeOAuthCredentials)
+          : isXaiProvider
+            ? Boolean(xaiCredentials)
+            : Boolean(apiKey.trim())
   const requiresBaseUrlRiskAcknowledgement = isThirdPartyBaseUrl(provider, baseUrl)
     && normalizeBaseUrl(baseUrl) !== acknowledgedBaseUrl
 
@@ -719,6 +741,78 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
     toast.info('已取消登录')
   }
 
+  const handleCancelGithubCopilotLogin = (): void => {
+    githubCopilotLoggingInRef.current = false
+    void window.electronAPI.githubCopilotOAuthCancel()
+    setGithubCopilotDeviceCode(null)
+  }
+
+  /** GitHub Copilot 始终使用 device-code；授权完成后 Pi 返回套餐/策略过滤的模型目录。 */
+  const handleGithubCopilotLogin = async (): Promise<void> => {
+    githubCopilotLoggingInRef.current = true
+    setGithubCopilotLoggingIn(true)
+    setGithubCopilotDeviceCode(null)
+    setTestResult(null)
+    try {
+      const result = await window.electronAPI.githubCopilotOAuthLogin(githubCopilotEnterpriseUrl)
+      if (!result.success || !result.credentials) {
+        toast.error(result.message ?? 'GitHub Copilot 登录失败，请重试')
+        return
+      }
+      const credentials = result.credentials
+      setApiKey(credentials)
+
+      let copilotModels: ChannelModel[]
+      try {
+        const modelsResult = await window.electronAPI.fetchModels({ provider, baseUrl, apiKey: credentials })
+        setFetchResult(modelsResult)
+        if (!modelsResult.success) {
+          toast.error(modelsResult.message ?? '无法读取 GitHub Copilot 可用模型，请重试')
+          return
+        }
+        // 本次登录返回的模型目录反映当前账号与组织策略。空列表也是权威结果，
+        // 不得沿用上一个账号的旧模型，否则选择器会显示无法实际调用的选项。
+        copilotModels = modelsResult.models.map((model) => ({ ...model, enabled: true }))
+        setModels(copilotModels)
+      } catch (modelErr) {
+        console.error('[模型配置表单] 拉取 GitHub Copilot 模型失败:', modelErr)
+        toast.error('无法读取 GitHub Copilot 可用模型，请重试')
+        return
+      }
+
+      if (isEdit && channel) {
+        await window.electronAPI.updateChannel(channel.id, {
+          name,
+          provider,
+          baseUrl,
+          apiKey: credentials,
+          models: copilotModels,
+          enabled,
+        })
+        toast.success(copilotModels.length > 0 ? 'GitHub Copilot 登录成功' : 'GitHub Copilot 登录成功，但当前订阅没有可用模型')
+      } else {
+        const input: ChannelCreateInput = {
+          name: name.trim() || PROVIDER_LABELS['github-copilot'],
+          provider,
+          baseUrl,
+          apiKey: credentials,
+          models: copilotModels,
+          enabled,
+        }
+        const saved = await window.electronAPI.createChannel(input)
+        toast.success(copilotModels.length > 0 ? 'GitHub Copilot 渠道已创建' : 'GitHub Copilot 渠道已创建，但当前订阅没有可用模型')
+        onSaved(saved)
+      }
+    } catch (error) {
+      console.error('[模型配置表单] GitHub Copilot 登录失败:', error)
+      toast.error('GitHub Copilot 登录失败，请重试')
+    } finally {
+      githubCopilotLoggingInRef.current = false
+      setGithubCopilotLoggingIn(false)
+      setGithubCopilotDeviceCode(null)
+    }
+  }
+
   const handleCancelXaiLogin = (): void => {
     xaiLoggingInRef.current = false
     void window.electronAPI.xaiOAuthCancel()
@@ -1106,13 +1200,15 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
               <div className="text-sm font-medium text-foreground">
                 {isCodexProvider
                   ? 'ChatGPT 登录'
-                  : isClaudeOAuthProvider
-                    ? 'Claude 账号登录'
-                    : isXaiProvider
-                      ? 'xAI 登录'
-                      : isZhipuTeamProvider
-                        ? '智谱团队版凭证'
-                        : 'API Key'}
+                  : isGithubCopilotProvider
+                    ? 'GitHub Copilot 登录'
+                    : isClaudeOAuthProvider
+                      ? 'Claude 账号登录'
+                      : isXaiProvider
+                        ? 'xAI 登录'
+                        : isZhipuTeamProvider
+                          ? '智谱团队版凭证'
+                          : 'API Key'}
               </div>
               {/* 订阅 OAuth 无标准 API Key 测试路径，隐藏测试按钮 */}
               {!isSubscriptionProvider && (
@@ -1174,6 +1270,44 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
                     <span>已登录 ChatGPT 订阅{codexCredentials?.accountId ? `（账号 ${codexCredentials.accountId.slice(0, 8)}…）` : ''}</span>
                   </div>
                 ) : <div className="text-xs text-muted-foreground">Guru 会代理 token 请求；系统浏览器授权页仍需使用可访问 OpenAI 的网络。可改用设备码并在另一台设备完成授权。</div>}
+              </div>
+            ) : isGithubCopilotProvider ? (
+              <div className="space-y-2">
+                <Input
+                  value={githubCopilotEnterpriseUrl}
+                  onChange={(event) => setGithubCopilotEnterpriseUrl(event.target.value)}
+                  placeholder="GitHub Enterprise Server 域名（可选，例如 github.company.com）"
+                  disabled={githubCopilotLoggingIn}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={handleGithubCopilotLogin}
+                  disabled={githubCopilotLoggingIn}
+                  className="w-full"
+                >
+                  {githubCopilotLoggingIn ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                  <span>{githubCopilotLoggingIn ? '等待 GitHub 授权完成…' : hasRequiredSecret ? '重新登录 GitHub Copilot' : '用 GitHub Copilot 登录'}</span>
+                </Button>
+                {githubCopilotLoggingIn && (
+                  <Button variant="ghost" size="sm" type="button" onClick={handleCancelGithubCopilotLogin} className="w-full text-muted-foreground">
+                    取消登录
+                  </Button>
+                )}
+                {githubCopilotDeviceCode && (
+                  <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground space-y-2">
+                    <div>在 GitHub 授权页面输入设备码：<span className="font-mono font-medium text-foreground">{githubCopilotDeviceCode.userCode}</span></div>
+                    <a href={githubCopilotDeviceCode.verificationUri} target="_blank" rel="noreferrer" className="text-primary hover:underline">打开 GitHub 授权页面</a>
+                    {githubCopilotDeviceCode.qrCodeData && <img src={githubCopilotDeviceCode.qrCodeData} alt="GitHub Copilot 设备码授权二维码" className="h-28 w-28 rounded bg-white p-1" />}
+                  </div>
+                )}
+                {hasRequiredSecret ? (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+                    <CheckCircle2 size={12} className="shrink-0" />
+                    <span>已登录 GitHub Copilot 订阅（{githubCopilotCredentials?.availableModelIds.length ?? 0} 个可用模型）</span>
+                  </div>
+                ) : <div className="text-xs text-muted-foreground">Guru 会通过 GitHub device-code 绑定 Copilot 订阅，并按你的套餐和组织策略只显示可用模型。</div>}
               </div>
             ) : isXaiProvider ? (
               <div className="space-y-2">

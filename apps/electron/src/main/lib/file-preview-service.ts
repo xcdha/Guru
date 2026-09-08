@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto'
 import AdmZip from 'adm-zip'
 import { DOMParser } from '@xmldom/xmldom'
 import type { OfficePreviewResult } from '@guru/shared'
+import { expandHomeDirectory } from './agent-file-path'
 
 const require = createRequire(__filename)
 const PDFJS_PACKAGE = 'pdfjs-dist'
@@ -98,12 +99,14 @@ function searchFileInDir(dir: string, targetName: string, maxDepth = 8): string 
  * - 相对路径：依次尝试 basePaths，返回第一个存在的；都不存在则 fallback 搜索
  */
 export function isAbsolutePreviewPath(filePath: string): boolean {
-  return filePath.startsWith('/') || filePath.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(filePath)
+  const expandedPath = expandHomeDirectory(filePath)
+  return expandedPath.startsWith('/') || expandedPath.startsWith('\\\\') || /^[A-Za-z]:[\\/]/.test(expandedPath)
 }
 
 export function resolveTargetPath(filePath: string, basePaths?: string[]): string {
   if (isAbsolutePreviewPath(filePath)) {
-    const direct = resolve(filePath)
+    const expandedPath = expandHomeDirectory(filePath)
+    const direct = resolve(expandedPath)
     if (existsSync(direct)) return direct
     const name = basename(direct)
     if (basePaths) {
@@ -113,9 +116,9 @@ export function resolveTargetPath(filePath: string, basePaths?: string[]): strin
         if (found) return found
       }
     }
-    const awIdx = filePath.indexOf('agent-workspaces')
+    const awIdx = expandedPath.indexOf('agent-workspaces')
     if (awIdx !== -1) {
-      const wsRoot = filePath.slice(0, awIdx + 'agent-workspaces'.length)
+      const wsRoot = expandedPath.slice(0, awIdx + 'agent-workspaces'.length)
       if (existsSync(wsRoot)) {
         const found = searchFileInDir(wsRoot, name)
         if (found) return found
