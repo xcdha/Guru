@@ -223,6 +223,49 @@ describe('migrateGlobalScopes - MCP 合并', () => {
   })
 })
 
+describe('distributeMcpToWorkspaces - v4 全局 MCP → 工作区分发', () => {
+  test('Given 全局配置含多个 server When 分发 Then 每个工作区得到同内容副本且全局改名保留', () => {
+    const ws1 = manager.createAgentWorkspace('ws-one')
+    const ws2 = manager.createAgentWorkspace('ws-two')
+    manager.saveGlobalMcpConfig({
+      servers: {
+        filesystem: { type: 'stdio', command: 'my-fs', enabled: true },
+        remote: { type: 'http', url: 'https://example.com/mcp', headers: { 'x-api-key': 'k' }, enabled: true },
+      },
+    })
+
+    const warnings = migration.distributeMcpToWorkspaces()
+
+    expect(warnings).toEqual([])
+    const one = manager.getWorkspaceMcpConfig(ws1.slug)
+    expect(Object.keys(one.servers).sort()).toEqual(['filesystem', 'remote'])
+    const two = manager.getWorkspaceMcpConfig(ws2.slug)
+    expect(two.servers.remote?.url).toBe('https://example.com/mcp')
+    // 全局文件改名保留，不再作为生效配置被读到
+    expect(existsSync(configPaths.getGlobalMcpPath())).toBe(false)
+    expect(existsSync(`${configPaths.getGlobalMcpPath()}.global-distributed`)).toBe(true)
+  })
+
+  test('Given 全局文件已不存在 When 分发 Then 返回空告警（幂等重跑不把空配置写进工作区）', () => {
+    const ws = manager.createAgentWorkspace('ws-one')
+    // 模拟已分发过：工作区已有副本，全局文件不存在
+    manager.saveWorkspaceMcpConfig(ws.slug, {
+      servers: { filesystem: { type: 'stdio', command: 'keep', enabled: true } },
+    })
+
+    const warnings = migration.distributeMcpToWorkspaces()
+
+    expect(warnings).toEqual([])
+    const config = manager.getWorkspaceMcpConfig(ws.slug)
+    expect(config.servers.filesystem?.command).toBe('keep')
+  })
+
+  test('Given 无任何工作区 When 分发 Then 返回空告警不崩溃', () => {
+    const warnings = migration.distributeMcpToWorkspaces()
+    expect(warnings).toEqual([])
+  })
+})
+
 describe('migrateGlobalScopes - Skills 上浮与清理', () => {
   test('Given 工作区持有预制 Skill 副本 When 迁移 Then 副本被清理并移入备份目录（不再残留在工作区）', async () => {
     writeDefaultSkillFixture('code-review', '代码审查')

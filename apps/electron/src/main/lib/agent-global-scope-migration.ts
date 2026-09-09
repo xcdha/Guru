@@ -46,6 +46,7 @@ import {
   listAgentWorkspaces,
   normalizeWorkspaceMcpConfig,
   saveGlobalMcpConfig,
+  saveWorkspaceMcpConfig,
 } from './agent-workspace-manager'
 import { projectRepository } from './project-repository'
 import {
@@ -513,4 +514,49 @@ export function getGlobalScopeReviewHints(): GlobalScopeReviewHints {
   const mcpSuffixedServers = Object.keys(getGlobalMcpConfig().servers ?? {}).filter((name) => name.includes('@'))
 
   return { leftoverWorkspaceMcp, mcpSuffixedServers }
+}
+
+// ===== v4 反向迁移：全局 MCP → 工作区（workspace 级对齐上游 #2037） =====
+
+/**
+ * 步骤 v4：把全局唯一 MCP 配置分发到每个工作区（对齐上游 workspace 级存储）。
+ *
+ * 语义：
+ * - 读当前权威全局 ~/.guru/mcp.json（含 0.10.16 后用户经 Connectors UI 新增的全部 server）。
+ * - 对每个工作区写一份相同配置（saveWorkspaceMcpConfig）；重复分发幂等（覆盖写同内容无害）。
+ * - 全部写成功后把全局文件改名 `mcp.json.global-distributed` 保留（不删除），供回滚/审计；
+ *   改名失败则告警并保持未完成，下次启动重试（此时重复分发幂等，不丢数据）。
+ * - 若全局文件已不存在（此前已改名/从未生成），视为已分发完成，不再把空配置写入工作区。
+ *
+ * ⚠️ 接线注意：本函数由 Phase 3（消费端切 workspace + MIGRATION_VERSION bump）统一启用；
+ *    在消费端仍读全局的过渡期不得调用，否则全局改名后运行时会读到空配置。
+ */
+export function distributeMcpToWorkspaces(): string[] {
+  const warnings: string[] = []
+  const workspaces = listAgentWorkspaces()
+  if (workspaces.length === 0) return warnings
+
+  const globalMcpPath = getGlobalMcpPath()
+  // 全局文件不存在 → 已分发过（或从未生成），保持工作区现状即可。
+  if (!existsSync(globalMcpPath)) return warnings
+
+  const config = getGlobalMcpConfig()
+  for (const workspace of workspaces) {
+    try {
+      saveWorkspaceMcpConfig(workspace.slug, normalizeWorkspaceMcpConfig(config))
+      console.log(`[迁移] 已将全局 MCP 配置分发到工作区 ${workspace.slug}`)
+    } catch (error) {
+      warnings.push(`分发全局 MCP 到工作区 ${workspace.slug} 失败: ${error instanceof Error ? error.message : error}`)
+    }
+  }
+
+  if (warnings.length > 0) return warnings
+
+  try {
+    renameSync(globalMcpPath, `${globalMcpPath}.global-distributed`)
+    console.log('[迁移] 全局 MCP 配置已分发至各工作区，全局文件保留为 mcp.json.global-distributed')
+  } catch (error) {
+    warnings.push(`改名全局 MCP 文件失败: ${error instanceof Error ? error.message : error}`)
+  }
+  return warnings
 }
