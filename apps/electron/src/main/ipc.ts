@@ -3216,7 +3216,7 @@ export function registerIpcHandlers(): void {
       const result = await validateMcpServer(name, entry)
       return {
         success: result.valid,
-        message: result.valid ? '连接成功' : (result.reason || '连接失败'),
+        message: result.valid ? (result.message ?? '连接成功') : (result.reason || '连接失败'),
       }
     }
   )
