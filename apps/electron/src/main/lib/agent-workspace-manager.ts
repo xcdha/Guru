@@ -1058,7 +1058,10 @@ function parseSkillFrontmatter(content: string, slug: string, enabled: boolean):
 export function getWorkspaceCapabilities(workspaceSlug: string): WorkspaceCapabilities {
   // MCP 全局化：能力摘要读生效配置（全局 + 工作区/项目合并），工作区 mcp.json 已迁移改名
   const mcpConfig = getEffectiveMcpConfig(workspaceSlug)
-  const skills = getWorkspaceSkills(workspaceSlug)
+  // 能力摘要供 UI 状态展示和变更提示使用；保留 inactive Skill 才能将
+  // skills/ ↔ skills-inactive/ 的移动识别为启用/关闭，而非移除/新增。
+  // Agent 运行时仍只从 skills/ 读取实际启用的 Skill。
+  const skills = getAllWorkspaceSkills(workspaceSlug)
   const builtinMcpServers = listBuiltinMcpServers({ workspaceSlug })
   const memory = getWorkspaceMemorySummary(workspaceSlug)
 

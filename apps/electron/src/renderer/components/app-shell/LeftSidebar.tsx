@@ -3041,6 +3041,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
               indicatorStatus={rowStatus}
               showPinIcon={showPinIcon && !!item.session.pinned}
               disableMiniMap={!sessionHoverPreviewEnabled}
+              suppressAutomationIcon={isAutomationGroup}
               childSummary={childCount > 0
                 ? {
                   total: childCount,
@@ -3080,6 +3081,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
                   activeSessionId={activeSessionId}
                   agentIndicatorMap={agentIndicatorMap}
                   relativeTimeNow={relativeTimeNow}
+                  suppressAutomationIcon={isAutomationGroup}
                   workspaceName={isAutomationGroup && childSession.workspaceId ? workspaceNameMapForRow?.get(childSession.workspaceId) : undefined}
                   onSelect={handleSelectAgentSession}
                   onRequestDelete={handleRequestDelete}
@@ -4593,6 +4595,8 @@ interface ChildSessionItemProps {
   activeSessionId: string | null
   agentIndicatorMap: Map<string, SessionIndicatorStatus>
   relativeTimeNow: number
+  /** 定时任务合成项目内隐藏行级时钟。 */
+  suppressAutomationIcon?: boolean
   workspaceName?: string
   /** 存量 KanbanProject 绑定清理出口；透传给会话行「移出项目」菜单项 */
   onClearProjectBinding?: (sessionId: string) => void | Promise<void>
@@ -4614,6 +4618,7 @@ const ChildSessionItem = React.memo(function ChildSessionItem({
   activeSessionId,
   agentIndicatorMap,
   relativeTimeNow,
+  suppressAutomationIcon,
   workspaceName,
   onClearProjectBinding,
   sessionGroups,
@@ -4635,6 +4640,7 @@ const ChildSessionItem = React.memo(function ChildSessionItem({
       active={session.id === activeSessionId}
       indicatorStatus={status}
       relativeTimeNow={relativeTimeNow}
+      suppressAutomationIcon={suppressAutomationIcon}
       workspaceName={workspaceName}
       sessionGroups={undefined}
       onSelect={onSelect}
@@ -4653,6 +4659,8 @@ interface DelegatedChildSessionItemProps {
   activeSessionId: string | null
   agentIndicatorMap: Map<string, SessionIndicatorStatus>
   relativeTimeNow: number
+  /** 定时任务合成项目内隐藏行级时钟。 */
+  suppressAutomationIcon?: boolean
   workspaceName?: string
   onSelect: (id: string, title: string) => void
   onRequestDelete: (id: string) => void
@@ -4669,6 +4677,7 @@ const DelegatedChildSessionItem = React.memo(function DelegatedChildSessionItem(
   activeSessionId,
   agentIndicatorMap,
   relativeTimeNow,
+  suppressAutomationIcon,
   workspaceName,
   onSelect,
   onRequestDelete,
@@ -4686,6 +4695,7 @@ const DelegatedChildSessionItem = React.memo(function DelegatedChildSessionItem(
       active={session.id === activeSessionId}
       indicatorStatus={status}
       relativeTimeNow={relativeTimeNow}
+      suppressAutomationIcon={suppressAutomationIcon}
       workspaceName={workspaceName}
       onSelect={onSelect}
       onRequestDelete={onRequestDelete}
@@ -5243,6 +5253,7 @@ const AgentProjectGroupItem = React.memo(function AgentProjectGroupItem({
                       activeSessionId={activeSessionId}
                       agentIndicatorMap={agentIndicatorMap}
                       relativeTimeNow={relativeTimeNow}
+                      suppressAutomationIcon={isAutomationGroup}
                       workspaceName={isAutomationGroup && childSession.workspaceId ? workspaceNameMap?.get(childSession.workspaceId) : undefined}
                       onClearProjectBinding={onClearProjectBinding}
                       sessionGroups={sessionGroups}
@@ -5288,6 +5299,7 @@ const AgentProjectGroupItem = React.memo(function AgentProjectGroupItem({
                           active={treeActive}
                           indicatorStatus={rowStatus}
                           showPinIcon={!!item.session.pinned}
+                          suppressAutomationIcon={isAutomationGroup}
                           childSummary={childProgress.total > 0
                             ? {
                               ...childProgress,

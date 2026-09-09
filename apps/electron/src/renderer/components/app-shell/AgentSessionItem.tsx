@@ -347,6 +347,8 @@ export interface AgentSessionItemProps {
   leftAccent?: never
   /** 是否禁用悬浮 Mini 地图 */
   disableMiniMap?: boolean
+  /** 定时任务合成项目内已由项目标题表达来源，隐藏行内重复时钟。 */
+  suppressAutomationIcon?: boolean
   /** 工作区名称 Badge（跨工作区列表时显示） */
   workspaceName?: string
   /** 所属项目主题色（已移除：原左缘 2px 色条随竖条一起去掉）
@@ -382,6 +384,7 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
   childSummary,
   delegationChildCount = 0,
   disableMiniMap,
+  suppressAutomationIcon,
   workspaceName,
   onClearProjectBinding,
   sessionGroups,
@@ -691,7 +694,7 @@ export const AgentSessionItem = React.memo(function AgentSessionItem({
                 {showPinIcon && (
                   <Pin size={11} className="flex-shrink-0 text-primary/60" />
                 )}
-                {session.sourceAutomationId && !session.sourceDelegationId && (
+                {!suppressAutomationIcon && session.sourceAutomationId && !session.sourceDelegationId && (
                   <Clock size={11} className="flex-shrink-0 text-foreground/40" />
                 )}
                 {session.parentSessionId && (

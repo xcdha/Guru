@@ -18,7 +18,7 @@ import { PROVIDER_LABELS } from '@guru/shared'
 import { channelsAtom } from '@/atoms/chat-atoms'
 import { supportsChannelPlanQuota, fetchChannelPlanQuota, invalidateChannelPlanQuota } from '@/lib/channel-plan-quota'
 import { getChannelLogo } from '@/lib/model-logo'
-import { buildQuotaSummary, buildQuotaTitle } from '@/components/chat/ChannelPlanQuotaBadge'
+import { getPlanQuotaDisplay } from '@/lib/channel-plan-quota-display'
 import { Button } from '../ui/button'
 
 /** 供应商展示名；缺失时统一显示"未知渠道"，不泄露原始 channelId */
@@ -81,9 +81,10 @@ function BalanceCard({ channel, refreshKey }: { channel: Channel; refreshKey: nu
   }
 
   // 成功：摘要 + hover 完整明细
+  const display = getPlanQuotaDisplay(quota, channel.provider)
   return (
     <div
-      title={buildQuotaTitle(quota)}
+      title={display?.title}
       className="flex items-center gap-3 rounded-lg border border-border/60 bg-card p-3 transition-colors hover:border-primary/30"
     >
       {logo}
@@ -92,7 +93,7 @@ function BalanceCard({ channel, refreshKey }: { channel: Channel; refreshKey: nu
         <div className="text-xs text-muted-foreground">{providerLabel(channel.provider)}</div>
       </div>
       <div className="shrink-0 text-right">
-        <div className="text-sm font-semibold tabular-nums">{buildQuotaSummary(quota)}</div>
+        <div className="text-sm font-semibold tabular-nums">{display?.summary ?? ''}</div>
         <div className="text-[10px] text-muted-foreground/60">{quota.planName ?? '订阅额度'}</div>
       </div>
     </div>
