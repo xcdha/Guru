@@ -52,6 +52,7 @@ import { refreshGithubCopilotOAuth } from './github-copilot-oauth-service'
 import { refreshXaiOAuth } from './xai-oauth-service'
 import { refreshXaiOAuthCredentialsSerial, rememberXaiOAuthCredentials } from './xai-oauth-credentials'
 import { parseCodexPlanQuotaResponse } from './codex-plan-quota'
+import { queryGithubCopilotPlanQuota } from './github-copilot-plan-quota'
 import { getKimiApiBalanceUrl, parseKimiApiBalanceResponse } from './kimi-api-balance'
 import { getOpenRouterKeyUrl, parseOpenRouterKeyResponse } from './openrouter-balance'
 import { listCodexModels, listGithubCopilotModels, listXaiModels } from './adapters/pi-model-registry'
@@ -80,6 +81,7 @@ const ARK_CODING_PLAN_TEST_MODEL = 'doubao-seed-2.0-code'
 const DEEPSEEK_PRESET_MODELS: ChannelModel[] = [
   { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', enabled: true },
   { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', enabled: true },
+  { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', enabled: true },
   { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash Vision Exp', enabled: true },
 ]
 const KIMI_PRESET_MODELS: ChannelModel[] = [
@@ -108,6 +110,7 @@ const ARK_CODING_PLAN_MODELS: ChannelModel[] = [
   { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', enabled: true },
   { id: 'minimax-m3', name: 'MiniMax M3', enabled: true },
   { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', enabled: true },
+  { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', enabled: true },
   { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', enabled: true },
 ]
 
@@ -124,6 +127,17 @@ const PRESET_MODEL_CANDIDATE_UPDATES: readonly {
     to: string
   }[]>>
 }[] = [
+  {
+    id: 'deepseek-v41-flash-v1',
+    candidates: {
+      deepseek: [
+        { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', enabled: false },
+      ],
+      'ark-coding-plan': [
+        { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', enabled: false },
+      ],
+    },
+  },
   {
     id: 'model-candidates-v3',
     candidates: {
@@ -1874,7 +1888,6 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
   } catch {
     provider = channel.provider
   }
-  const proxyUrl = await getEffectiveProxyUrl()
   let apiKey: string
   try {
     apiKey = decryptKey(channel.apiKey)
@@ -1883,6 +1896,10 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
   }
 
   try {
+    const proxyUrl = await getEffectiveProxyUrl()
+    if (provider === 'github-copilot') {
+      return await queryGithubCopilotPlanQuota(apiKey, proxyUrl)
+    }
     if (provider === 'openai-codex') {
       return await queryCodexPlanQuota(channelId, apiKey, proxyUrl)
     }
@@ -1912,7 +1929,9 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
     }
     return createUnsupportedPlanQuota(provider, '当前渠道不支持订阅 Plan 额度查询')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '订阅额度查询失败'
+    const message = provider === 'github-copilot'
+      ? 'GitHub Copilot 额度查询失败，请检查网络或代理后重试'
+      : error instanceof Error ? error.message : '订阅额度查询失败'
     return createUnsupportedPlanQuota(provider, message)
   }
 }

@@ -104,6 +104,15 @@ export function AddConnectorMenu({
               <button
                 type="button"
                 role="menuitem"
+                onClick={() => { setOpen(false); onAddPreset('exa-search') }}
+                className="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
+              >
+                <Globe size={14} className="shrink-0 text-foreground/40" />
+                Exa 搜索
+              </button>
+              <button
+                type="button"
+                role="menuitem"
                 onClick={() => { setOpen(false); onAddPreset('tavily-search') }}
                 className="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors focus:bg-accent hover:bg-accent"
               >
