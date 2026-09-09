@@ -3,11 +3,11 @@ import type { McpServerEntry } from '@guru/shared'
 /**
  * 官方搜索 MCP 连接器模板。
  *
- * 对齐上游 Proma #1976（Brave/Tavily MCP presets）：用户只需填入 API Key，
+ * 对齐上游 Proma #1976 / #2040（Brave/Tavily/Exa MCP presets）：用户只需填入 API Key，
  * 其余连接参数由模板预填。Brave 走 stdio npx + 环境变量注入；
- * Tavily 走官方远程 MCP + Authorization 请求头。
+ * Tavily 走官方远程 MCP + Authorization 请求头；Exa 走 x-api-key 请求头。
  */
-export type SearchMcpPresetId = 'brave-search' | 'tavily-search'
+export type SearchMcpPresetId = 'brave-search' | 'exa-search' | 'tavily-search'
 
 export interface McpPresetTemplate {
   id: SearchMcpPresetId
@@ -58,8 +58,28 @@ const TAVILY_SEARCH_PRESET: McpPresetTemplate = {
   },
 }
 
+const EXA_SEARCH_PRESET: McpPresetTemplate = {
+  id: 'exa-search',
+  name: 'Exa Search',
+  serverName: 'exa',
+  displayName: 'Exa 搜索 MCP',
+  description: '接入 Exa 官方远程 MCP，提供语义网页搜索与页面内容提取能力。',
+  buildEntry: (apiKey) => {
+    const headers: Record<string, string> = {}
+    // 预填 header 名：表单文本区显示 x-api-key:，用户补 key 即可
+    headers['x-api-key'] = apiKey
+    return {
+      type: 'http',
+      url: 'https://mcp.exa.ai/mcp',
+      headers,
+      enabled: true,
+    }
+  },
+}
+
 export const SEARCH_MCP_PRESETS: readonly McpPresetTemplate[] = [
   BRAVE_SEARCH_PRESET,
+  EXA_SEARCH_PRESET,
   TAVILY_SEARCH_PRESET,
 ]
 
