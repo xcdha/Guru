@@ -9,6 +9,7 @@ const PLAN_QUOTA_PROVIDERS = new Set<ProviderType>([
   'zhipu-coding',
   'zhipu-coding-team',
   'openai-codex',
+  'github-copilot',
   'kimi-api',
   'openrouter',
   'anthropic-oauth',
@@ -31,6 +32,8 @@ interface CachedPlanQuota {
 
 const quotaCache = new Map<string, CachedPlanQuota>()
 const inflightRequests = new Map<string, Promise<ChannelPlanQuotaResult>>()
+/** 渠道当前凭据版本：缓存写入只在该版本仍是当前版本时生效，避免旧账号结果污染新账号展示。 */
+const currentVersions = new Map<string, number | undefined>()
 
 function getCacheTtl(result: ChannelPlanQuotaResult): number {
   return result.supported ? PLAN_QUOTA_CACHE_MS : PLAN_QUOTA_ERROR_CACHE_MS
@@ -47,29 +50,37 @@ export async function fetchChannelPlanQuota(
   channelId: string,
   channelUpdatedAt?: number,
 ): Promise<ChannelPlanQuotaResult> {
+  currentVersions.set(channelId, channelUpdatedAt)
   const cached = getCachedPlanQuota(channelId, channelUpdatedAt)
   if (cached) return cached
+  quotaCache.delete(channelId)
 
   // 同一渠道换号后不能复用旧凭据发起的 in-flight 请求。
   const requestKey = `${channelId}:${channelUpdatedAt ?? ''}`
   const inflight = inflightRequests.get(requestKey)
   if (inflight) return inflight
 
-  const request = window.electronAPI.getChannelPlanQuota(channelId)
-    .then((result) => {
+  // 仅当查询完成时该渠道仍是同一凭据版本才写入缓存，过期结果直接丢弃。
+  const cacheIfCurrent = (result: ChannelPlanQuotaResult): ChannelPlanQuotaResult => {
+    if (currentVersions.get(channelId) === channelUpdatedAt) {
       quotaCache.set(channelId, { result, channelUpdatedAt })
-      return result
-    })
-    .catch((error: unknown) => {
+    }
+    return result
+  }
+
+  const request = Promise.resolve()
+    .then(() => window.electronAPI.getChannelPlanQuota(channelId))
+    .then(cacheIfCurrent)
+    .catch(() => {
+      // 不向上层透传 IPC/主进程错误细节，统一收敛为用户可读提示。
       const result: ChannelPlanQuotaResult = {
         supported: false,
         provider: 'custom',
         windows: [],
         updatedAt: Date.now(),
-        message: error instanceof Error ? error.message : '订阅额度查询失败',
+        message: '订阅额度查询失败，请稍后重试',
       }
-      quotaCache.set(channelId, { result, channelUpdatedAt })
-      return result
+      return cacheIfCurrent(result)
     })
     .finally(() => {
       inflightRequests.delete(requestKey)

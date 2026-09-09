@@ -52,6 +52,7 @@ import { refreshGithubCopilotOAuth } from './github-copilot-oauth-service'
 import { refreshXaiOAuth } from './xai-oauth-service'
 import { refreshXaiOAuthCredentialsSerial, rememberXaiOAuthCredentials } from './xai-oauth-credentials'
 import { parseCodexPlanQuotaResponse } from './codex-plan-quota'
+import { queryGithubCopilotPlanQuota } from './github-copilot-plan-quota'
 import { getKimiApiBalanceUrl, parseKimiApiBalanceResponse } from './kimi-api-balance'
 import { getOpenRouterKeyUrl, parseOpenRouterKeyResponse } from './openrouter-balance'
 import { listCodexModels, listGithubCopilotModels, listXaiModels } from './adapters/pi-model-registry'
@@ -1887,7 +1888,6 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
   } catch {
     provider = channel.provider
   }
-  const proxyUrl = await getEffectiveProxyUrl()
   let apiKey: string
   try {
     apiKey = decryptKey(channel.apiKey)
@@ -1896,6 +1896,10 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
   }
 
   try {
+    const proxyUrl = await getEffectiveProxyUrl()
+    if (provider === 'github-copilot') {
+      return await queryGithubCopilotPlanQuota(apiKey, proxyUrl)
+    }
     if (provider === 'openai-codex') {
       return await queryCodexPlanQuota(channelId, apiKey, proxyUrl)
     }
@@ -1925,7 +1929,9 @@ export async function getChannelPlanQuota(channelId: string): Promise<ChannelPla
     }
     return createUnsupportedPlanQuota(provider, '当前渠道不支持订阅 Plan 额度查询')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '订阅额度查询失败'
+    const message = provider === 'github-copilot'
+      ? 'GitHub Copilot 额度查询失败，请检查网络或代理后重试'
+      : error instanceof Error ? error.message : '订阅额度查询失败'
     return createUnsupportedPlanQuota(provider, message)
   }
 }
