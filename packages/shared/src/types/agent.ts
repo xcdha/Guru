@@ -2339,6 +2339,20 @@ export const AGENT_IPC_CHANNELS = {
   SAVE_MCP_CONFIG: 'agent:save-mcp-config',
   /** 原子删除工作区内的单个 MCP 条目（保留其他条目当前状态） */
   DELETE_MCP: 'agent:delete-mcp',
+  /** 刷新并持久化工作区 MCP 真实连接状态 */
+  REFRESH_MCP_CONNECTIONS: 'agent:refresh-mcp-connections',
+  /** 原子切换 MCP 启用状态，并在启用时条件持久化真实验证结果。 */
+  SET_MCP_ENABLED_AND_VALIDATE: 'agent:set-mcp-enabled-and-validate',
+  /** 原子新增 MCP，并在初始启用时条件持久化真实验证结果。 */
+  INSTALL_MCP_AND_VALIDATE: 'agent:install-mcp-and-validate',
+  /** 启动远程 MCP 的 OAuth PKCE 授权 */
+  START_MCP_OAUTH: 'agent:start-mcp-oauth',
+  /** 将 OAuth client secret 加密保存到系统 Keychain。 */
+  SAVE_MCP_OAUTH_CLIENT_SECRET: 'agent:save-mcp-oauth-client-secret',
+  /** 安全保存远程 MCP 的静态 API Key / Token */
+  SAVE_MCP_API_KEY: 'agent:save-mcp-api-key',
+  /** 删除工作区 MCP 对应的系统安全凭据，不返回任何凭据。 */
+  DELETE_MCP_CREDENTIAL: 'agent:delete-mcp-credential',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
   /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
