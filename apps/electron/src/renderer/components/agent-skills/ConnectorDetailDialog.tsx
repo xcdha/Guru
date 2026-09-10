@@ -27,7 +27,6 @@ interface ConnectorDetailDialogProps {
   builtinServers: BuiltinMcpServerSummary[]
   userEntries: Array<[string, McpServerEntry]>
   workspaceSlug: string
-  projectId?: string | null
   onToggle?: (item: ConnectorItem, enabled: boolean) => void
   onUserMcpChanged?: () => void
   onDeletedHttp?: () => void
@@ -40,7 +39,6 @@ export function ConnectorDetailDialog({
   builtinServers,
   userEntries,
   workspaceSlug,
-  projectId,
   onToggle,
   onUserMcpChanged,
   onDeletedHttp,
@@ -75,7 +73,7 @@ export function ConnectorDetailDialog({
         return
       }
       if (item.kind === 'user-mcp' && userEntry) {
-        setTestResult(await window.electronAPI.testMcpServer(item.sourceId, userEntry))
+        setTestResult(await window.electronAPI.testMcpServer(workspaceSlug, item.sourceId, userEntry))
       }
     } catch (error) {
       setTestResult({
@@ -133,7 +131,6 @@ export function ConnectorDetailDialog({
               key={item.sourceId}
               server={{ name: item.sourceId, entry: userEntry }}
               workspaceSlug={workspaceSlug}
-              projectId={projectId}
               onSaved={() => {
                 setEditingUserMcp(false)
                 onUserMcpChanged?.()

@@ -286,21 +286,33 @@ export class ProjectRepository {
     return getProjectInactiveSkillsPath(workspaceRoot, project.config.slug)
   }
 
-  /** 项目是否已配置自己的 MCP 服务器 */
+  /**
+   * 项目是否已配置自己的 MCP 服务器。
+   *
+   * @deprecated MCP 已对齐上游 #2037 为工作区级存储，项目级 MCP 覆盖已移除；仅保留底层存储能力，无业务调用。
+   */
   hasProjectMcpServers(workspaceRoot: string, idOrSlug: string): boolean {
     const project = this.getProjectAtRoot(workspaceRoot, idOrSlug)
     if (!project) return false
     return hasProjectMcpServersInStorage(workspaceRoot, project.config.slug)
   }
 
-  /** 项目级 MCP 配置原始数据（未归一化，由调用方按 WorkspaceMcpConfig 校验） */
+  /**
+   * 项目级 MCP 配置原始数据（未归一化）。
+   *
+   * @deprecated 同 hasProjectMcpServers：项目级 MCP 已移除，仅保留底层读取能力。
+   */
   getProjectMcpConfigRaw(workspaceRoot: string, idOrSlug: string): { servers: Record<string, unknown> } {
     const project = this.getProjectAtRoot(workspaceRoot, idOrSlug)
     if (!project) return { servers: {} }
     return readProjectMcpConfigRaw(workspaceRoot, project.config.slug)
   }
 
-  /** 写入项目级 MCP 配置 */
+  /**
+   * 写入项目级 MCP 配置。
+   *
+   * @deprecated 同 hasProjectMcpServers：项目级 MCP 已移除，仅保留底层写入能力。
+   */
   saveProjectMcpConfigRaw(workspaceRoot: string, idOrSlug: string, config: { servers: Record<string, unknown> }): void {
     const project = this.getProjectAtRoot(workspaceRoot, idOrSlug)
     if (!project) throw new Error(`项目不存在: ${idOrSlug}`)

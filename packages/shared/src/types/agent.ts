@@ -2333,15 +2333,11 @@ export const AGENT_IPC_CHANNELS = {
   // 工作区能力（MCP + Skill）
   /** 获取工作区能力摘要 */
   GET_CAPABILITIES: 'agent:get-capabilities',
-  /** 获取工作区 MCP 配置（已迁移，仅给迁移脚本/向后兼容保留，UI 请改用 GET_GLOBAL_MCP_CONFIG） */
+  /** 获取工作区 MCP 配置（对齐上游 #2037：MCP 为工作区级存储，UI 唯一入口） */
   GET_MCP_CONFIG: 'agent:get-mcp-config',
-  /** 保存工作区 MCP 配置（同上，已迁移） */
+  /** 保存工作区 MCP 配置（UI 唯一入口） */
   SAVE_MCP_CONFIG: 'agent:save-mcp-config',
-  /** 读取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享） */
-  GET_GLOBAL_MCP_CONFIG: 'agent:get-global-mcp-config',
-  /** 保存全局 MCP 配置 */
-  SAVE_GLOBAL_MCP_CONFIG: 'agent:save-global-mcp-config',
-  /** 原子删除单个 MCP（保留其他条目当前状态；projectId 为空删全局条目） */
+  /** 原子删除工作区内的单个 MCP 条目（保留其他条目当前状态） */
   DELETE_MCP: 'agent:delete-mcp',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
@@ -2381,12 +2377,6 @@ export const AGENT_IPC_CHANNELS = {
   DELETE_PROJECT_SKILL: 'agent:delete-project-skill',
   /** 切换项目 Skill 启用/禁用 */
   TOGGLE_PROJECT_SKILL: 'agent:toggle-project-skill',
-  /** 获取项目级 MCP 配置 */
-  GET_PROJECT_MCP_CONFIG: 'agent:get-project-mcp-config',
-  /** 保存项目级 MCP 配置 */
-  SAVE_PROJECT_MCP_CONFIG: 'agent:save-project-mcp-config',
-  /** 项目是否已配置自己的 MCP 服务器 */
-  HAS_PROJECT_MCP_SERVERS: 'agent:has-project-mcp-servers',
   /** 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project） */
   GET_OTHER_PROJECT_SKILLS: 'agent:get-other-project-skills',
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */

@@ -942,20 +942,14 @@ export interface ElectronAPI {
   /** 保存工作区 MCP 配置 */
   saveWorkspaceMcpConfig: (workspaceSlug: string, config: WorkspaceMcpConfig) => Promise<void>
 
-  /** 读取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享） */
-  getGlobalMcpConfig: () => Promise<WorkspaceMcpConfig>
-
-  /** 保存全局 MCP 配置 */
-  saveGlobalMcpConfig: (config: WorkspaceMcpConfig) => Promise<void>
-
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   getGlobalScopeReviewHints: () => Promise<import('@guru/shared').GlobalScopeReviewHints>
 
   /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
   getGlobalSkillsDir: () => Promise<string>
 
-  /** 测试 MCP 服务器连接 */
-  testMcpServer: (name: string, entry: import('@guru/shared').McpServerEntry) => Promise<{ success: boolean; message: string }>
+  /** 测试 MCP 服务器连接（真实握手，带工作区以注入凭据） */
+  testMcpServer: (workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry) => Promise<{ success: boolean; message: string }>
 
   /** 测试内置连接器依赖（如 Chrome / npx） */
   testBuiltinConnector: (id: string) => Promise<{ success: boolean; message: string }>
@@ -1001,15 +995,9 @@ export interface ElectronAPI {
   deleteProjectSkill: (workspaceSlug: string, projectId: string, skillSlug: string) => Promise<void>
   /** 切换项目 Skill 启用/禁用 */
   toggleProjectSkill: (workspaceSlug: string, projectId: string, skillSlug: string, enabled: boolean) => Promise<void>
-  /** 项目是否已配置自己的 MCP 服务器 */
-  hasProjectMcpServers: (workspaceSlug: string, projectId: string) => Promise<boolean>
-  /** 获取项目级 MCP 配置 */
-  getProjectMcpConfig: (workspaceSlug: string, projectId: string) => Promise<WorkspaceMcpConfig>
-  /** 保存项目级 MCP 配置 */
-  saveProjectMcpConfig: (workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig) => Promise<void>
 
-  /** 原子删除单个 MCP（projectId 为空时删全局条目），保留其他条目当前状态 */
-  deleteMcp: (workspaceSlug: string, name: string, projectId?: string | null) => Promise<WorkspaceMcpConfig>
+  /** 原子删除工作区内的单个 MCP 条目，保留其他条目当前状态 */
+  deleteMcp: (workspaceSlug: string, name: string) => Promise<WorkspaceMcpConfig>
   /** 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project） */
   getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => Promise<import('@guru/shared').OtherProjectSkillsGroup[]>
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */
@@ -2661,14 +2649,6 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SAVE_MCP_CONFIG, workspaceSlug, config)
   },
 
-  getGlobalMcpConfig: () => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_GLOBAL_MCP_CONFIG)
-  },
-
-  saveGlobalMcpConfig: (config: WorkspaceMcpConfig) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SAVE_GLOBAL_MCP_CONFIG, config)
-  },
-
   getGlobalScopeReviewHints: () => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_GLOBAL_SCOPE_REVIEW_HINTS)
   },
@@ -2677,8 +2657,8 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_GLOBAL_SKILLS_DIR)
   },
 
-  testMcpServer: (name: string, entry: import('@guru/shared').McpServerEntry) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TEST_MCP_SERVER, name, entry) as Promise<{ success: boolean; message: string }>
+  testMcpServer: (workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TEST_MCP_SERVER, workspaceSlug, name, entry) as Promise<{ success: boolean; message: string }>
   },
 
   testBuiltinConnector: (id: string) => {
@@ -2745,20 +2725,8 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.TOGGLE_PROJECT_SKILL, workspaceSlug, projectId, skillSlug, enabled)
   },
 
-  hasProjectMcpServers: (workspaceSlug: string, projectId: string) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.HAS_PROJECT_MCP_SERVERS, workspaceSlug, projectId)
-  },
-
-  getProjectMcpConfig: (workspaceSlug: string, projectId: string) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_PROJECT_MCP_CONFIG, workspaceSlug, projectId)
-  },
-
-  saveProjectMcpConfig: (workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SAVE_PROJECT_MCP_CONFIG, workspaceSlug, projectId, config)
-  },
-
-  deleteMcp: (workspaceSlug: string, name: string, projectId?: string | null) => {
-    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_MCP, workspaceSlug, name, projectId) as Promise<WorkspaceMcpConfig>
+  deleteMcp: (workspaceSlug: string, name: string) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_MCP, workspaceSlug, name) as Promise<WorkspaceMcpConfig>
   },
 
   getOtherProjectSkills: (workspaceSlug: string, currentProjectId: string) => {

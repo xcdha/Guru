@@ -293,10 +293,9 @@ function migrateOneProject(
       }
     }
   }
-  const projectMcp = projectRepository.getProjectMcpConfigRaw(workspaceRoot, project.slug)
-  if (projectMcp && Object.keys(projectMcp).length > 0) {
-    projectRepository.saveProjectMcpConfigRaw(newRoot, project.slug, projectMcp)
-  }
+  // MCP 已对齐上游 #2037 为工作区级存储（项目级 MCP 覆盖已移除）：
+  // 项目原有 MCP 已在 migrateGlobalScopes v3/v4 合并到全局并分发到各工作区，
+  // 此处不再搬运项目级 MCP（旧路径已 .migrated）。
 
   // 4.5 看板列迁移：KanbanProject.kanbanColumns → 工作区配置（自定义列不随项目丢失）
   const projectColumns = projectRepository.getProjectAtRoot(workspaceRoot, project.slug)?.config.kanbanColumns

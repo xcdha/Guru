@@ -367,8 +367,6 @@ import {
   ensureDefaultWorkspace,
   getWorkspaceMcpConfig,
   saveWorkspaceMcpConfig,
-  getGlobalMcpConfig,
-  saveGlobalMcpConfig,
   getAllEffectiveSkills,
   toggleGlobalSkill,
   deleteGlobalSkill,
@@ -383,11 +381,7 @@ import {
   getProjectSkillsDir,
   deleteProjectSkill,
   toggleProjectSkill,
-  hasProjectMcpServers,
-  getProjectMcpConfig,
-  saveProjectMcpConfig,
-  removeGlobalMcpServer,
-  removeProjectMcpServer,
+  removeWorkspaceMcpServer,
   getOtherProjectSkills,
   batchImportSkillsToProject,
   importSkillFromWorkspace,
@@ -3159,7 +3153,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 获取工作区 MCP 配置
+  // 获取工作区 MCP 配置（对齐上游 #2037：MCP 为工作区级存储，UI 唯一入口）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_MCP_CONFIG,
     async (_, workspaceSlug: string): Promise<WorkspaceMcpConfig> => {
@@ -3172,22 +3166,6 @@ export function registerIpcHandlers(): void {
     AGENT_IPC_CHANNELS.SAVE_MCP_CONFIG,
     async (_, workspaceSlug: string, config: WorkspaceMcpConfig): Promise<void> => {
       return saveWorkspaceMcpConfig(workspaceSlug, config)
-    }
-  )
-
-  // 获取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享，设置页真实编辑入口）
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.GET_GLOBAL_MCP_CONFIG,
-    async (): Promise<WorkspaceMcpConfig> => {
-      return getGlobalMcpConfig()
-    }
-  )
-
-  // 保存全局 MCP 配置
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.SAVE_GLOBAL_MCP_CONFIG,
-    async (_, config: WorkspaceMcpConfig): Promise<void> => {
-      return saveGlobalMcpConfig(config)
     }
   )
 
@@ -3208,12 +3186,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 测试 MCP 服务器连接
+  // 测试 MCP 服务器连接（真实握手；传 workspaceSlug 以注入该工作区的 OAuth/API-key 凭据）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TEST_MCP_SERVER,
-    async (_, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
+    async (_, workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
       const { validateMcpServer } = await import('./lib/mcp-validator')
-      const result = await validateMcpServer(name, entry)
+      const result = await validateMcpServer(name, entry, workspaceSlug)
       return {
         success: result.valid,
         message: result.valid ? (result.message ?? '连接成功') : (result.reason || '连接失败'),
@@ -3357,36 +3335,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.HAS_PROJECT_MCP_SERVERS,
-    async (_, workspaceSlug: string, projectId: string): Promise<boolean> => {
-      return hasProjectMcpServers(workspaceSlug, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.GET_PROJECT_MCP_CONFIG,
-    async (_, workspaceSlug: string, projectId: string): Promise<WorkspaceMcpConfig> => {
-      return getProjectMcpConfig(workspaceSlug, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.SAVE_PROJECT_MCP_CONFIG,
-    async (_, workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig): Promise<void> => {
-      return saveProjectMcpConfig(workspaceSlug, projectId, config)
-    }
-  )
-
-  // 原子删除单个 MCP（projectId 为空时删全局条目），基于主进程当前配置，避免
-  // 渲染层旧快照整体回写时覆盖其他条目的新状态。
+  // 原子删除工作区内的单个 MCP 条目，基于主进程当前配置，避免渲染层旧快照整体回写时覆盖其他条目的新状态。
+  // MCP 已对齐上游 #2037 为工作区级存储，项目级 MCP 覆盖已移除。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.DELETE_MCP,
-    async (_, workspaceSlug: string, name: string, projectId?: string | null): Promise<WorkspaceMcpConfig> => {
-      if (projectId) {
-        return removeProjectMcpServer(workspaceSlug, projectId, name)
-      }
-      return removeGlobalMcpServer(name)
+    async (_, workspaceSlug: string, name: string): Promise<WorkspaceMcpConfig> => {
+      return removeWorkspaceMcpServer(workspaceSlug, name)
     }
   )
 

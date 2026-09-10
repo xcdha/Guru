@@ -28,10 +28,8 @@ interface EditingServer {
 interface McpServerFormProps {
   /** 编辑模式传入已有服务器，创建模式传 null */
   server: EditingServer | null
-  /** 当前工作区 slug：仅 projectId 分支需要（定位项目存储位置），MCP 已全局化不再按工作区隔离 */
+  /** 当前工作区 slug（MCP 为工作区级存储，对齐上游 #2037） */
   workspaceSlug: string
-  /** 嵌套 Project id；传入且该 Project 已自己配置过时，读写完全覆盖到项目专属 MCP 配置；不传则读写全局唯一配置 */
-  projectId?: string | null
   onSaved: () => void
   onChanged?: () => void
   onCancel: () => void
@@ -122,27 +120,15 @@ function buildEntryFromValues(values: McpFormValues, includeTestResult = false):
   return base
 }
 
-export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onChanged, onCancel }: McpServerFormProps): React.ReactElement {
-  // 仅项目已有覆盖配置时读写项目档；否则读写全局，避免第一次保存把空项目配置写成整份覆盖。
+export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCancel }: McpServerFormProps): React.ReactElement {
+  // MCP 为工作区级存储（对齐上游 #2037），读写当前工作区配置。
   const readMcpConfig = React.useCallback(
-    async () => {
-      const overrideId = projectId
-      if (overrideId && await window.electronAPI.hasProjectMcpServers(workspaceSlug, overrideId)) {
-        return window.electronAPI.getProjectMcpConfig(workspaceSlug, overrideId)
-      }
-      return window.electronAPI.getGlobalMcpConfig()
-    },
-    [projectId, workspaceSlug],
+    async () => window.electronAPI.getWorkspaceMcpConfig(workspaceSlug),
+    [workspaceSlug],
   )
   const writeMcpConfig = React.useCallback(
-    async (config: WorkspaceMcpConfig) => {
-      const overrideId = projectId
-      if (overrideId && await window.electronAPI.hasProjectMcpServers(workspaceSlug, overrideId)) {
-        return window.electronAPI.saveProjectMcpConfig(workspaceSlug, overrideId, config)
-      }
-      return window.electronAPI.saveGlobalMcpConfig(config)
-    },
-    [projectId, workspaceSlug],
+    async (config: WorkspaceMcpConfig) => window.electronAPI.saveWorkspaceMcpConfig(workspaceSlug, config),
+    [workspaceSlug],
   )
   const isEdit = server !== null
   const isBuiltin = server?.entry.isBuiltin === true
@@ -328,7 +314,7 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
 
     try {
       const entry = buildEntry(false) // 测试时不包含旧的测试结果
-      const result = await window.electronAPI.testMcpServer(serverName, entry)
+      const result = await window.electronAPI.testMcpServer(workspaceSlug, serverName, entry)
       setTestResult({
         success: result.success,
         message: result.message,

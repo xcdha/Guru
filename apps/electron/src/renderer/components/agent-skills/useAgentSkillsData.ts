@@ -55,10 +55,8 @@ export interface AgentSkillsData {
   skillsDir: string
   /** 全局 Skills 目录（~/.guru/global-skills/） */
   globalSkillsDir: string
-  /** 生效的 MCP 配置：projectId 未传或项目未自配置时为全局配置，否则为项目覆盖配置 */
+  /** 当前工作区的 MCP 配置（对齐上游 #2037：MCP 为工作区级存储） */
   mcpConfig: WorkspaceMcpConfig
-  /** 当前 mcpConfig 是否来自项目覆盖（true）还是全局配置（false），供 UI 提示区分 */
-  mcpIsProjectOverride: boolean
   /** 工作区级能力摘要（builtinMcpServers / memory），不随 projectId 变化 */
   capabilities: WorkspaceCapabilities | null
   builtinMcpServers: BuiltinMcpServerSummary[]
@@ -67,14 +65,14 @@ export interface AgentSkillsData {
   toggleSkill: (skill: SkillMeta, enabled: boolean) => Promise<void>
   deleteSkill: (skill: SkillMeta) => Promise<boolean>
   updateSkill: (skill: SkillMeta) => Promise<void>
-  /** 重新读取当前生效的 MCP 配置（不重新读 Skills），用于关闭 MCP 编辑抽屉后局部刷新 */
+  /** 重新读取当前工作区的 MCP 配置（不重新读 Skills），用于关闭 MCP 编辑抽屉后局部刷新 */
   refreshMcpConfig: () => Promise<void>
   toggleMcp: (name: string, enabled: boolean) => Promise<void>
   toggleBuiltinMcp: (id: string, enabled: boolean) => Promise<void>
   deleteMcp: (name: string) => Promise<void>
   /** 在系统文件管理器中打开某个 Skill 所在目录（按其 scope 自动定位到 global/workspace/project） */
   openSkillFolder: (skill: SkillMeta) => void
-  /** 静默重读当前 scope（不把 loading 打回 true）。项目档下首次保存 MCP overlay 后必须调，否则内存仍是全局快照。 */
+  /** 静默重读当前 scope（不把 loading 打回 true）。切换工作区后刷新卡片状态。 */
   reload: () => Promise<void>
 }
 
@@ -93,7 +91,6 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
   const [skillsDir, setSkillsDir] = React.useState('')
   const [globalSkillsDir, setGlobalSkillsDir] = React.useState('')
   const [mcpConfig, setMcpConfig] = React.useState<WorkspaceMcpConfig>({ servers: {} })
-  const [mcpIsProjectOverride, setMcpIsProjectOverride] = React.useState(false)
   const [capabilities, setCapabilities] = React.useState<WorkspaceCapabilities | null>(null)
   const [builtinMcpServers, setBuiltinMcpServers] = React.useState<BuiltinMcpServerSummary[]>([])
   /** 存 getSkillKey(skill)，不能单存 slug（同名跨 scope 会串号） */
@@ -104,7 +101,6 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     if (!workspaceSlug) {
       setSkills([])
       setMcpConfig({ servers: {} })
-      setMcpIsProjectOverride(false)
       setCapabilities(null)
       setBuiltinMcpServers([])
       setSkillsDir('')
@@ -124,12 +120,8 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
       setBuiltinMcpServers(workspaceCapabilities.builtinMcpServers)
       setGlobalSkillsDir(globalDir)
 
-      // MCP：项目已自配置时用项目覆盖，否则用全局唯一配置（不再按工作区隔离）
-      const projectHasOwnMcp = scopeProjectId ? await window.electronAPI.hasProjectMcpServers(workspaceSlug, scopeProjectId) : false
-      setMcpIsProjectOverride(projectHasOwnMcp)
-      const config = projectHasOwnMcp && scopeProjectId
-        ? await window.electronAPI.getProjectMcpConfig(workspaceSlug, scopeProjectId)
-        : await window.electronAPI.getGlobalMcpConfig()
+      // MCP：工作区级存储（对齐上游 #2037；项目级 MCP 覆盖已移除）
+      const config = await window.electronAPI.getWorkspaceMcpConfig(workspaceSlug)
       setMcpConfig(config)
 
       // Skills：全局 + 工作区 + 已配置项目三层合并；skillsDir 仍取“当前 scope 自有目录”供打开/分类用
@@ -228,20 +220,16 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     if (baseDir) window.electronAPI.openFile(`${baseDir}/${skill.slug}`)
   }, [globalSkillsDir, skillsDir])
 
-  /** 重新从磁盘读取当前生效的 MCP 配置（与 loadData 中的 MCP 分支同步），供关闭编辑抽屉后刷新卡片上的测试状态 */
+  /** 重新从磁盘读取当前工作区的 MCP 配置（与 loadData 中的 MCP 分支同步），供关闭编辑抽屉后刷新卡片上的测试状态 */
   const refreshMcpConfig = React.useCallback(async () => {
     if (!workspaceSlug) return
     try {
-      const projectHasOwnMcp = scopeProjectId ? await window.electronAPI.hasProjectMcpServers(workspaceSlug, scopeProjectId) : false
-      setMcpIsProjectOverride(projectHasOwnMcp)
-      const config = projectHasOwnMcp && scopeProjectId
-        ? await window.electronAPI.getProjectMcpConfig(workspaceSlug, scopeProjectId)
-        : await window.electronAPI.getGlobalMcpConfig()
+      const config = await window.electronAPI.getWorkspaceMcpConfig(workspaceSlug)
       setMcpConfig(config)
     } catch (error) {
       console.error('[Agent 技能] 刷新 MCP 配置失败:', error)
     }
-  }, [workspaceSlug, scopeProjectId])
+  }, [workspaceSlug])
 
   const toggleMcp = React.useCallback(async (name: string, enabled: boolean) => {
     try {
@@ -250,18 +238,15 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
       const newConfig: WorkspaceMcpConfig = {
         servers: { ...mcpConfig.servers, [name]: { ...entry, enabled } },
       }
-      if (mcpIsProjectOverride && scopeProjectId) {
-        await window.electronAPI.saveProjectMcpConfig(workspaceSlug, scopeProjectId, newConfig)
-      } else {
-        await window.electronAPI.saveGlobalMcpConfig(newConfig)
-      }
+      if (!workspaceSlug) return
+      await window.electronAPI.saveWorkspaceMcpConfig(workspaceSlug, newConfig)
       setMcpConfig(newConfig)
       bumpCapabilitiesVersion((v) => v + 1)
     } catch (error) {
       console.error('[Agent 技能] 切换 MCP 服务器状态失败:', error)
       toast.error('切换 MCP 状态失败')
     }
-  }, [workspaceSlug, scopeProjectId, mcpConfig, mcpIsProjectOverride, bumpCapabilitiesVersion])
+  }, [workspaceSlug, mcpConfig, bumpCapabilitiesVersion])
 
   // 内置 MCP（nano-banana / 浏览器工具等）是全局设置，与工作区、项目均无关，scope 切换不影响它
   const toggleBuiltinMcp = React.useCallback(async (id: string, enabled: boolean) => {
@@ -283,7 +268,7 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     try {
       // 基于主进程当前配置原子删除，避免本渲染层旧快照整体回写时覆盖
       // 其他条目的新状态（如其他 MCP 的启用/验证状态）。
-      const newConfig = await window.electronAPI.deleteMcp(workspaceSlug, name, mcpIsProjectOverride ? scopeProjectId : null)
+      const newConfig = await window.electronAPI.deleteMcp(workspaceSlug, name)
       setMcpConfig(newConfig)
       bumpCapabilitiesVersion((v) => v + 1)
       toast.success(`已删除连接器：${name}`)
@@ -291,7 +276,7 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
       console.error('[Agent 技能] 删除连接器失败:', error)
       toast.error('删除连接器失败')
     }
-  }, [workspaceSlug, scopeProjectId, mcpConfig, mcpIsProjectOverride, bumpCapabilitiesVersion])
+  }, [workspaceSlug, mcpConfig, bumpCapabilitiesVersion])
 
   return {
     workspaceSlug,
@@ -303,7 +288,6 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     skillsDir,
     globalSkillsDir,
     mcpConfig,
-    mcpIsProjectOverride,
     capabilities,
     builtinMcpServers,
     isSkillUpdating,

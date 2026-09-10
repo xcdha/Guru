@@ -2,67 +2,45 @@ import { describe, expect, test } from 'bun:test'
 import { resolveEffectivePluginScope } from './agent-plugin-profile'
 
 describe('resolveEffectivePluginScope', () => {
-  test('无 project 时 MCP 走全局、Skills 自有层走工作区', () => {
+  test('无 project 时 Skills 自有层走工作区', () => {
     expect(
       resolveEffectivePluginScope({
         workspaceSlug: 'default',
         projectId: undefined,
-        hasProjectMcp: false,
         hasProjectSkills: false,
       }),
     ).toEqual({
       workspaceSlug: 'default',
       projectId: undefined,
-      mcpScope: 'global',
       skillsDirScope: 'workspace',
     })
   })
 
-  test('project 只有 MCP overlay 时仅 MCP 走项目覆盖', () => {
+  test('project 有 Skills overlay 时 Skills 自有层走项目', () => {
     expect(
       resolveEffectivePluginScope({
         workspaceSlug: 'default',
         projectId: 'p1',
-        hasProjectMcp: true,
+        hasProjectSkills: true,
+      }),
+    ).toEqual({
+      workspaceSlug: 'default',
+      projectId: 'p1',
+      skillsDirScope: 'project',
+    })
+  })
+
+  test('project 无 Skills overlay 时仍走工作区', () => {
+    expect(
+      resolveEffectivePluginScope({
+        workspaceSlug: 'default',
+        projectId: 'p1',
         hasProjectSkills: false,
       }),
     ).toEqual({
       workspaceSlug: 'default',
       projectId: 'p1',
-      mcpScope: 'project',
       skillsDirScope: 'workspace',
-    })
-  })
-
-  test('project 只有 Skills overlay 时仅 Skills 自有层走项目', () => {
-    expect(
-      resolveEffectivePluginScope({
-        workspaceSlug: 'default',
-        projectId: 'p1',
-        hasProjectMcp: false,
-        hasProjectSkills: true,
-      }),
-    ).toEqual({
-      workspaceSlug: 'default',
-      projectId: 'p1',
-      mcpScope: 'global',
-      skillsDirScope: 'project',
-    })
-  })
-
-  test('MCP 与 Skills overlay 都有时两层都走项目', () => {
-    expect(
-      resolveEffectivePluginScope({
-        workspaceSlug: 'default',
-        projectId: 'p1',
-        hasProjectMcp: true,
-        hasProjectSkills: true,
-      }),
-    ).toEqual({
-      workspaceSlug: 'default',
-      projectId: 'p1',
-      mcpScope: 'project',
-      skillsDirScope: 'project',
     })
   })
 
@@ -71,14 +49,12 @@ describe('resolveEffectivePluginScope', () => {
       resolveEffectivePluginScope({
         workspaceSlug: undefined,
         projectId: 'p1',
-        hasProjectMcp: true,
-        hasProjectSkills: false,
+        hasProjectSkills: true,
       }),
     ).toEqual({
       workspaceSlug: undefined,
       projectId: 'p1',
-      mcpScope: 'project',
-      skillsDirScope: 'workspace',
+      skillsDirScope: 'project',
     })
   })
 
@@ -87,13 +63,11 @@ describe('resolveEffectivePluginScope', () => {
       resolveEffectivePluginScope({
         workspaceSlug: 'default',
         projectId: undefined,
-        hasProjectMcp: true,
         hasProjectSkills: true,
       }),
     ).toEqual({
       workspaceSlug: 'default',
       projectId: undefined,
-      mcpScope: 'global',
       skillsDirScope: 'workspace',
     })
   })

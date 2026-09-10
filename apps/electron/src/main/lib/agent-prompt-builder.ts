@@ -16,7 +16,7 @@ import { formatProjectContextForPrompt } from '@guru/shared/projects'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { getUserProfile } from './user-profile-service'
-import { getEffectiveMcpConfig, hasProjectMcpServers, getProjectMcpConfig } from './agent-workspace-manager'
+import { getEffectiveMcpConfig } from './agent-workspace-manager'
 import { getConfigDirName } from './config-paths'
 import { buildGitAttributionPromptSection, isGitAttributionEnabled } from './agent-git-attribution'
 import { buildGitWorktreePromptSection } from './agent-git-worktree-policy'
@@ -505,12 +505,9 @@ export function buildDynamicContext(ctx: DynamicContext): string {
       wsLines.push(`工作区: ${ctx.workspaceName}`)
     }
 
-    // MCP 服务器列表：与 buildMcpServers 同样的 fallback 规则（项目自己配置过才用项目级，
-    // 否则读生效的全局配置）。不能用 getWorkspaceMcpConfig——工作区级 mcp.json 迁移后已改名，
-    // 继续读旧路径会让模型看到的服务器列表长期为空，即使全局配置里实际存在。
-    const mcpConfig = ctx.projectId && hasProjectMcpServers(ctx.workspaceSlug, ctx.projectId)
-      ? getProjectMcpConfig(ctx.workspaceSlug, ctx.projectId)
-      : getEffectiveMcpConfig(ctx.workspaceSlug)
+    // MCP 服务器列表：读当前工作区生效配置（getEffectiveMcpConfig → 工作区 mcp.json，带全局兜底）。
+    // MCP 已对齐上游 #2037 为工作区级存储，项目级 MCP 覆盖已移除。
+    const mcpConfig = getEffectiveMcpConfig(ctx.workspaceSlug)
     const serverEntries = Object.entries(mcpConfig.servers ?? {})
     if (serverEntries.length > 0) {
       wsLines.push('MCP 服务器:')

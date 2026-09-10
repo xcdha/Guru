@@ -1,19 +1,22 @@
 import type { KanbanProject } from '@/components/app-shell/kanban/types'
 import { filterPickableKanbanProjects } from '@/components/app-shell/kanban/types'
 
-/** UI 默认档：全局 MCP + 当前工作区 Skills overlay。 */
+/** UI 默认档：工作区连接器 + 当前工作区 Skills overlay。 */
 export type PluginScope =
   | { kind: 'workspace' }
   | {
       kind: 'project'
       projectId: string
       projectName: string
-      hasOwnMcp: boolean
       hasOwnSkills: boolean
     }
 
+/**
+ * 项目作用域标记。
+ *
+ * MCP 已对齐上游 #2037 为工作区级存储（项目级 MCP 覆盖已移除），故仅保留 Skills 维度。
+ */
 export interface PluginScopeFlags {
-  hasOwnMcp: boolean
   hasOwnSkills: boolean
 }
 
@@ -24,19 +27,15 @@ export interface PluginScopeOption {
   scope: PluginScope
 }
 
-const WORKSPACE_DESCRIPTION = '连接器全局共享（所有工作区）；Skills 为当前工作区叠加全局。'
+const WORKSPACE_DESCRIPTION = '连接器按工作区保存；Skills 为当前工作区叠加全局。'
 
 function flagsOf(flags: Record<string, PluginScopeFlags> | undefined, projectId: string): PluginScopeFlags {
-  return flags?.[projectId] ?? { hasOwnMcp: false, hasOwnSkills: false }
+  return flags?.[projectId] ?? { hasOwnSkills: false }
 }
 
 function describeProjectFlags(flags: PluginScopeFlags): string {
-  if (flags.hasOwnMcp && flags.hasOwnSkills) {
-    return '连接器完全覆盖全局，仅本项目生效；含项目级 Skills'
-  }
-  if (flags.hasOwnMcp) return '连接器完全覆盖全局，仅本项目生效'
   if (flags.hasOwnSkills) return '含项目级 Skills'
-  return 'Skills 叠加工作区/全局；连接器沿用全局配置'
+  return 'Skills 叠加工作区/全局'
 }
 
 export function buildPluginScopeOptions(input: {
@@ -62,7 +61,6 @@ export function buildPluginScopeOptions(input: {
         kind: 'project',
         projectId: project.id,
         projectName: project.name,
-        hasOwnMcp: flags.hasOwnMcp,
         hasOwnSkills: flags.hasOwnSkills,
       },
     })
@@ -90,13 +88,10 @@ export function describePluginScopeNotice(scope: PluginScope): string | null {
     case 'workspace':
       return null
     case 'project': {
-      const mcpLine = scope.hasOwnMcp
-        ? '连接器完全覆盖全局，仅本项目生效'
-        : '连接器沿用全局配置'
       const skillsLine = scope.hasOwnSkills
         ? '含项目级 Skills'
         : 'Skills 叠加工作区/全局'
-      return `项目「${scope.projectName}」：${skillsLine}；${mcpLine}`
+      return `项目「${scope.projectName}」：${skillsLine}；连接器按工作区保存（与项目无关）`
     }
     default: {
       const _exhaustive: never = scope
@@ -130,12 +125,11 @@ export function applyPluginScopeFlags(
       return scope
     case 'project': {
       const next = flagsOf(flags, scope.projectId)
-      if (next.hasOwnMcp === scope.hasOwnMcp && next.hasOwnSkills === scope.hasOwnSkills) return scope
+      if (next.hasOwnSkills === scope.hasOwnSkills) return scope
       return {
         kind: 'project',
         projectId: scope.projectId,
         projectName: scope.projectName,
-        hasOwnMcp: next.hasOwnMcp,
         hasOwnSkills: next.hasOwnSkills,
       }
     }
@@ -160,13 +154,4 @@ export function syncPluginScope(scope: PluginScope, options: readonly PluginScop
       return _exhaustive
     }
   }
-}
-
-/** 仅当项目已有连接器覆盖时才写入项目档；否则编辑沿用全局，避免把空配置存成整份覆盖。 */
-export function resolveMcpWriteProjectId(
-  scopeProjectId: string | null | undefined,
-  mcpIsProjectOverride: boolean,
-): string | null {
-  if (!mcpIsProjectOverride) return null
-  return scopeProjectId ?? null
 }

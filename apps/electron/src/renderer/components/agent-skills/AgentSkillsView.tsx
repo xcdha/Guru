@@ -10,7 +10,7 @@
  * - 内容：各插件能力卡片/列表，点击打开详情抽屉；记忆复用 WorkspaceMemoryTab
  *
  * 作用域真实规则（不要写成「Workspace 默认 MCP + Project 覆盖」）：
- * - MCP：全局 ~/.guru/mcp.json（所有工作区共享）；仅当项目 hasProjectMcpServers 时整份替换。
+ * - MCP：工作区级 agent-workspaces/{slug}/mcp.json（对齐上游 #2037，项目级 MCP 覆盖已移除）。
  * - Skills：全局 + 工作区 + 项目三层 overlay；项目层只在 hasProjectSkills 时出现。
  * - Chat tools / builtin MCP / 专家 / 专家团：全局，与选择器无关。
  * - Memory：工作区级，选择器不改变记忆页。
@@ -43,7 +43,6 @@ import { buildConnectorItems } from '@/lib/connectors-model'
 import {
   buildPluginScopeOptions,
   describePluginScopeNotice,
-  resolveMcpWriteProjectId,
   syncPluginScope,
   type PluginScope,
   type PluginScopeFlags,
@@ -123,9 +122,8 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
   const [pluginScope, setPluginScope] = React.useState<PluginScope>({ kind: 'workspace' })
   const [projectScopeFlags, setProjectScopeFlags] = React.useState<Record<string, PluginScopeFlags>>({})
   const scopeProjectId = pluginScope.kind === 'project' ? pluginScope.projectId : null
-  // MCP 全局共享；Skills 三层 overlay。projectId 只在选中 Project 时传入。
+  // MCP 工作区级（对齐上游 #2037）；Skills 三层 overlay。projectId 只在选中 Project 时传入。
   const data = useAgentSkillsData(scopeProjectId)
-  const mcpWriteProjectId = resolveMcpWriteProjectId(scopeProjectId, data.mcpIsProjectOverride)
   const bumpCapabilities = useSetAtom(workspaceCapabilitiesVersionAtom)
   const setActiveView = useSetAtom(activeViewAtom)
   const setPendingPrompt = useSetAtom(agentPendingPromptAtom)
@@ -216,7 +214,6 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
         && next.kind === 'project'
         && current.projectId === next.projectId
         && current.projectName === next.projectName
-        && current.hasOwnMcp === next.hasOwnMcp
         && current.hasOwnSkills === next.hasOwnSkills
       ) {
         return current
@@ -234,11 +231,8 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
     const projectIds = filterPickableKanbanProjects(kanbanProjects).map((project) => project.id)
     let cancelled = false
     void Promise.all(projectIds.map(async (projectId) => {
-      const [hasOwnMcp, hasOwnSkills] = await Promise.all([
-        window.electronAPI.hasProjectMcpServers(slug, projectId),
-        window.electronAPI.hasProjectSkills(slug, projectId),
-      ])
-      return [projectId, { hasOwnMcp, hasOwnSkills }] as const
+      const hasOwnSkills = await window.electronAPI.hasProjectSkills(slug, projectId)
+      return [projectId, { hasOwnSkills }] as const
     })).then((entries) => {
       if (!cancelled) setProjectScopeFlags(Object.fromEntries(entries))
     }).catch((error: unknown) => {
@@ -608,7 +602,6 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
               builtinServers={data.builtinMcpServers}
               userEntries={userMcpEntries}
               query={search}
-              mcpIsProjectOverride={data.mcpIsProjectOverride}
               reviewHints={hintsDismissed ? null : globalScopeHints}
               onDismissHints={() => setHintsDismissed(true)}
               onToggleBuiltin={data.toggleBuiltinMcp}
@@ -622,7 +615,6 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
                 setMcpSheetOpen(true)
               }}
               workspaceSlug={data.workspaceSlug}
-              projectId={mcpWriteProjectId}
               onUserMcpChanged={() => {
                 bumpCapabilities((v) => v + 1)
                 void data.reload()
@@ -683,11 +675,7 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
         open={pendingDeleteMcpName !== null}
         onOpenChange={(open) => { if (!open) setPendingDeleteMcpName(null) }}
         title={`确认删除连接器「${pendingDeleteMcpName}」？`}
-        description={
-          data.mcpIsProjectOverride
-            ? '将从本项目的连接器覆盖配置中删除，不影响全局配置。'
-            : '这是全局连接器配置，删除将影响所有工作区，且无法恢复。'
-        }
+        description="将从当前工作区的连接器配置中删除，且无法恢复。"
         confirmLabel="删除"
         loadingLabel="删除中..."
         loading={isDeletingMcp}
@@ -731,7 +719,6 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
         open={mcpSheetOpen}
         server={editingMcp}
         workspaceSlug={data.workspaceSlug}
-        projectId={mcpWriteProjectId}
         onOpenChange={(open) => {
           setMcpSheetOpen(open)
           if (!open) {
