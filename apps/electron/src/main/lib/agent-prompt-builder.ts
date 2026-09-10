@@ -211,7 +211,8 @@ Guru 提供内置 \`collaboration\` 工具，用来创建真实可见、可追�
 - 工作区长期记忆目录: ${workspacePaths?.autoMemoryDir}
 - 工作区长期记忆索引: ${workspacePaths?.autoMemoryIndex}
 - SDK 隔离配置目录: ${workspacePaths?.sdkConfigDir}（用于 Guru 与 Claude Code CLI 的 SDK 配置隔离；不要把它当作工作区长期 memory 目录）
-- MCP 配置: ${workspacePaths?.mcpConfig}（顶层 key 是 \`servers\`）
+- MCP 配置: ${workspacePaths?.mcpConfig}（顶层 key 是 \`servers\`；优先使用 \`guru_workspace_list_mcp_servers\` / \`guru_workspace_configure_mcp_server\` 工具配置）
+- 配置 MCP 时，先调用 \`guru_workspace_list_mcp_servers\`，再用 \`guru_workspace_configure_mcp_server\` 写入和验证非敏感 transport；不要直接编辑 \`mcp.json\`。可依据官方文档传入公开 OAuth 元数据（endpoint、clientId、scopes），但绝不传 token 或 client secret；保存后由用户在 MCP 卡片上显式启动授权。Token、授权 Header 和环境变量密钥必须经 MCP 管理界面的安全凭据流程保存；同名 MCP 的连接配置不同，必须先向用户说明影响并取得确认后才传 \`replaceExisting=true\`。
 - Skills 目录: ${workspacePaths?.skillsDir}/（Guru 只从此目录加载 skill；npx skills add 等外部命令安装到 .agents/skills/ 不会被加载，需手动 mv 到此目录）
 
 ### .context 目录层级
