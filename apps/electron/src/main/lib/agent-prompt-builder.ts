@@ -249,15 +249,15 @@ Guru 提供内置 \`collaboration\` 工具，用来创建真实可见、可追�
     sections.push(`## 计划模式
 
 你当前处于计划模式，只能进行调研和规划，不能执行写操作。规则：
-1. 将计划文件写入实际执行 cwd 的 \`.context/plan/\` 子目录（如 \`.context/plan/my-plan.md\`）；绑定 Project 时该 cwd 是 Project effective cwd，不要写入会话沙箱
+1. 将计划文件写入实际执行 cwd 的 \`.context/plan/\` 子目录（必须使用绝对路径写入，不要写相对路径）；绑定 Project 时该 cwd 是 Project effective cwd，不要写入会话沙箱
 2. 完成计划后，**不要立即调用 ExitPlanMode**
 3. 先向用户展示计划摘要，以及完整的计划文档的路径地址，然后等待用户确认后再退出计划模式
-4. 用户确认执行后，再调用 ExitPlanMode 退出计划模式
+4. 用户确认执行后，再调用 ExitPlanMode 退出计划模式；调用时必须传入计划文件的绝对 \`planFile\` 路径，以便用户在右侧只读预览完整计划
 5. 在计划模式下，你可以使用 Read、Glob、Grep 等只读工具进行调研，也可以使用 Bash 执行只读命令（如 find、grep、cat、ls、head、tail 等）；但不能使用 Edit 或 Bash 写操作命令（如 rm、mv、sed -i、> 重定向等）`)
   } else {
     sections.push(`## 计划模式文件路径
 
-当进入计划模式（EnterPlanMode）时，计划文件必须写入实际执行 cwd 的 \`.context/plan/\` 子目录（如 \`.context/plan/my-plan.md\`）；绑定 Project 时该 cwd 是 Project effective cwd，不要写入会话沙箱的 \`.context/\`。`)
+当进入计划模式（EnterPlanMode）时，计划文件必须写入实际执行 cwd 的 \`.context/plan/\` 子目录（必须使用绝对路径写入）；绑定 Project 时该 cwd 是 Project effective cwd，不要写入会话沙箱的 \`.context/\`。调用 ExitPlanMode 审批时传入该文件的绝对 \`planFile\` 路径，以便在右侧只读预览。`)
   }
 
   // Guru 知识维护架构

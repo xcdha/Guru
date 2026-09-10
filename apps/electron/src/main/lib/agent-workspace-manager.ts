@@ -2499,6 +2499,8 @@ interface WorkspaceConfig {
   worktreeRepos?: import('@guru/shared').WorkspaceWorktreeRepo[]
   /** 旧版工作区默认工作目录（2026-08-15 起迁移到应用设置 agentDefaultWorkingDirectory，此处仅作迁移回退）。 */
   defaultWorkingDirectory?: string
+  /** 本工作区中仅对 Guru 停用的 CLI 集成；第三方 CLI 自身的凭据不受影响。 */
+  disabledCliIntegrationIds?: string[]
   /** 用户授权 Agent 主动维护工作区/项目 AGENTS.md 知识。 */
   projectKnowledgeMaintenanceApproved?: boolean
   /** 内部节奏元数据（仅用于记忆复查冷却）；Markdown 仍是长期记忆唯一来源。 */
@@ -2532,6 +2534,9 @@ function readWorkspaceConfigAtPath(configPath: string): WorkspaceConfig {
       defaultWorkingDirectory: typeof data.defaultWorkingDirectory === 'string'
         ? data.defaultWorkingDirectory
         : undefined,
+      disabledCliIntegrationIds: Array.isArray(data.disabledCliIntegrationIds)
+        ? [...new Set(data.disabledCliIntegrationIds.filter((id): id is string => typeof id === 'string' && id.length > 0))]
+        : undefined,
       projectKnowledgeMaintenanceApproved: data.projectKnowledgeMaintenanceApproved === true ? true : undefined,
       // 仅保留旧的公开设置 memoryRefresh 的冷却时间戳；切到固定内部节奏后忽略其 interval。
       memoryReview: (() => {
@@ -2555,6 +2560,28 @@ function readWorkspaceConfig(workspaceSlug: string): WorkspaceConfig {
 function writeWorkspaceConfig(workspaceSlug: string, config: WorkspaceConfig): void {
   const configPath = getWorkspaceConfigPath(workspaceSlug)
   writeJsonFileAtomic(configPath, config)
+}
+
+/** 本工作区中仅对 Guru 停用的 CLI 集成 ID 集合。 */
+export function getDisabledCliIntegrationIds(workspaceSlug: string): Set<string> {
+  return new Set(readWorkspaceConfig(workspaceSlug).disabledCliIntegrationIds ?? [])
+}
+
+/**
+ * 变更 Guru 对某个 CLI 集成的使用许可；不调用第三方登出、不删除凭据、不撤销 token。
+ */
+export function setCliIntegrationEnabled(workspaceSlug: string, id: string, enabled: boolean): void {
+  const normalizedId = id.trim()
+  if (!normalizedId) throw new Error('CLI 集成 ID 不能为空')
+
+  const config = readWorkspaceConfig(workspaceSlug)
+  const disabledIds = new Set(config.disabledCliIntegrationIds ?? [])
+  if (enabled) disabledIds.delete(normalizedId)
+  else disabledIds.add(normalizedId)
+  writeWorkspaceConfig(workspaceSlug, {
+    ...config,
+    disabledCliIntegrationIds: [...disabledIds].sort(),
+  })
 }
 
 /** 用户是否已授权 Agent 主动维护工作区/项目 AGENTS.md 知识。 */

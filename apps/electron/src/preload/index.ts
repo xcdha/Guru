@@ -963,6 +963,12 @@ export interface ElectronAPI {
   /** 删除工作区 MCP 对应的系统安全凭据；不返回任何认证值。 */
   deleteMcpCredential: (workspaceSlug: string, serverName: string) => Promise<void>
 
+  /** 查询本机 CLI 集成状态；不返回任何认证值。 */
+  getCliIntegrationStatuses: (workspaceSlug: string) => Promise<import('@guru/shared').CliIntegrationStatus[]>
+
+  /** 仅切换 Guru 对工作区 CLI 集成的使用权限；绝不登出或撤销第三方授权。 */
+  setCliIntegrationEnabled: (workspaceSlug: string, id: string, enabled: boolean) => Promise<import('@guru/shared').CliIntegrationStatus[]>
+
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   getGlobalScopeReviewHints: () => Promise<import('@guru/shared').GlobalScopeReviewHints>
 
@@ -2696,6 +2702,14 @@ const electronAPI: ElectronAPI = {
 
   deleteMcpCredential: (workspaceSlug: string, serverName: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_MCP_CREDENTIAL, workspaceSlug, serverName) as Promise<void>
+  },
+
+  getCliIntegrationStatuses: (workspaceSlug: string) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.GET_CLI_INTEGRATION_STATUSES, workspaceSlug) as Promise<import('@guru/shared').CliIntegrationStatus[]>
+  },
+
+  setCliIntegrationEnabled: (workspaceSlug: string, id: string, enabled: boolean) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.SET_CLI_INTEGRATION_ENABLED, workspaceSlug, id, enabled) as Promise<import('@guru/shared').CliIntegrationStatus[]>
   },
 
   getGlobalScopeReviewHints: () => {

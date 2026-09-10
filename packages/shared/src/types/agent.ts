@@ -1297,6 +1297,15 @@ export interface SaveMcpApiKeyInput {
   stdioBinding?: { command: string; args: string[] }
 }
 
+/** CLI 集成的非敏感状态；任何凭据值都不会返回给渲染进程。 */
+export interface CliIntegrationStatus {
+  id: string
+  /** 第三方 CLI 是否报告了已认证账户。 */
+  connected: boolean
+  /** Guru 是否被允许在当前工作区使用该 CLI。 */
+  enabled: boolean
+}
+
 // ===== Skill 元数据 =====
 
 /** 导入来源类型：工作区本地 or 企业版组织分发 */
@@ -1662,8 +1671,8 @@ export interface AgentSendInput {
   startedAt?: number
   /** 用户点击错误消息的重试时，指向本轮开始前应删除的错误 UUID。 */
   retryOfErrorUuid?: string
-  /** 触发来源：用户手动、定时任务、父 Agent 委派、Task Conductor 编排（用于 UI 区分标记） */
-  triggeredBy?: 'user' | 'automation' | 'delegation' | 'work'
+  /** 触发来源：用户手动、定时任务、父 Agent 委派、Task Conductor 编排或外部 Bridge（用于权限与 UI 区分） */
+  triggeredBy?: 'user' | 'automation' | 'delegation' | 'external' | 'work'
   /** 定时任务执行上下文（注入到系统提示词，用户不可见） */
   automationContext?: string
   /** Task Conductor 上下文（注入到系统提示词，用户不可见） */
@@ -2353,6 +2362,10 @@ export const AGENT_IPC_CHANNELS = {
   SAVE_MCP_API_KEY: 'agent:save-mcp-api-key',
   /** 删除工作区 MCP 对应的系统安全凭据，不返回任何凭据。 */
   DELETE_MCP_CREDENTIAL: 'agent:delete-mcp-credential',
+  /** 查询本机 CLI 集成是否已完成官方配置，不返回任何凭据。 */
+  GET_CLI_INTEGRATION_STATUSES: 'agent:get-cli-integration-statuses',
+  /** 更新 Guru 对工作区 CLI 集成的启用状态；绝不调用第三方 CLI 登出或撤销授权。 */
+  SET_CLI_INTEGRATION_ENABLED: 'agent:set-cli-integration-enabled',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
   /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */

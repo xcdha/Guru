@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import { sanitizeGraphifyToolArgs } from './pi-mcp-tools'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import type { Socket } from 'node:net'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
@@ -157,6 +158,119 @@ async function startSessionTestServer(options: SessionServerOptions): Promise<Se
   }
 }
 
+type FlakyMcpServerMode = 'fail' | 'healthy' | 'hang'
+
+interface FlakyMcpServer {
+  url: string
+  setMode: (mode: FlakyMcpServerMode) => void
+  disconnectClients: () => void
+}
+
+/**
+ * required 冷却测试用可切换 MCP 服务器：
+ * - fail：所有请求立即返回 503（快速握手失败）
+ * - healthy：正常 MCP serve（initialize/listTools 全流程）
+ * - hang：接受请求但永不响应（模拟挂死服务器，用于验证冷却内的 500ms 竞态上限）
+ */
+async function startFlakyTestServer(): Promise<FlakyMcpServer> {
+  let mode: FlakyMcpServerMode = 'fail'
+  const sockets = new Set<Socket>()
+  const transports = new Map<string, StreamableHTTPServerTransport>()
+  const servers = new Set<McpServer>()
+
+  const httpServer = createServer(async (request, response) => {
+    if (mode === 'hang') return
+    if (mode === 'fail') {
+      sendJsonError(response, 503, 'MCP server temporarily unavailable')
+      return
+    }
+
+    if (request.method === 'GET') {
+      response.writeHead(405).end()
+      return
+    }
+    if (request.method !== 'POST') {
+      response.writeHead(405).end()
+      return
+    }
+
+    try {
+      const body = await readJsonBody(request)
+      const rawSessionId = request.headers['mcp-session-id']
+      const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId
+
+      if (sessionId) {
+        const transport = transports.get(sessionId)
+        if (!transport) {
+          sendJsonError(response, 404, 'No valid session ID provided')
+          return
+        }
+        await transport.handleRequest(request, response, body)
+        return
+      }
+
+      if (!isInitializeRequest(body)) {
+        sendJsonError(response, 400, 'Mcp-Session-Id header is required')
+        return
+      }
+
+      let transport!: StreamableHTTPServerTransport
+      const mcpServer = new McpServer({ name: 'pi-mcp-flaky-test', version: '1.0.0' })
+      mcpServer.registerTool('ping', { description: '返回 pong' }, async () => (
+        { content: [{ type: 'text' as const, text: 'pong' }] }
+      ))
+
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        enableJsonResponse: true,
+        onsessioninitialized: (newSessionId) => {
+          transports.set(newSessionId, transport)
+        },
+      })
+      servers.add(mcpServer)
+      await mcpServer.connect(transport)
+      await transport.handleRequest(request, response, body)
+    } catch (error) {
+      if (!response.headersSent) {
+        sendJsonError(response, 500, error instanceof Error ? error.message : String(error))
+      }
+    }
+  })
+
+  httpServer.on('connection', (socket) => {
+    sockets.add(socket)
+    socket.on('close', () => {
+      sockets.delete(socket)
+    })
+  })
+
+  await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve))
+  const address = httpServer.address()
+  if (!address || typeof address === 'string') throw new Error('无法获取测试服务器端口')
+
+  const disconnectClients = (): void => {
+    for (const socket of [...sockets]) socket.destroy()
+    sockets.clear()
+  }
+
+  const close = async (): Promise<void> => {
+    disconnectClients()
+    await Promise.allSettled([...servers].map((server) => server.close()))
+    await new Promise<void>((resolve, reject) => {
+      httpServer.close((error) => error ? reject(error) : resolve())
+    })
+  }
+  cleanups.push(close)
+
+  return {
+    url: `http://127.0.0.1:${address.port}/mcp`,
+    setMode: (nextMode) => {
+      mode = nextMode
+    },
+    disconnectClients,
+  }
+}
+
 async function buildPingTool(serverName: string, url: string): Promise<ToolDefinition> {
   const tools = await buildPiMcpTools({
     [serverName]: { type: 'http', url, required: true },
@@ -293,5 +407,47 @@ describe('Graphify 工具参数安全（2026-08-14 P3）', () => {
   test('无 project_path 时原样返回且不新增字段', () => {
     const args = { question: 'x', depth: 2 }
     expect(sanitizeGraphifyToolArgs(args)).toEqual({ question: 'x', depth: 2 })
+  })
+})
+
+describe('Pi MCP required 失败冷却（对齐上游 #1976）', () => {
+  test('required 首次握手失败后进入冷却：后续回合只等 bootstrap 窗口，不阻塞完整握手超时', async () => {
+    const server = await startFlakyTestServer()
+    const serverName = 'required_cooldown_hang'
+    const config = { type: 'http', url: server.url, required: true, startup_timeout_sec: 10 }
+
+    // 第一次：fail 模式，握手快速失败 → 记入冷却并跳过该服务器（不抛错、不阻断会话）
+    const first = await buildPiMcpTools({ [serverName]: config })
+    expect(first).toEqual([])
+
+    // 第二次：服务器转为挂死。冷却期内回落到 500ms bootstrap 竞态；
+    // 若冷却未生效，这里会等待完整的 10s connect 超时。
+    server.setMode('hang')
+    try {
+      const startedAt = Date.now()
+      const second = await buildPiMcpTools({ [serverName]: config })
+      const elapsedMs = Date.now() - startedAt
+      expect(second).toEqual([])
+      expect(elapsedMs).toBeLessThan(3000)
+    } finally {
+      server.disconnectClients()
+    }
+  })
+
+  test('冷却期内同端口服务恢复：本回合即返回工具并退出冷却', async () => {
+    const server = await startFlakyTestServer()
+    const serverName = 'required_cooldown_recovery'
+    const config = { type: 'http', url: server.url, required: true, startup_timeout_sec: 10 }
+
+    const first = await buildPiMcpTools({ [serverName]: config })
+    expect(first).toEqual([])
+
+    // 服务恢复后（仍在 2 分钟冷却期内），后台重连一旦成功应立即退出冷却：
+    // 本回合即桥接到工具，而不是等冷却过期。
+    server.setMode('healthy')
+    const second = await buildPiMcpTools({ [serverName]: config })
+    const ping = second.find((tool) => tool.name === `mcp__${serverName}__ping`)
+    if (!ping) throw new Error(`未找到 ${serverName} 的 ping 工具`)
+    await callPing(ping, 'recovered-call')
   })
 })
