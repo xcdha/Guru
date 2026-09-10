@@ -115,7 +115,12 @@ version: "1.0.0"
 - 是否有需要用户确认或后续合并同类项的建议`
 }
 
-export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): React.ReactElement {
+/**
+ * `componentTab`：由右侧工作区组件 Tab（技能 / MCP）传入，直接定位到对应插件子页。
+ * prop 优先、atom 兜底；嵌入模式下视图内切换其他插件 Tab 只写本地状态，
+ * 不污染全局插件中心（全屏视图）的当前子页。
+ */
+export function AgentSkillsView({ embedded = false, componentTab }: { embedded?: boolean; componentTab?: 'skills' | 'mcp' }): React.ReactElement {
   const { workspaces, currentWorkspaceId, selectWorkspace } = useWorkspaceActions()
   const kanbanProjects = useAtomValue(serverKanbanProjectsAtom)
   const capabilitiesVersion = useAtomValue(workspaceCapabilitiesVersionAtom)
@@ -132,8 +137,18 @@ export function AgentSkillsView({ embedded = false }: { embedded?: boolean }): R
   const { createAgent } = useCreateSession()
 
   const [rawTab, setRawTab] = useAtom(agentSkillsTabAtom)
-  const tab = normalizePluginCenterTab(rawTab)
-  const setTab = React.useCallback((next: PluginCenterTab) => setRawTab(next), [setRawTab])
+  const componentTabDefault: PluginCenterTab | null = componentTab === 'mcp' ? 'connectors' : componentTab === 'skills' ? 'skills' : null
+  const [embeddedTab, setEmbeddedTab] = React.useState<PluginCenterTab | null>(null)
+  // 外层组件 Tab 在 skills ↔ mcp 之间切换时丢弃本地覆盖，回到 prop 指定的子页。
+  React.useEffect(() => { setEmbeddedTab(null) }, [componentTabDefault])
+  const tab = componentTabDefault ? (embeddedTab ?? componentTabDefault) : normalizePluginCenterTab(rawTab)
+  const setTab = React.useCallback((next: PluginCenterTab) => {
+    if (componentTabDefault) {
+      setEmbeddedTab(next)
+      return
+    }
+    setRawTab(next)
+  }, [componentTabDefault, setRawTab])
   const [search, setSearch] = React.useState('')
   // 专家 / 专家团 Tab：数量与“新建专家”触发 token（由工具条按钮递增，AgentExpertsView 收到后打开弹窗）
   const [expertsCount, setExpertsCount] = React.useState(0)

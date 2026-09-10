@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { NanoBananaSettings } from '@/components/settings/ToolSettings'
 import { McpServerForm } from '@/components/settings/McpServerForm'
+import { McpCredentialActions } from './McpCredentialActions'
 import { chatToolsAtom } from '@/atoms/chat-tool-atoms'
 import { getConnectorIcon } from '@/lib/builtin-mcp-icons'
 import { describeConnectorDetail } from '@/lib/connector-detail-model'
@@ -143,6 +144,7 @@ export function ConnectorDetailDialog({
               item={item}
               builtinServers={builtinServers}
               userEntries={userEntries}
+              workspaceSlug={workspaceSlug}
               testResult={testResult}
               onUserMcpChanged={onUserMcpChanged}
               onEditUserMcp={() => setEditingUserMcp(true)}
@@ -186,6 +188,7 @@ interface DetailBodyProps {
   item: ConnectorItem | null
   builtinServers: BuiltinMcpServerSummary[]
   userEntries: Array<[string, McpServerEntry]>
+  workspaceSlug: string
   testResult: { success: boolean; message: string } | null
   onUserMcpChanged?: () => void
   onEditUserMcp: () => void
@@ -196,6 +199,7 @@ function DetailBody({
   item,
   builtinServers,
   userEntries,
+  workspaceSlug,
   testResult,
   onUserMcpChanged,
   onEditUserMcp,
@@ -321,6 +325,13 @@ function DetailBody({
               </span>
             </div>
           )}
+          <McpCredentialActions
+            key={item.sourceId}
+            serverName={item.sourceId}
+            entry={userEntry}
+            workspaceSlug={workspaceSlug}
+            onChanged={onUserMcpChanged}
+          />
           <Button variant="outline" size="sm" className="self-start" onClick={onEditUserMcp}>
             编辑配置
           </Button>

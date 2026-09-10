@@ -157,6 +157,14 @@ export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCan
     server?.entry.lastTestResult ?? null
   )
 
+  // 编辑时保留表单未暴露的字段：oauth 元数据由 OAuth 模板 / Agent 写入，表单只透传不清除。
+  const latestOauthRef = React.useRef(server?.entry.oauth)
+  React.useEffect(() => { latestOauthRef.current = server?.entry.oauth }, [server])
+  const preserveOauth = (entry: McpServerEntry): McpServerEntry => {
+    const oauth = latestOauthRef.current
+    return oauth ? { ...entry, oauth } : entry
+  }
+
   // 自动保存状态（仅编辑模式）
   const AUTO_SAVE_DELAY = 600
   const autoSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -261,7 +269,7 @@ export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCan
     setSaveStatus('idle')
     autoSaveTimerRef.current = setTimeout(() => {
       const vals = latestValuesRef.current
-      const entry = buildEntryFromValues(vals, true)
+      const entry = preserveOauth(buildEntryFromValues(vals, true))
       void doSaveEntryRef.current(vals.name.trim(), entry)
     }, AUTO_SAVE_DELAY)
     return () => {
@@ -296,7 +304,7 @@ export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCan
         if (!serverName) return
         if (vals.transportType === 'stdio' && !vals.command.trim()) return
         if (vals.transportType !== 'stdio' && !vals.url.trim()) return
-        const entry = buildEntryFromValues(vals, true)
+        const entry = preserveOauth(buildEntryFromValues(vals, true))
         void doSaveEntryRef.current(serverName, entry)
       }
     }
@@ -391,7 +399,7 @@ export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCan
           (vals.transportType === 'stdio' && vals.command.trim()) ||
           (vals.transportType !== 'stdio' && vals.url.trim())
         if (isValid) {
-          const entry = buildEntryFromValues(vals, true)
+          const entry = preserveOauth(buildEntryFromValues(vals, true))
           await doSaveEntryRef.current(serverName, entry)
         }
       }
@@ -449,6 +457,16 @@ export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCan
             placeholder="选择传输类型"
             disabled={isBuiltin}
           />
+
+          {/* 只读 OAuth 元数据提示：表单不编辑 OAuth；授权动作在连接器详情完成 */}
+          {server?.entry.oauth && (
+            <div className="px-4 py-3 border-t border-border space-y-2">
+              <div className="text-sm font-medium text-foreground">OAuth 授权</div>
+              <div className="text-xs text-muted-foreground leading-5">
+                此连接器声明了 OAuth 配置{server.entry.oauth.provider ? `（${server.entry.oauth.provider}）` : ''}。保存后在连接器详情中点击「OAuth 授权」完成登录；token 与 Client Secret 只会加密保存到系统 Keychain，不会写入此配置。
+              </div>
+            </div>
+          )}
 
           {/* stdio 专用字段 */}
           {transportType === 'stdio' && (
