@@ -469,7 +469,18 @@ export async function runAgentHeadless(
     callbacks.originSessionId,
     getMainRendererWebContents,
   )
-  const runInput: AgentSendInput = input.startedAt != null ? input : { ...input, startedAt: Date.now() }
+  // Headless 运行来自定时任务、Task Conductor、collaboration 委派或外部 Bridge；未显式传入
+  // 触发来源时绝不能按交互式桌面用户处理——外部来源可能在无人监督的情况下授予本地副作用。
+  // 推断规则：delegation / work 保持原语义，其余外部来源统一标记为 external（对齐上游）。
+  const inferredTriggeredBy =
+    callbacks.source === 'delegation' ? 'delegation'
+      : callbacks.source === 'work' ? 'work'
+        : 'external'
+  const runInput: AgentSendInput = {
+    ...input,
+    ...(input.triggeredBy ? {} : { triggeredBy: inferredTriggeredBy }),
+    ...(input.startedAt != null ? {} : { startedAt: Date.now() }),
+  }
   const startedAt = runInput.startedAt!
   if (wc) {
     registerWebContents(runInput.sessionId, wc)

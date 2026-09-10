@@ -24,7 +24,7 @@ import {
   type ConnectorFilterChip,
   type ConnectorItem,
 } from '@/lib/connectors-model'
-import type { BuiltinMcpServerSummary, GlobalScopeReviewHints, McpServerEntry } from '@guru/shared'
+import type { BuiltinMcpServerSummary, CliIntegrationStatus, GlobalScopeReviewHints, McpServerEntry } from '@guru/shared'
 import { ConnectorCard } from './ConnectorCard'
 import { ConnectorDetailDialog } from './ConnectorDetailDialog'
 import { AddConnectorMenu } from './AddConnectorMenu'
@@ -35,6 +35,7 @@ import {
   isCatalogIntegrationVisible,
   matchesCatalogSearch,
   type CatalogCliIntegration,
+  type CatalogCliProbeState,
   type CatalogCredentialIntegration,
   type CatalogGuidedIntegration,
   type CatalogMcpIntegration,
@@ -57,6 +58,12 @@ interface ConnectorsTabProps {
   projectId?: string | null
   /** 已启用的 Skill slug 集合：供引导类集成的「Skill 已安装」状态使用 */
   activeSkillSlugs?: Set<string>
+  /** CLI 集成探测结果（工作区级；不包含任何凭据） */
+  cliIntegrationStatuses: CliIntegrationStatus[]
+  /** CLI 探测加载状态：loading / ready / failed */
+  cliIntegrationProbeState: CatalogCliProbeState
+  /** 仅切换 Guru 对某个 CLI 集成的使用权限；不登出、不撤销第三方授权 */
+  onSetCliIntegrationEnabled: (id: string, enabled: boolean) => Promise<void>
   onUserMcpChanged?: () => void
   /** 要自动打开的连接器完整 id（带 kind 命名空间，如 builtin:chrome-devtools） */
   openConnectorId?: string | null
@@ -78,6 +85,9 @@ export function ConnectorsTab({
   workspaceSlug,
   projectId,
   activeSkillSlugs,
+  cliIntegrationStatuses,
+  cliIntegrationProbeState,
+  onSetCliIntegrationEnabled,
   onUserMcpChanged,
   openConnectorId,
   onOpenConnectorConsumed,
@@ -160,6 +170,12 @@ export function ConnectorsTab({
     [catalogQuery],
   )
   const catalogCardCount = catalogMcps.length + catalogClis.length + catalogGuided.length + catalogCredentials.length
+
+  /** 已连接且被 Guru 允许使用的 CLI 集成 id 集合（供目录卡片判断四态）。 */
+  const connectedCliIds = React.useMemo(
+    () => new Set(cliIntegrationStatuses.filter((status) => status.connected && status.enabled).map((status) => status.id)),
+    [cliIntegrationStatuses],
+  )
 
   const openItem = React.useCallback((item: ConnectorItem): void => {
     setSelected(item)
@@ -335,7 +351,7 @@ export function ConnectorsTab({
     }
   }, [installedMcpNames, onUserMcpChanged, workspaceSlug])
 
-  /** 引导类条目（含 CLI）：把 agentPrompt 交给一个新的 Agent 会话执行（复用本地 Skills 分类会话的做法）。 */
+  /** 引导类条目：把 agentPrompt 交给一个新的 Agent 会话执行（复用本地 Skills 分类会话的做法）。 */
   const guideWithAgentPrompt = React.useCallback(async (name: string, prompt: string): Promise<void> => {
     try {
       const sessionId = await createAgent()
@@ -350,6 +366,28 @@ export function ConnectorsTab({
       toast.error(error instanceof Error ? error.message : `创建 ${name} 配置会话失败`)
     }
   }, [createAgent, setPendingPrompt])
+
+  /** CLI 条目「配置」：重新授予 Guru 使用该 CLI 的工作区许可，并创建引导会话。 */
+  const guideCatalogCli = React.useCallback(async (integration: CatalogCliIntegration): Promise<void> => {
+    try {
+      // 「配置」是重新授予 Guru 使用此 CLI 的入口，不会影响 CLI 自己的登录或授权。
+      await onSetCliIntegrationEnabled(integration.id, true)
+    } catch {
+      toast.error(`无法启用 ${integration.name} 集成`)
+      return
+    }
+    await guideWithAgentPrompt(integration.name, integration.agentPrompt)
+  }, [guideWithAgentPrompt, onSetCliIntegrationEnabled])
+
+  /** CLI 条目「断开连接」：仅停用 Guru 的工作区许可，不登出、不撤销第三方授权。 */
+  const disconnectCatalogCli = React.useCallback(async (integration: CatalogCliIntegration): Promise<void> => {
+    try {
+      await onSetCliIntegrationEnabled(integration.id, false)
+      toast.success(`已断开 ${integration.name}`, { description: '仅停止 Guru 使用该 CLI，不会登出或撤销第三方授权。' })
+    } catch {
+      toast.error(`无法断开 ${integration.name}`)
+    }
+  }, [onSetCliIntegrationEnabled])
 
   const hasReviewHints = !!reviewHints && (
     reviewHints.leftoverWorkspaceMcp.length > 0 || reviewHints.mcpSuffixedServers.length > 0
@@ -456,9 +494,12 @@ export function ConnectorsTab({
           enabledMcpNames={enabledMcpNames}
           verifiedMcpNames={verifiedMcpNames}
           activeSkillSlugs={activeSkillSlugs ?? EMPTY_SKILL_SLUGS}
+          connectedCliIds={connectedCliIds}
+          cliIntegrationProbeState={cliIntegrationProbeState}
           installingMcpId={installingCatalogId}
           onInstallMcp={(integration) => { void handleCatalogMcpAction(integration) }}
-          onGuideCli={(integration) => { void guideWithAgentPrompt(integration.name, integration.agentPrompt) }}
+          onGuideCli={(integration) => { void guideCatalogCli(integration) }}
+          onDisconnectCli={(integration) => { void disconnectCatalogCli(integration) }}
           onGuide={(integration) => { void guideWithAgentPrompt(integration.name, integration.agentPrompt) }}
           onRequestCredential={setCredentialRequest}
           onToggleMcp={onToggleMcp}

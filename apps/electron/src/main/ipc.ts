@@ -368,6 +368,8 @@ import {
   ensureDefaultWorkspace,
   getWorkspaceMcpConfig,
   saveWorkspaceMcpConfig,
+  getDisabledCliIntegrationIds,
+  setCliIntegrationEnabled,
   getAllEffectiveSkills,
   toggleGlobalSkill,
   deleteGlobalSkill,
@@ -594,6 +596,59 @@ async function validateAndConditionallyPersistMcp(
   clearWorkspaceMcpPendingValidation(workspaceSlug, name)
   saveWorkspaceMcpConfig(workspaceSlug, config)
   return { config, verification }
+}
+
+async function runCliProbe(
+  runner: CliCommandRunner,
+  bin: string,
+  args: string[],
+): Promise<CliCommandResult> {
+  try {
+    return await runner(bin, args, { timeoutMs: 2_000 })
+  } catch {
+    return { status: null, stdout: '' }
+  }
+}
+
+/**
+ * `dws auth status --format json` 是官方的非交互认证探测。只接受其完整、成功且 token 有效的结果；
+ * 不读取、返回或持久化 CLI 输出中的任何身份字段。
+ */
+function isDingTalkCliAuthenticated(result: CliCommandResult): boolean {
+  if (result.status !== 0) return false
+
+  try {
+    const status = JSON.parse(result.stdout) as {
+      success?: unknown
+      authenticated?: unknown
+      token_valid?: unknown
+    }
+    return status.success === true && status.authenticated === true && status.token_valid === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 仅将可由 CLI 本身的认证探测确认的集成标记为已连接；命令不存在、超时、未认证和未知探测均保守为 false。
+ */
+export async function getCliIntegrationStatuses(
+  runner: CliCommandRunner = runCliCommand,
+  disabledIds: ReadonlySet<string> = new Set(),
+): Promise<import('@guru/shared').CliIntegrationStatus[]> {
+  const [wecom, dingtalk, github, feishu] = await Promise.all([
+    runCliProbe(runner, 'wecom-cli', ['auth', 'show', '--status']),
+    runCliProbe(runner, 'dws', ['auth', 'status', '--format', 'json']),
+    runCliProbe(runner, 'gh', ['auth', 'status', '--active']),
+    runCliProbe(runner, 'lark-cli', ['auth', 'status', '--verify']),
+  ])
+
+  return [
+    { id: 'wecom-cli', connected: wecom.status === 0 && wecom.stdout.trim().toLowerCase() === 'authorized', enabled: !disabledIds.has('wecom-cli') },
+    { id: 'dingtalk-cli', connected: isDingTalkCliAuthenticated(dingtalk), enabled: !disabledIds.has('dingtalk-cli') },
+    { id: 'github-cli', connected: github.status === 0, enabled: !disabledIds.has('github-cli') },
+    { id: 'feishu-cli', connected: feishu.status === 0, enabled: !disabledIds.has('feishu-cli') },
+  ]
 }
 
 function stopWorkspaceMemoryWatch(webContentsId: number, workspaceSlug: string): void {
@@ -998,6 +1053,31 @@ async function runCmd(
       child.stdin.end(stdin)
     }
   })
+}
+
+type CliCommandResult = { status: number | null; stdout: string }
+type CliCommandRunner = (bin: string, args: string[], opts: { timeoutMs?: number }) => Promise<CliCommandResult>
+
+/**
+ * npm 安装的 CLI 在 Windows 上通常以 .cmd shim 暴露。把 cmd.exe 路径严格限制在
+ * 固定的目录探测命令里，而不是为通用 runCmd 打开 shell。
+ */
+export function getCliProbeInvocation(
+  bin: string,
+  args: string[],
+  platform = process.platform,
+  comSpec = process.env.ComSpec,
+): { bin: string; args: string[] } {
+  if (platform !== 'win32') return { bin, args }
+  return {
+    bin: comSpec || 'cmd.exe',
+    args: ['/d', '/s', '/c', [bin, ...args].join(' ')],
+  }
+}
+
+async function runCliCommand(bin: string, args: string[], opts: { timeoutMs?: number }): Promise<CliCommandResult> {
+  const invocation = getCliProbeInvocation(bin, args)
+  return runCmd(invocation.bin, invocation.args, opts)
 }
 
 function parseWindowsRegistryValue(stdout: string): string {
@@ -3506,6 +3586,23 @@ export function registerIpcHandlers(): void {
     AGENT_IPC_CHANNELS.DELETE_MCP_CREDENTIAL,
     async (_, workspaceSlug: string, serverName: string): Promise<void> => {
       return deleteMcpCredential(workspaceSlug, serverName)
+    }
+  )
+
+  // 查询本机 CLI 集成状态（含当前工作区的启用状态；不返回任何凭据）。
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.GET_CLI_INTEGRATION_STATUSES,
+    async (_, workspaceSlug: string): Promise<import('@guru/shared').CliIntegrationStatus[]> => {
+      return getCliIntegrationStatuses(undefined, getDisabledCliIntegrationIds(workspaceSlug))
+    }
+  )
+
+  // 仅切换 Guru 对工作区 CLI 集成的使用权限；绝不登出或撤销第三方授权。
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.SET_CLI_INTEGRATION_ENABLED,
+    async (_, workspaceSlug: string, id: string, enabled: boolean): Promise<import('@guru/shared').CliIntegrationStatus[]> => {
+      setCliIntegrationEnabled(workspaceSlug, id, enabled)
+      return getCliIntegrationStatuses(undefined, getDisabledCliIntegrationIds(workspaceSlug))
     }
   )
 
