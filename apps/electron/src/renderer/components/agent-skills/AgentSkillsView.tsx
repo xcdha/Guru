@@ -57,7 +57,6 @@ import { SkillCard } from './SkillCard'
 import { SkillDetailSheet } from './SkillDetailSheet'
 import { McpDetailSheet } from './McpDetailSheet'
 import { AddConnectorMenu } from './AddConnectorMenu'
-import { getSearchMcpPreset } from '@/lib/mcp-search-presets'
 import { CustomHttpConnectorDialog } from './CustomHttpConnectorDialog'
 import { ImportSkillDialog } from './ImportSkillDialog'
 
@@ -309,6 +308,11 @@ export function AgentSkillsView({ embedded = false, componentTab }: { embedded?:
     }),
     [chatTools, data.builtinMcpServers, userMcpEntries],
   )
+  /** 已启用 Skill 的 slug 集合：供集成目录里的引导类条目判断「Skill 已安装」。 */
+  const activeSkillSlugs = React.useMemo(
+    () => new Set(data.skills.filter((skill) => skill.enabled).map((skill) => skill.slug)),
+    [data.skills],
+  )
   const tabCounts: Record<PluginCenterTab, number> = {
     overview: pluginOverview.summary.enabledPlugins,
     experts: expertsCount,
@@ -548,12 +552,6 @@ export function AgentSkillsView({ embedded = false, componentTab }: { embedded?:
           <AddConnectorMenu
             onAddMcp={() => { setEditingMcp(null); setMcpSheetOpen(true) }}
             onAddHttp={() => setHttpDialogOpen(true)}
-            onAddPreset={(presetId) => {
-              const preset = getSearchMcpPreset(presetId)
-              if (!preset) return
-              setEditingMcp({ name: preset.serverName, entry: preset.buildEntry('') })
-              setMcpSheetOpen(true)
-            }}
           />
         )}
       </div>
@@ -623,12 +621,7 @@ export function AgentSkillsView({ embedded = false, componentTab }: { embedded?:
               onToggleMcp={data.toggleMcp}
               onAddMcp={() => { setEditingMcp(null); setMcpSheetOpen(true) }}
               onAddHttp={() => setHttpDialogOpen(true)}
-              onAddPreset={(presetId) => {
-                const preset = getSearchMcpPreset(presetId)
-                if (!preset) return
-                setEditingMcp({ name: preset.serverName, entry: preset.buildEntry('') })
-                setMcpSheetOpen(true)
-              }}
+              activeSkillSlugs={activeSkillSlugs}
               workspaceSlug={data.workspaceSlug}
               onUserMcpChanged={() => {
                 bumpCapabilities((v) => v + 1)
