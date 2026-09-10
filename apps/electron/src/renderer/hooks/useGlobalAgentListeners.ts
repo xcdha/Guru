@@ -53,6 +53,7 @@ import {
   agentNonGitFileChangesAtom,
   agentFileChangesCurrentRunAtom,
   agentSidePanelOpenAtomFamily,
+  revealChangedWorkspaceComponentAtom,
   askUserDraftsAtom,
 } from '@/atoms/agent-atoms'
 import {
@@ -83,6 +84,7 @@ import { detectIsWindows } from '@/lib/platform'
 import { getSessionFileChangeKind, removeSessionFileChange, upsertSessionFileChange } from '@/lib/session-file-changes'
 import { removeQueuedMessage, restoreQueuedMessageToFront, createQueuedAgentStreamState } from '@/lib/agent-message-queue'
 import { createAgentStreamEventBatcher } from '@/lib/agent-stream-event-batcher'
+import { getChangedWorkspaceComponentFromSdkMessage, shouldRevealChangedWorkspaceComponentImmediately } from '@/lib/agent-component-activation'
 
 /** 触发右侧文件浏览器自动定位的写入类工具集合 */
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Update'])
@@ -1059,6 +1061,15 @@ export function useGlobalAgentListeners(): void {
 
         if (payload.kind === 'sdk_message') {
           const msgRecord = payload.message as Record<string, unknown>
+          // 仅在 Agent 发出变更工具调用时展示对应项目组件；右侧 Tab 严格归属产生变更的 session，
+          // 同一 workspace 的其他活跃会话不得被后台变更抢走焦点。
+          if (!msgRecord.isReplay) {
+            const changedComponent = getChangedWorkspaceComponentFromSdkMessage(payload.message)
+            if (changedComponent && shouldRevealChangedWorkspaceComponentImmediately(changedComponent)) {
+              store.set(revealChangedWorkspaceComponentAtom, { sessionId, component: changedComponent })
+            }
+          }
+
           // prompt_suggestion 不是对话转录消息，不能进入 liveMessages（会被错误渲染到最后一条助手消息中）
           // 它通过下方 legacyEvents 分支写入 agentPromptSuggestionsAtom，显示在输入框上方
           if (msgRecord.type === 'prompt_suggestion') {

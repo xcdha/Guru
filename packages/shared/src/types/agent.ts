@@ -1163,6 +1163,24 @@ export type McpTransportTypeAlias = 'streamableHttp' | 'streamable-http' | 'stre
 /** MCP 传输类型输入；保存和运行前会规范化为 McpTransportType */
 export type McpTransportTypeInput = McpTransportType | McpTransportTypeAlias
 
+/** 非敏感 OAuth 客户端元数据（公开字段）；token/secret 只保存在 safeStorage。 */
+export interface McpOAuthConfiguration {
+  /** 可选的展示/诊断标识，不参与密钥存储。 */
+  provider?: string
+  /** OAuth authorization endpoint。未提供时尝试从 MCP protected-resource metadata 发现。 */
+  authorizationEndpoint?: string
+  /** OAuth token endpoint。未提供时尝试从 MCP protected-resource metadata 发现。 */
+  tokenEndpoint?: string
+  /** 支持 Dynamic Client Registration 的 registration endpoint。 */
+  registrationEndpoint?: string
+  /** 已公开注册的 OAuth client ID；没有 DCR 时必须提供。 */
+  clientId?: string
+  /** 授权码交换是否要求用户通过安全 UI 保存 OAuth client secret。 */
+  clientSecretRequired?: boolean
+  /** 请求授权时使用的 scope；为空时使用 MCP 声明的 scopes_supported。 */
+  scopes?: string[]
+}
+
 /** MCP 服务器条目 */
 export interface McpServerEntry {
   type: McpTransportType
@@ -1182,6 +1200,8 @@ export interface McpServerEntry {
   enabled: boolean
   /** 是否为内置 MCP（不可删除，仅可配置 env） */
   isBuiltin?: boolean
+  /** 非敏感 OAuth 客户端元数据；token 只保存在 Keychain。 */
+  oauth?: McpOAuthConfiguration
   /** 最后一次测试结果 */
   lastTestResult?: {
     success: boolean
@@ -1216,6 +1236,65 @@ export interface BuiltinMcpServerSummary {
 /** 工作区 MCP 配置文件 */
 export interface WorkspaceMcpConfig {
   servers: Record<string, McpServerEntry>
+}
+
+/** 主进程原子启用/安装 + 验证操作的结果。 */
+export interface McpConnectionMutationResult {
+  config: WorkspaceMcpConfig
+  verification: {
+    success: boolean
+    message: string
+  }
+}
+
+export interface McpInstallMutationResult extends McpConnectionMutationResult {
+  installed: boolean
+}
+
+/** OAuth provider 展示/凭据命名空间。Agent 配置的 MCP 可使用任意稳定字符串。 */
+export type McpOAuthProvider = string
+
+/** Renderer → main 的远程 MCP authorization-code + PKCE 流程请求。 */
+export interface StartMcpOAuthInput {
+  workspaceSlug: string
+  serverName: string
+  provider: McpOAuthProvider
+  serverUrl: string
+  /** Agent 或目录提供的非敏感 OAuth 客户端元数据。 */
+  oauth?: McpOAuthConfiguration
+}
+
+/** Renderer → main 将 OAuth client secret 存入 Keychain；绝不暴露给 Agent/工具结果。 */
+export interface SaveMcpOAuthClientSecretInput {
+  workspaceSlug: string
+  serverName: string
+  serverUrl: string
+  clientSecret: string
+}
+
+/** OAuth 连接结果：有意排除所有 secret 材料。 */
+export interface McpOAuthStartResult {
+  provider: McpOAuthProvider
+  serverName: string
+  expiresAt?: number
+}
+
+export interface SaveWorkspaceMcpConfigOptions {
+  /** 用户动作显式关闭的名称集合；取消任何 in-flight 验证。 */
+  explicitlyDisabledServerNames?: string[]
+}
+
+/** 将静态 MCP token 存入 Keychain-backed safeStorage；绝不持久化进 mcp.json。 */
+export interface SaveMcpApiKeyInput {
+  workspaceSlug: string
+  serverName: string
+  serverUrl: string
+  headerName: string
+  value: string
+  /** stdio MCP 环境变量凭据；远程 HTTP/SSE 凭据留空。 */
+  envName?: string
+  /** stdio MCP 凭据绑定的启动命令；注入前与当前配置比对，防止同名配置被改后泄露密钥。 */
+  stdioBinding?: { command: string; args: string[] }
 }
 
 // ===== Skill 元数据 =====
@@ -2254,16 +2333,26 @@ export const AGENT_IPC_CHANNELS = {
   // 工作区能力（MCP + Skill）
   /** 获取工作区能力摘要 */
   GET_CAPABILITIES: 'agent:get-capabilities',
-  /** 获取工作区 MCP 配置（已迁移，仅给迁移脚本/向后兼容保留，UI 请改用 GET_GLOBAL_MCP_CONFIG） */
+  /** 获取工作区 MCP 配置（对齐上游 #2037：MCP 为工作区级存储，UI 唯一入口） */
   GET_MCP_CONFIG: 'agent:get-mcp-config',
-  /** 保存工作区 MCP 配置（同上，已迁移） */
+  /** 保存工作区 MCP 配置（UI 唯一入口） */
   SAVE_MCP_CONFIG: 'agent:save-mcp-config',
-  /** 读取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享） */
-  GET_GLOBAL_MCP_CONFIG: 'agent:get-global-mcp-config',
-  /** 保存全局 MCP 配置 */
-  SAVE_GLOBAL_MCP_CONFIG: 'agent:save-global-mcp-config',
-  /** 原子删除单个 MCP（保留其他条目当前状态；projectId 为空删全局条目） */
+  /** 原子删除工作区内的单个 MCP 条目（保留其他条目当前状态） */
   DELETE_MCP: 'agent:delete-mcp',
+  /** 刷新并持久化工作区 MCP 真实连接状态 */
+  REFRESH_MCP_CONNECTIONS: 'agent:refresh-mcp-connections',
+  /** 原子切换 MCP 启用状态，并在启用时条件持久化真实验证结果。 */
+  SET_MCP_ENABLED_AND_VALIDATE: 'agent:set-mcp-enabled-and-validate',
+  /** 原子新增 MCP，并在初始启用时条件持久化真实验证结果。 */
+  INSTALL_MCP_AND_VALIDATE: 'agent:install-mcp-and-validate',
+  /** 启动远程 MCP 的 OAuth PKCE 授权 */
+  START_MCP_OAUTH: 'agent:start-mcp-oauth',
+  /** 将 OAuth client secret 加密保存到系统 Keychain。 */
+  SAVE_MCP_OAUTH_CLIENT_SECRET: 'agent:save-mcp-oauth-client-secret',
+  /** 安全保存远程 MCP 的静态 API Key / Token */
+  SAVE_MCP_API_KEY: 'agent:save-mcp-api-key',
+  /** 删除工作区 MCP 对应的系统安全凭据，不返回任何凭据。 */
+  DELETE_MCP_CREDENTIAL: 'agent:delete-mcp-credential',
   /** 获取全局作用域迁移后续提示（遗留工作区 mcp.json / 同名冲突后缀） */
   GET_GLOBAL_SCOPE_REVIEW_HINTS: 'agent:get-global-scope-review-hints',
   /** 获取全局 Skills 目录绝对路径（~/.guru/global-skills/） */
@@ -2302,12 +2391,6 @@ export const AGENT_IPC_CHANNELS = {
   DELETE_PROJECT_SKILL: 'agent:delete-project-skill',
   /** 切换项目 Skill 启用/禁用 */
   TOGGLE_PROJECT_SKILL: 'agent:toggle-project-skill',
-  /** 获取项目级 MCP 配置 */
-  GET_PROJECT_MCP_CONFIG: 'agent:get-project-mcp-config',
-  /** 保存项目级 MCP 配置 */
-  SAVE_PROJECT_MCP_CONFIG: 'agent:save-project-mcp-config',
-  /** 项目是否已配置自己的 MCP 服务器 */
-  HAS_PROJECT_MCP_SERVERS: 'agent:has-project-mcp-servers',
   /** 获取同工作区内可导入到当前 Project 的 Skill 来源（工作区默认 + 其他嵌套 Project） */
   GET_OTHER_PROJECT_SKILLS: 'agent:get-other-project-skills',
   /** 从工作区默认或其他嵌套 Project 批量导入 Skill 到当前 Project */

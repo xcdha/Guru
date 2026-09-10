@@ -80,8 +80,10 @@ function writeWorkspaceSkillFixture(workspaceSlug: string, skillSlug: string, na
   writeFileSync(join(dir, 'SKILL.md'), `---\nname: ${name}\nversion: "1.0.0"\n---\n${body}`, 'utf-8')
 }
 
-describe('migrateGlobalScopes - MCP 合并', () => {
-  test('Given 单工作区单个 MCP 服务器 When 迁移 Then 原样进入全局配置', async () => {
+describe('migrateGlobalScopes - MCP 合并与分发', () => {
+  // 注：迁移完整跑完 = v3（合并到全局 + 源文件改名 .migrated）+ v4（全局分发回各工作区 + 全局改名 .global-distributed）。
+  // v4 后 getGlobalMcpConfig() 返回空，故断言均读工作区配置（分发结果 = v3 合并结果）。
+  test('Given 单工作区单个 MCP 服务器 When 迁移 Then 合并结果分发到该工作区', async () => {
     const ws = manager.createAgentWorkspace('solo')
     manager.saveWorkspaceMcpConfig(ws.slug, {
       servers: { filesystem: { type: 'stdio', command: 'solo-fs', enabled: true } },
@@ -89,8 +91,8 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    const global = manager.getGlobalMcpConfig()
-    expect(global.servers.filesystem?.command).toBe('solo-fs')
+    const distributed = manager.getWorkspaceMcpConfig(ws.slug)
+    expect(distributed.servers.filesystem?.command).toBe('solo-fs')
   })
 
   test('Given 两个非默认工作区同名 server 冲突 When 迁移 Then 按 createdAt 升序确定谁保留原名（不依赖遍历顺序）', async () => {
@@ -112,10 +114,10 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    const global = manager.getGlobalMcpConfig()
+    const merged = manager.getWorkspaceMcpConfig(alpha.slug)
     // beta createdAt 更早 → 先处理 → 占用原名；alpha 的版本加后缀保留
-    expect(global.servers.filesystem?.command).toBe('beta-fs')
-    expect(global.servers['filesystem@alpha']?.command).toBe('alpha-fs')
+    expect(merged.servers.filesystem?.command).toBe('beta-fs')
+    expect(merged.servers['filesystem@alpha']?.command).toBe('alpha-fs')
   })
 
   test('Given 默认工作区与其他工作区同名 server When 迁移 Then 默认工作区始终占用原名，被覆盖的旧值加 @default-overridden 保留', async () => {
@@ -133,9 +135,9 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    const global = manager.getGlobalMcpConfig()
-    expect(global.servers.filesystem?.command).toBe('default-fs')
-    expect(global.servers['filesystem@default-overridden']?.command).toBe('alpha-fs')
+    const merged = manager.getWorkspaceMcpConfig(defaultWs.slug)
+    expect(merged.servers.filesystem?.command).toBe('default-fs')
+    expect(merged.servers['filesystem@default-overridden']?.command).toBe('alpha-fs')
   })
 
   test('Given 两个工作区同名 server 但内容完全一致 When 迁移 Then 不生成冲突后缀（避免噪音）', async () => {
@@ -150,9 +152,9 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    const global = manager.getGlobalMcpConfig()
-    expect(global.servers.filesystem?.command).toBe('shared-fs')
-    expect(Object.keys(global.servers).filter((name) => name.includes('@'))).toEqual([])
+    const merged = manager.getWorkspaceMcpConfig(alpha.slug)
+    expect(merged.servers.filesystem?.command).toBe('shared-fs')
+    expect(Object.keys(merged.servers).filter((name) => name.includes('@'))).toEqual([])
   })
 
   test('Given 全局配置已持有某工作区数据但 state 未标记 mcp 步骤完成且源文件仍在 When 迁移 Then 内容相同不重复生成假冲突（幂等性防护）', async () => {
@@ -169,10 +171,10 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    const global = manager.getGlobalMcpConfig()
-    expect(global.servers.filesystem?.command).toBe('solo-fs')
+    const merged = manager.getWorkspaceMcpConfig(ws.slug)
+    expect(merged.servers.filesystem?.command).toBe('solo-fs')
     // 断言点：不应该出现 filesystem@solo 或 filesystem@default-overridden 之类的假冲突后缀
-    expect(Object.keys(global.servers)).toEqual(['filesystem'])
+    expect(Object.keys(merged.servers)).toEqual(['filesystem'])
   })
 
   test('Given 迁移已完整跑完一次 When 再次调用 Then 直接跳过、不产生任何告警', async () => {
@@ -188,7 +190,7 @@ describe('migrateGlobalScopes - MCP 合并', () => {
     expect(secondWarnings).toEqual([])
   })
 
-  test('Given 迁移完整跑完 When 查询 getGlobalScopeReviewHints Then 工作区源文件已改名，无遗留提示', async () => {
+  test('Given 迁移完整跑完 When 查询 getGlobalScopeReviewHints Then 无遗留提示（工作区配置为正常状态）', async () => {
     const ws = manager.createAgentWorkspace('solo')
     manager.saveWorkspaceMcpConfig(ws.slug, {
       servers: { filesystem: { type: 'stdio', command: 'solo-fs', enabled: true } },
@@ -196,8 +198,9 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     await migration.migrateGlobalScopes()
 
-    expect(existsSync(configPaths.getWorkspaceMcpPath(ws.slug))).toBe(false)
+    // v3 改名后的历史备份保留，v4 分发重建了正常工作区配置
     expect(existsSync(`${configPaths.getWorkspaceMcpPath(ws.slug)}.migrated`)).toBe(true)
+    expect(existsSync(configPaths.getWorkspaceMcpPath(ws.slug))).toBe(true)
 
     const hints = migration.getGlobalScopeReviewHints()
     expect(hints.leftoverWorkspaceMcp).toEqual([])
@@ -220,6 +223,49 @@ describe('migrateGlobalScopes - MCP 合并', () => {
 
     const hints = migration.getGlobalScopeReviewHints()
     expect(hints.mcpSuffixedServers).toEqual(['filesystem@beta'])
+  })
+})
+
+describe('distributeMcpToWorkspaces - v4 全局 MCP → 工作区分发', () => {
+  test('Given 全局配置含多个 server When 分发 Then 每个工作区得到同内容副本且全局改名保留', () => {
+    const ws1 = manager.createAgentWorkspace('ws-one')
+    const ws2 = manager.createAgentWorkspace('ws-two')
+    manager.saveGlobalMcpConfig({
+      servers: {
+        filesystem: { type: 'stdio', command: 'my-fs', enabled: true },
+        remote: { type: 'http', url: 'https://example.com/mcp', headers: { 'x-api-key': 'k' }, enabled: true },
+      },
+    })
+
+    const warnings = migration.distributeMcpToWorkspaces()
+
+    expect(warnings).toEqual([])
+    const one = manager.getWorkspaceMcpConfig(ws1.slug)
+    expect(Object.keys(one.servers).sort()).toEqual(['filesystem', 'remote'])
+    const two = manager.getWorkspaceMcpConfig(ws2.slug)
+    expect(two.servers.remote?.url).toBe('https://example.com/mcp')
+    // 全局文件改名保留，不再作为生效配置被读到
+    expect(existsSync(configPaths.getGlobalMcpPath())).toBe(false)
+    expect(existsSync(`${configPaths.getGlobalMcpPath()}.global-distributed`)).toBe(true)
+  })
+
+  test('Given 全局文件已不存在 When 分发 Then 返回空告警（幂等重跑不把空配置写进工作区）', () => {
+    const ws = manager.createAgentWorkspace('ws-one')
+    // 模拟已分发过：工作区已有副本，全局文件不存在
+    manager.saveWorkspaceMcpConfig(ws.slug, {
+      servers: { filesystem: { type: 'stdio', command: 'keep', enabled: true } },
+    })
+
+    const warnings = migration.distributeMcpToWorkspaces()
+
+    expect(warnings).toEqual([])
+    const config = manager.getWorkspaceMcpConfig(ws.slug)
+    expect(config.servers.filesystem?.command).toBe('keep')
+  })
+
+  test('Given 无任何工作区 When 分发 Then 返回空告警不崩溃', () => {
+    const warnings = migration.distributeMcpToWorkspaces()
+    expect(warnings).toEqual([])
   })
 })
 

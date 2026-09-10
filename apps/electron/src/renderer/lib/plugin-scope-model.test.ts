@@ -7,7 +7,6 @@ import {
   describePluginScopeNotice,
   resolvePluginScope,
   syncPluginScope,
-  resolveMcpWriteProjectId,
   type PluginScope,
   type PluginScopeFlags,
 } from './plugin-scope-model'
@@ -39,7 +38,7 @@ describe('plugin-scope-model', () => {
     ])
     expect(options[0]?.label).toBe('默认配置')
     expect(options[0]?.label).not.toContain('全部项目共享')
-    expect(options[0]?.description).toContain('连接器全局共享（所有工作区）')
+    expect(options[0]?.description).toContain('连接器按工作区保存')
     expect(options[0]?.description).toContain('Skills 为当前工作区叠加全局')
     expect(options.map((option) => option.label)).toEqual([
       '默认配置',
@@ -70,29 +69,26 @@ describe('plugin-scope-model', () => {
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     })
-    expect(app?.description).toBe('Skills 叠加工作区/全局；连接器沿用全局配置')
+    expect(app?.description).toBe('Skills 叠加工作区/全局')
   })
 
-  test('describes project overlay flags', () => {
+  test('describes project skills overlay flags', () => {
     const flags: Record<string, PluginScopeFlags> = {
-      p1: { hasOwnMcp: true, hasOwnSkills: false },
-      p3: { hasOwnMcp: false, hasOwnSkills: true },
-      p5: { hasOwnMcp: true, hasOwnSkills: true },
+      p1: { hasOwnSkills: false },
+      p3: { hasOwnSkills: true },
     }
     const options = buildPluginScopeOptions({ projects, flags })
     const byId = Object.fromEntries(options.map((option) => [option.id, option]))
 
-    expect(byId['project:p1']?.description).toBe('连接器完全覆盖全局，仅本项目生效')
+    expect(byId['project:p1']?.description).toBe('Skills 叠加工作区/全局')
     expect(byId['project:p3']?.description).toBe('含项目级 Skills')
-    expect(byId['project:p5']?.description).toBe('连接器完全覆盖全局，仅本项目生效；含项目级 Skills')
-    expect(byId['project:p1']?.scope).toMatchObject({ hasOwnMcp: true, hasOwnSkills: false })
+    expect(byId['project:p3']?.scope).toMatchObject({ hasOwnSkills: true })
   })
 
   test('describePluginScope matches option semantics', () => {
-    expect(describePluginScope({ kind: 'workspace' })).toContain('连接器全局共享（所有工作区）')
+    expect(describePluginScope({ kind: 'workspace' })).toContain('连接器按工作区保存')
     expect(describePluginScope({ kind: 'workspace' })).toContain('Skills 为当前工作区叠加全局')
     expect(describePluginScope({ kind: 'workspace' })).not.toContain('全部项目共享')
     expect(describePluginScope({ kind: 'workspace' })).not.toContain('Workspace 默认')
@@ -101,42 +97,30 @@ describe('plugin-scope-model', () => {
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     }
     expect(describePluginScope(noOverlay)).toContain('App')
     expect(describePluginScope(noOverlay)).toContain('Skills 叠加工作区/全局')
-    expect(describePluginScope(noOverlay)).toContain('连接器沿用全局配置')
     expect(describePluginScope(noOverlay)).not.toContain('沿用 Workspace 默认')
 
     expect(describePluginScope({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: true,
-      hasOwnSkills: false,
-    })).toContain('连接器完全覆盖全局，仅本项目生效')
-
-    expect(describePluginScope({
-      kind: 'project',
-      projectId: 'p1',
-      projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: true,
     })).toContain('含项目级 Skills')
   })
 
-  test('project notice splits MCP and Skills overlays and never claims workspace MCP inherit', () => {
+  test('project notice splits MCP (workspace-scoped) and Skills overlays', () => {
     const notice = describePluginScopeNotice({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     })
     expect(notice).toContain('App')
     expect(notice).toContain('Skills 叠加工作区/全局')
-    expect(notice).toContain('连接器沿用全局配置')
+    expect(notice).toContain('连接器按工作区保存')
     expect(notice).not.toContain('未配置的技能或连接器会沿用 Workspace 默认')
     expect(notice).not.toContain('Workspace 默认')
 
@@ -144,25 +128,8 @@ describe('plugin-scope-model', () => {
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: true,
-      hasOwnSkills: false,
-    })).toContain('Skills 叠加工作区/全局')
-
-    expect(describePluginScopeNotice({
-      kind: 'project',
-      projectId: 'p1',
-      projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: true,
-    })).toContain('连接器沿用全局配置')
-
-    expect(describePluginScopeNotice({
-      kind: 'project',
-      projectId: 'p1',
-      projectName: 'App',
-      hasOwnMcp: true,
-      hasOwnSkills: true,
-    })).toContain('连接器完全覆盖全局，仅本项目生效')
+    })).toContain('含项目级 Skills')
 
     expect(describePluginScopeNotice({ kind: 'workspace' })).toBeNull()
   })
@@ -172,7 +139,6 @@ describe('plugin-scope-model', () => {
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: true,
       hasOwnSkills: false,
     }
     expect(resolvePluginScope(current, [project('p3', 'Other')])).toEqual({ kind: 'workspace' })
@@ -186,24 +152,21 @@ describe('plugin-scope-model', () => {
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: true,
       hasOwnSkills: true,
     }
-    expect(applyPluginScopeFlags(current, { p1: { hasOwnMcp: false, hasOwnSkills: true } })).toEqual({
+    expect(applyPluginScopeFlags(current, { p1: { hasOwnSkills: false } })).toEqual({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
-      hasOwnSkills: true,
+      hasOwnSkills: false,
     })
     expect(applyPluginScopeFlags(current, {})).toEqual({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     })
-    expect(applyPluginScopeFlags({ kind: 'workspace' }, { p1: { hasOwnMcp: true, hasOwnSkills: true } })).toEqual({
+    expect(applyPluginScopeFlags({ kind: 'workspace' }, { p1: { hasOwnSkills: true } })).toEqual({
       kind: 'workspace',
     })
   })
@@ -211,33 +174,24 @@ describe('plugin-scope-model', () => {
   test('syncPluginScope follows option flags and resets missing projects', () => {
     const options = buildPluginScopeOptions({
       projects: [project('p1', 'App')],
-      flags: { p1: { hasOwnMcp: true, hasOwnSkills: false } },
+      flags: { p1: { hasOwnSkills: true } },
     })
     expect(syncPluginScope({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     }, options)).toEqual({
       kind: 'project',
       projectId: 'p1',
       projectName: 'App',
-      hasOwnMcp: true,
-      hasOwnSkills: false,
+      hasOwnSkills: true,
     })
     expect(syncPluginScope({
       kind: 'project',
       projectId: 'gone',
       projectName: 'Gone',
-      hasOwnMcp: false,
       hasOwnSkills: false,
     }, options)).toEqual({ kind: 'workspace' })
-  })
-
-  test('only writes MCP to a project after it already has an override', () => {
-    expect(resolveMcpWriteProjectId('p1', false)).toBeNull()
-    expect(resolveMcpWriteProjectId('p1', true)).toBe('p1')
-    expect(resolveMcpWriteProjectId(null, true)).toBeNull()
   })
 })

@@ -862,38 +862,36 @@ export function saveGlobalMcpConfig(config: WorkspaceMcpConfig): void {
 }
 
 /**
- * 读取生效的 MCP 配置（全局单层）。
+ * 读取生效的 MCP 配置（workspace 级，对齐上游 #2037）。
  *
- * MCP 是「全局唯一配置」：运行时只读 ~/.guru/mcp.json。工作区/嵌套项目的 mcp.json
- * 已在 migrateGlobalScopes 中合并并改名为 .migrated；若仍发现未改名的遗留文件，
- * 只打告警、不参与合并，避免和 UI「只编全局」的心智模型打架。
+ * 语义：优先读当前工作区 `agent-workspaces/{slug}/mcp.json`；仅当工作区文件
+ * 尚未生成（如 v4 分发迁移尚未跑完的新升级用户）时回退读全局 `~/.guru/mcp.json`，
+ * 避免存量配置在升级窗口内静默消失。分发完成后全局文件已改名，兜底自然失效。
+ *
+ * 项目级 MCP 覆盖已移除（对齐上游：项目不再单独维护 MCP）。
  */
-export function getEffectiveMcpConfig(
-  workspaceSlug: string | undefined,
-  _projectId?: string | undefined,
-): WorkspaceMcpConfig {
-  if (workspaceSlug) {
-    warnLeftoverWorkspaceMcp(workspaceSlug)
-  }
-  return getGlobalMcpConfig()
+export function getEffectiveMcpConfig(workspaceSlug: string | undefined): WorkspaceMcpConfig {
+  if (!workspaceSlug) return getGlobalMcpConfig()
+  const withOverride = getWorkspaceMcpConfigWithGlobalFallback(workspaceSlug)
+  return withOverride
 }
 
-const leftoverMcpWarned = new Set<string>()
-
-/** 遗留工作区 mcp.json 只告警一次，不覆盖全局配置 */
-function warnLeftoverWorkspaceMcp(workspaceSlug: string): void {
-  if (leftoverMcpWarned.has(workspaceSlug)) return
-  leftoverMcpWarned.add(workspaceSlug)
+/**
+ * 工作区 MCP 配置（带全局兜底）：工作区文件存在时以它为唯一来源，否则回退全局。
+ *
+ * 注意：
+ * - 工作区文件存在但为空 `{servers:{}}` 也算“已迁移/已清空”，继续兜底全局会导致
+ *   用户清空后配置“复活”，因此判存在而不判非空。
+ */
+function getWorkspaceMcpConfigWithGlobalFallback(workspaceSlug: string): WorkspaceMcpConfig {
   try {
     if (existsSync(getWorkspaceMcpPath(workspaceSlug))) {
-      console.warn(
-        `[全局 MCP] 发现遗留工作区配置 ${getWorkspaceMcpPath(workspaceSlug)}，已忽略（MCP 仅为全局单层）。` +
-          '若迁移未完成，重启应用会重试改名为 .migrated。',
-      )
+      return getWorkspaceMcpConfig(workspaceSlug)
     }
   } catch {
-    leftoverMcpWarned.delete(workspaceSlug)
+    // 读取异常时回退全局，不阻断会话启动
   }
+  return getGlobalMcpConfig()
 }
 
 // ===== Skill 目录扫描 =====
@@ -1319,44 +1317,17 @@ export function toggleProjectSkill(workspaceSlug: string, projectId: string, ski
   console.log(`[项目 Skills] ${enabled ? '启用' : '禁用'}: ${workspaceSlug}/${projectId}/${skillSlug}`)
 }
 
-/** 项目是否已配置自己的 MCP 服务器；用于 UI 判断切换器展示、运行时判断是否用项目级覆盖工作区级 */
-export function hasProjectMcpServers(workspaceSlug: string, projectId: string): boolean {
-  return projectRepository.hasProjectMcpServers(getAgentWorkspacePath(workspaceSlug), projectId)
-}
-
-/** 获取项目级 MCP 配置（未配置时返回空 servers） */
-export function getProjectMcpConfig(workspaceSlug: string, projectId: string): WorkspaceMcpConfig {
-  const raw = projectRepository.getProjectMcpConfigRaw(getAgentWorkspacePath(workspaceSlug), projectId)
-  return normalizeWorkspaceMcpConfig(raw as Partial<WorkspaceMcpConfig>)
-}
-
-/** 保存项目级 MCP 配置 */
-export function saveProjectMcpConfig(workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig): void {
-  projectRepository.saveProjectMcpConfigRaw(
-    getAgentWorkspacePath(workspaceSlug),
-    projectId,
-    normalizeWorkspaceMcpConfig(config),
-  )
-  console.log(`[项目 MCP] 已保存配置: ${workspaceSlug}/${projectId}`)
-}
-
-/** 原子删除全局 MCP 单个条目，基于主进程当前配置而非渲染层快照，避免覆盖并发新状态。 */
-export function removeGlobalMcpServer(name: string): WorkspaceMcpConfig {
-  const current = getGlobalMcpConfig()
+/**
+ * 原子删除工作区 MCP 单个条目，基于主进程当前配置而非渲染层快照，避免覆盖并发新状态。
+ *
+ * MCP 已对齐上游为工作区级存储；项目级 MCP 覆盖已移除。
+ */
+export function removeWorkspaceMcpServer(workspaceSlug: string, name: string): WorkspaceMcpConfig {
+  const current = getWorkspaceMcpConfigWithGlobalFallback(workspaceSlug)
   const servers = { ...current.servers }
   delete servers[name]
   const next: WorkspaceMcpConfig = { servers }
-  saveGlobalMcpConfig(next)
-  return next
-}
-
-/** 原子删除项目 MCP 单个条目，基于主进程当前配置而非渲染层快照。 */
-export function removeProjectMcpServer(workspaceSlug: string, projectId: string, name: string): WorkspaceMcpConfig {
-  const current = getProjectMcpConfig(workspaceSlug, projectId)
-  const servers = { ...current.servers }
-  delete servers[name]
-  const next: WorkspaceMcpConfig = { servers }
-  saveProjectMcpConfig(workspaceSlug, projectId, next)
+  saveWorkspaceMcpConfig(workspaceSlug, next)
   return next
 }
 

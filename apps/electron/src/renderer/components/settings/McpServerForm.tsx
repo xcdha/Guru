@@ -28,10 +28,8 @@ interface EditingServer {
 interface McpServerFormProps {
   /** 编辑模式传入已有服务器，创建模式传 null */
   server: EditingServer | null
-  /** 当前工作区 slug：仅 projectId 分支需要（定位项目存储位置），MCP 已全局化不再按工作区隔离 */
+  /** 当前工作区 slug（MCP 为工作区级存储，对齐上游 #2037） */
   workspaceSlug: string
-  /** 嵌套 Project id；传入且该 Project 已自己配置过时，读写完全覆盖到项目专属 MCP 配置；不传则读写全局唯一配置 */
-  projectId?: string | null
   onSaved: () => void
   onChanged?: () => void
   onCancel: () => void
@@ -122,27 +120,15 @@ function buildEntryFromValues(values: McpFormValues, includeTestResult = false):
   return base
 }
 
-export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onChanged, onCancel }: McpServerFormProps): React.ReactElement {
-  // 仅项目已有覆盖配置时读写项目档；否则读写全局，避免第一次保存把空项目配置写成整份覆盖。
+export function McpServerForm({ server, workspaceSlug, onSaved, onChanged, onCancel }: McpServerFormProps): React.ReactElement {
+  // MCP 为工作区级存储（对齐上游 #2037），读写当前工作区配置。
   const readMcpConfig = React.useCallback(
-    async () => {
-      const overrideId = projectId
-      if (overrideId && await window.electronAPI.hasProjectMcpServers(workspaceSlug, overrideId)) {
-        return window.electronAPI.getProjectMcpConfig(workspaceSlug, overrideId)
-      }
-      return window.electronAPI.getGlobalMcpConfig()
-    },
-    [projectId, workspaceSlug],
+    async () => window.electronAPI.getWorkspaceMcpConfig(workspaceSlug),
+    [workspaceSlug],
   )
   const writeMcpConfig = React.useCallback(
-    async (config: WorkspaceMcpConfig) => {
-      const overrideId = projectId
-      if (overrideId && await window.electronAPI.hasProjectMcpServers(workspaceSlug, overrideId)) {
-        return window.electronAPI.saveProjectMcpConfig(workspaceSlug, overrideId, config)
-      }
-      return window.electronAPI.saveGlobalMcpConfig(config)
-    },
-    [projectId, workspaceSlug],
+    async (config: WorkspaceMcpConfig) => window.electronAPI.saveWorkspaceMcpConfig(workspaceSlug, config),
+    [workspaceSlug],
   )
   const isEdit = server !== null
   const isBuiltin = server?.entry.isBuiltin === true
@@ -170,6 +156,14 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
   const [testResult, setTestResult] = React.useState<{ success: boolean; message: string; timestamp?: number } | null>(
     server?.entry.lastTestResult ?? null
   )
+
+  // 编辑时保留表单未暴露的字段：oauth 元数据由 OAuth 模板 / Agent 写入，表单只透传不清除。
+  const latestOauthRef = React.useRef(server?.entry.oauth)
+  React.useEffect(() => { latestOauthRef.current = server?.entry.oauth }, [server])
+  const preserveOauth = (entry: McpServerEntry): McpServerEntry => {
+    const oauth = latestOauthRef.current
+    return oauth ? { ...entry, oauth } : entry
+  }
 
   // 自动保存状态（仅编辑模式）
   const AUTO_SAVE_DELAY = 600
@@ -275,7 +269,7 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
     setSaveStatus('idle')
     autoSaveTimerRef.current = setTimeout(() => {
       const vals = latestValuesRef.current
-      const entry = buildEntryFromValues(vals, true)
+      const entry = preserveOauth(buildEntryFromValues(vals, true))
       void doSaveEntryRef.current(vals.name.trim(), entry)
     }, AUTO_SAVE_DELAY)
     return () => {
@@ -310,7 +304,7 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
         if (!serverName) return
         if (vals.transportType === 'stdio' && !vals.command.trim()) return
         if (vals.transportType !== 'stdio' && !vals.url.trim()) return
-        const entry = buildEntryFromValues(vals, true)
+        const entry = preserveOauth(buildEntryFromValues(vals, true))
         void doSaveEntryRef.current(serverName, entry)
       }
     }
@@ -328,7 +322,7 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
 
     try {
       const entry = buildEntry(false) // 测试时不包含旧的测试结果
-      const result = await window.electronAPI.testMcpServer(serverName, entry)
+      const result = await window.electronAPI.testMcpServer(workspaceSlug, serverName, entry)
       setTestResult({
         success: result.success,
         message: result.message,
@@ -405,7 +399,7 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
           (vals.transportType === 'stdio' && vals.command.trim()) ||
           (vals.transportType !== 'stdio' && vals.url.trim())
         if (isValid) {
-          const entry = buildEntryFromValues(vals, true)
+          const entry = preserveOauth(buildEntryFromValues(vals, true))
           await doSaveEntryRef.current(serverName, entry)
         }
       }
@@ -463,6 +457,16 @@ export function McpServerForm({ server, workspaceSlug, projectId, onSaved, onCha
             placeholder="选择传输类型"
             disabled={isBuiltin}
           />
+
+          {/* 只读 OAuth 元数据提示：表单不编辑 OAuth；授权动作在连接器详情完成 */}
+          {server?.entry.oauth && (
+            <div className="px-4 py-3 border-t border-border space-y-2">
+              <div className="text-sm font-medium text-foreground">OAuth 授权</div>
+              <div className="text-xs text-muted-foreground leading-5">
+                此连接器声明了 OAuth 配置{server.entry.oauth.provider ? `（${server.entry.oauth.provider}）` : ''}。保存后在连接器详情中点击「OAuth 授权」完成登录；token 与 Client Secret 只会加密保存到系统 Keychain，不会写入此配置。
+              </div>
+            </div>
+          )}
 
           {/* stdio 专用字段 */}
           {transportType === 'stdio' && (

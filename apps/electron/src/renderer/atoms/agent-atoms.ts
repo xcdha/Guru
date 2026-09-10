@@ -624,6 +624,17 @@ export function isWorkspaceComponentTab(tab: AgentSidePanelTab | string): tab is
   return (WORKSPACE_COMPONENT_TABS as readonly string[]).includes(tab)
 }
 
+/** 右侧工作区组件 Tab 的用户可读名称（Tab 条与占位提示共用）。 */
+export const WORKSPACE_COMPONENT_TAB_LABELS: Record<WorkspaceComponentTab, string> = {
+  todos: '待办',
+  calendar: '日程',
+  automations: '定时任务',
+  mcp: 'MCP',
+  skills: '技能',
+  memory: '记忆',
+  vault: '保险库',
+}
+
 /** 过滤旧版本或异常持久化数据，避免未知组件渲染成空的右侧 Tab。 */
 export function sanitizeWorkspaceComponentTabs(tabs: readonly string[]): WorkspaceComponentTab[] {
   return tabs.every(isWorkspaceComponentTab)
@@ -805,8 +816,12 @@ export const revealChangedWorkspaceComponentAtom = atom(
     ))
 
     const activeTab = get(agentDiffPanelTabAtom).get(sessionId)
-    const preservesUserFocus = get(agentSidePanelOpenAtomFamily(sessionId))
-      && isUserPriorityWorkspaceComponentTab(activeTab)
+    const panelOpen = get(agentSidePanelOpenAtomFamily(sessionId))
+    // MCP 的受控配置成功后必须让 Tab 可见，但配置结果不应打断用户正在阅读
+    // 文件、变更或其他工作区内容。右侧已打开时仅添加 Tab；尚未打开时才以 MCP 打开。
+    if (component === 'mcp' && panelOpen) return
+
+    const preservesUserFocus = panelOpen && isUserPriorityWorkspaceComponentTab(activeTab)
     if (preservesUserFocus) return
 
     set(agentSidePanelOpenAtomFamily(sessionId), true)
@@ -1738,6 +1753,14 @@ export function cleanupDeletedAgentSessionAtoms(store: Store, sessionId: string)
   agentMessageQueueAtomFamily.remove(sessionId)
   backgroundTasksAtomFamily.remove(sessionId)
   agentSidePanelOpenAtomFamily.remove(sessionId)
+  // 组件 Tab 打开状态是持久化的 Record（atomWithStorage）：会话删除后清掉该 session 的条目，
+  // 避免长期累积无效会话 ID（列表本身按 session 读取，不会影响其他会话）。
+  store.set(agentSessionComponentOpenMapAtom, (prev) => {
+    if (!(sessionId in prev)) return prev
+    const next = { ...prev }
+    delete next[sessionId]
+    return next
+  })
   sessionPersistedPermissionModeAtom.remove(sessionId)
   sessionExistsAtom.remove(sessionId)
 }

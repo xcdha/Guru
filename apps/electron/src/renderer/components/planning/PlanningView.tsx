@@ -12,7 +12,7 @@ import { CalendarWorkspace } from '@/components/planning/CalendarWorkspace'
 import { PlanningFloatingInspector } from '@/components/planning/PlanningFloatingInspector'
 import { PlanningGroupManager } from '@/components/planning/PlanningGroupManager'
 import { PlanningNativeSyncControl } from '@/components/planning/PlanningNativeSyncControl'
-import { agentChannelIdAtom, agentModelIdAtom, agentPendingPromptAtom, agentSessionsAtom, agentWorkspacesAtom, currentAgentWorkspaceIdAtom } from '@/atoms/agent-atoms'
+import { agentChannelIdAtom, agentModelIdAtom, agentPendingPromptAtom, agentSessionsAtom, agentWorkspacesAtom, currentAgentWorkspaceIdAtom, WORKSPACE_COMPONENT_TAB_LABELS } from '@/atoms/agent-atoms'
 import { planningCalendarCreateRequestAtom, planningSelectedTodoIdAtom, planningTabAtom, planningTagsAtom, planningTodoCreateRequestAtom, planningWorkspaceScopeAtom, todoPlanningGroupsAtom, todosAtom, type PlanningTab } from '@/atoms/planning-atoms'
 import { useOpenSession } from '@/hooks/useOpenSession'
 import { useShortcut } from '@/hooks/useShortcut'
@@ -47,8 +47,15 @@ function CreateShortcutHint(): React.ReactElement | null {
   )
 }
 
-export function PlanningView({ standalone = false }: { standalone?: boolean } = {}): React.ReactElement {
-  const [tab, setTab] = useAtom(planningTabAtom)
+/**
+ * 规划视图。
+ *
+ * `componentTab`：由右侧工作区组件 Tab（待办 / 日程 / 定时任务）传入，直接决定当前子页。
+ * 该模式下不读写全局 planningTabAtom，避免污染规划窗口/独立窗口共享的当前子页，
+ * 同时隐藏视图内的子页导航（外层 Tab 条已提供同等入口，避免出现点了没反应的按钮）。
+ */
+export function PlanningView({ standalone = false, componentTab }: { standalone?: boolean; componentTab?: PlanningTab } = {}): React.ReactElement {
+  const [storedTab, setStoredTab] = useAtom(planningTabAtom)
   const [workspaceScope, setWorkspaceScope] = useAtom(planningWorkspaceScopeAtom)
   const isWindows = React.useMemo(() => detectIsWindows(), [])
   const productivityTools = useAtomValue(productivityToolsAtom)
@@ -57,12 +64,21 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
     || (candidate === 'todos' && productivityTools.todosEnabled)
     || (candidate === 'calendar' && productivityTools.calendarEnabled)
   ), [productivityTools.calendarEnabled, productivityTools.todosEnabled])
-  const requestedTab = tab
-  const visibleTab = isTabEnabled(requestedTab) ? requestedTab : 'automations'
+  const requestedTab = componentTab ?? storedTab
+  const tab = isTabEnabled(requestedTab) ? requestedTab : 'automations'
+  const setTab = React.useCallback((next: PlanningTab) => {
+    if (componentTab) return
+    setStoredTab(next)
+  }, [componentTab, setStoredTab])
   const availableTabs = React.useMemo(() => TABS.filter((item) => isTabEnabled(item.id)), [isTabEnabled])
+  // 嵌入右侧工作区时用紧凑标题栏：面板只有 300–560px 宽，完整标题栏（大标题 + 副标题 +
+  // 独立窗口按钮）会被容器裁切，因此内嵌模式只保留图标 + 当前子页名 + 主操作按钮。
+  const isEmbedded = Boolean(componentTab)
+  const headerTitle = componentTab ? WORKSPACE_COMPONENT_TAB_LABELS[componentTab] : '任务/日程'
   React.useEffect(() => {
-    if (visibleTab !== tab) setTab(visibleTab)
-  }, [setTab, tab, visibleTab])
+    if (componentTab) return
+    if (tab !== storedTab) setStoredTab(tab)
+  }, [componentTab, setStoredTab, storedTab, tab])
   const automations = useAtomValue(automationsAtom)
   const setAutomationForm = useSetAtom(automationFormAtom)
   const requestTodoCreate = useSetAtom(planningTodoCreateRequestAtom)
@@ -93,27 +109,29 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
   // 独立于「新会话」的快捷键 ID：避免共享 new-session 时 Task 日历页面必须靠
   // exclusive 抢占才能正确响应，也避免用户在设置里改「新会话」快捷键时意外
   // 影响这里的新建 Todo/日程/定时任务行为。
+  // 内嵌到右侧工作区时不注册：避免与主视图的 PlanningView 重复响应同一快捷键、
+  // 同时弹出两个新建弹窗（面板内仍保留「新建」按钮）。
   useShortcut('new-todo', React.useCallback(() => {
     if (tab === 'todos') triggerTodoCreate()
     else if (tab === 'calendar') triggerCalendarCreate()
     else createAutomation()
-  }, [createAutomation, tab, triggerCalendarCreate, triggerTodoCreate]))
+  }, [createAutomation, tab, triggerCalendarCreate, triggerTodoCreate]), !componentTab)
   return (
     <div className="flex h-full flex-col overflow-hidden bg-content-area">
       {/* 非 standalone（内嵌主窗口）时用 pt-14 让内容让到 AppShell 全局 drag 层
           （0–50px, z-50）下方，避免与 Windows 自定义 WindowControls 视觉重叠；
           standalone 独立窗口没有该全局拖拽层，维持原有 pt-8。 */}
-      <header className={cn('relative titlebar-no-drag flex w-full items-center justify-between', standalone ? 'px-5 pb-4 pt-8' : 'px-6 pb-5 pt-14 sm:px-8 xl:px-10')}>
+      <header className={cn('relative titlebar-no-drag flex w-full items-center justify-between', standalone ? 'px-5 pb-4 pt-8' : isEmbedded ? 'gap-2 px-3 pb-3 pt-3' : 'px-6 pb-5 pt-14 sm:px-8 xl:px-10')}>
         <div className={cn('absolute inset-y-0 left-0 z-0 titlebar-drag-region', isWindows ? WINDOW_CONTROLS_INSET_RIGHT : 'right-0')} />
-        <div className="relative z-[1] flex items-center gap-2.5">
-          <CalendarDays className="size-6 text-foreground/70" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-wrap-balance">任务/日程</h1>
-            <p className="mt-1 text-sm text-muted-foreground">安排待办、日程与定时任务</p>
+        <div className="relative z-[1] flex min-w-0 items-center gap-2.5">
+          <CalendarDays className={cn('shrink-0 text-foreground/70', isEmbedded ? 'size-4' : 'size-6')} />
+          <div className="min-w-0">
+            <h1 className={cn('font-semibold tracking-tight', isEmbedded ? 'truncate text-sm' : 'text-2xl text-wrap-balance')}>{headerTitle}</h1>
+            {!isEmbedded && <p className="mt-1 text-sm text-muted-foreground">安排待办、日程与定时任务</p>}
           </div>
         </div>
-        <div className="relative z-[1] titlebar-no-drag flex items-center gap-2">
-          {!standalone && (
+        <div className="relative z-[1] titlebar-no-drag flex shrink-0 items-center gap-2">
+          {!standalone && !isEmbedded && (
             <button
               type="button"
               onClick={openPlanningWindow}
@@ -127,9 +145,9 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
               type="button"
               onClick={triggerTodoCreate}
               aria-keyshortcuts="Meta+T Control+T"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]"
+              className={cn('inline-flex items-center gap-1.5 rounded-lg bg-primary font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]', isEmbedded ? 'min-h-7 px-2 text-xs' : 'min-h-10 px-3 text-sm')}
             >
-              <Plus size={16} /> 新建 Todo<CreateShortcutHint />
+              <Plus size={16} /> 新建 Todo{!isEmbedded && <CreateShortcutHint />}
             </button>
           )}
           {tab === 'calendar' && (
@@ -137,9 +155,9 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
               type="button"
               onClick={triggerCalendarCreate}
               aria-keyshortcuts="Meta+T Control+T"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]"
+              className={cn('inline-flex items-center gap-1.5 rounded-lg bg-primary font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]', isEmbedded ? 'min-h-7 px-2 text-xs' : 'min-h-10 px-3 text-sm')}
             >
-              <Plus size={16} /> 新建日程<CreateShortcutHint />
+              <Plus size={16} /> 新建日程{!isEmbedded && <CreateShortcutHint />}
             </button>
           )}
           {tab === 'automations' && automations.length > 0 && (
@@ -147,31 +165,31 @@ export function PlanningView({ standalone = false }: { standalone?: boolean } = 
               type="button"
               onClick={createAutomation}
               aria-keyshortcuts="Meta+T Control+T"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]"
+              className={cn('inline-flex items-center gap-1.5 rounded-lg bg-primary font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 active:scale-[0.96]', isEmbedded ? 'min-h-7 px-2 text-xs' : 'min-h-10 px-3 text-sm')}
             >
-              <Plus size={16} /> 新建定时任务<CreateShortcutHint />
+              <Plus size={16} /> 新建定时任务{!isEmbedded && <CreateShortcutHint />}
             </button>
           )}
         </div>
       </header>
-      <div className={cn('titlebar-no-drag flex w-full items-center justify-between gap-2', standalone ? 'px-5' : 'px-6 sm:px-8 xl:px-10')}>
-        <nav className="inline-flex rounded-xl bg-muted/60 p-1 shadow-inner" aria-label="任务日程视图">
+      <div className={cn('titlebar-no-drag flex w-full items-center justify-between gap-2', standalone ? 'px-5' : isEmbedded ? 'px-3' : 'px-6 sm:px-8 xl:px-10')}>
+        <nav className={cn('inline-flex rounded-xl bg-muted/60 p-1 shadow-inner', componentTab && 'hidden')} aria-label="任务日程视图">
           {availableTabs.map((item) => <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn('min-h-9 rounded-lg px-3 text-sm transition-colors', tab === item.id ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{item.label}</button>)}
         </nav>
-        <nav className="inline-flex rounded-xl bg-muted/60 p-1 shadow-inner" aria-label="工作区范围">
+        <nav className={cn('inline-flex rounded-xl bg-muted/60 p-1 shadow-inner', componentTab && 'ml-auto')} aria-label="工作区范围">
           {(['current', 'all'] as const).map((scope) => (
             <button
               key={scope}
               type="button"
               onClick={() => setWorkspaceScope(scope)}
-              className={cn('min-h-9 rounded-lg px-3 text-sm transition-colors', workspaceScope === scope ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('rounded-lg transition-colors', isEmbedded ? 'min-h-7 px-2 text-xs' : 'min-h-9 px-3 text-sm', workspaceScope === scope ? 'bg-background font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
             >
               {scope === 'current' ? '当前工作区' : '全部工作区'}
             </button>
           ))}
         </nav>
       </div>
-      <main className={cn('min-h-0 flex-1 titlebar-no-drag', standalone ? 'px-5 pb-5 pt-4' : 'px-6 pb-8 pt-6 sm:px-8 xl:px-10', tab === 'calendar' || tab === 'todos' ? 'overflow-hidden' : 'overflow-y-auto')}>
+      <main className={cn('min-h-0 flex-1 titlebar-no-drag', standalone ? 'px-5 pb-5 pt-4' : isEmbedded ? 'px-2 pb-2 pt-2' : 'px-6 pb-8 pt-6 sm:px-8 xl:px-10', tab === 'calendar' || tab === 'todos' ? 'overflow-hidden' : 'overflow-y-auto')}>
         <div className={cn('w-full', (tab === 'calendar' || tab === 'todos') && 'h-full')}>
           {tab === 'todos' && <TodoWorkspace standalone={standalone} />}
           {tab === 'calendar' && <CalendarWorkspace />}

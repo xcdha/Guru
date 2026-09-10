@@ -9,6 +9,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { realpath, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { createHash } from 'node:crypto'
 import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, SLACK_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isGuruPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, VAULT_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@guru/shared'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, EXCALIDRAW_IPC_CHANNELS, QUICK_TASK_IPC_CHANNELS, VOICE_DICTATION_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
 import type {
@@ -367,8 +368,6 @@ import {
   ensureDefaultWorkspace,
   getWorkspaceMcpConfig,
   saveWorkspaceMcpConfig,
-  getGlobalMcpConfig,
-  saveGlobalMcpConfig,
   getAllEffectiveSkills,
   toggleGlobalSkill,
   deleteGlobalSkill,
@@ -383,11 +382,7 @@ import {
   getProjectSkillsDir,
   deleteProjectSkill,
   toggleProjectSkill,
-  hasProjectMcpServers,
-  getProjectMcpConfig,
-  saveProjectMcpConfig,
-  removeGlobalMcpServer,
-  removeProjectMcpServer,
+  removeWorkspaceMcpServer,
   getOtherProjectSkills,
   batchImportSkillsToProject,
   importSkillFromWorkspace,
@@ -443,10 +438,163 @@ import { fetchCommunityManifest, installCommunitySkill } from './lib/community-s
 import { projectRepository } from './lib/project-repository'
 import { subscribeWorkspaceMemoryChanges } from './lib/workspace-memory-change-watcher'
 import { confirmWorkspaceMemoryWindowClose, markWorkspaceMemoryWindowReady } from './lib/workspace-memory-window'
+import { deleteMcpCredential, startMcpOAuth, saveMcpApiKey, saveMcpOAuthClientSecret } from './lib/mcp-oauth-service'
 
 /** 按渲染进程隔离的订阅表；在显式 STOP 或 renderer 销毁时释放。 */
 const workspaceMemoryWatchSubscriptions = new Map<number, Map<string, () => void>>()
 const workspaceMemoryWatchDestroyedListeners = new Set<number>()
+
+/**
+ * 每次保存或刷新都会推进工作区代数，使较早的异步 MCP 刷新不能回写较新的配置。
+ * 该代数仅用于进程内竞态保护，不写入用户的 mcp.json。
+ */
+const workspaceMcpRefreshGenerations = new Map<string, number>()
+const workspaceMcpPendingValidations = new Map<string, Map<string, import('@guru/shared').McpServerEntry>>()
+
+function advanceWorkspaceMcpRefreshGeneration(workspaceSlug: string): number {
+  const generation = (workspaceMcpRefreshGenerations.get(workspaceSlug) ?? 0) + 1
+  workspaceMcpRefreshGenerations.set(workspaceSlug, generation)
+  return generation
+}
+
+function getWorkspaceMcpPendingValidation(workspaceSlug: string, name: string): import('@guru/shared').McpServerEntry | undefined {
+  return workspaceMcpPendingValidations.get(workspaceSlug)?.get(name)
+}
+
+function setWorkspaceMcpPendingValidation(workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): void {
+  const pending = workspaceMcpPendingValidations.get(workspaceSlug) ?? new Map<string, import('@guru/shared').McpServerEntry>()
+  pending.set(name, entry)
+  workspaceMcpPendingValidations.set(workspaceSlug, pending)
+}
+
+function clearWorkspaceMcpPendingValidation(workspaceSlug: string, name: string): void {
+  const pending = workspaceMcpPendingValidations.get(workspaceSlug)
+  if (!pending) return
+  pending.delete(name)
+  if (pending.size === 0) workspaceMcpPendingValidations.delete(workspaceSlug)
+}
+
+function clearMissingWorkspaceMcpPendingValidations(workspaceSlug: string, serverNames: ReadonlySet<string>): void {
+  const pending = workspaceMcpPendingValidations.get(workspaceSlug)
+  if (!pending) return
+  for (const name of pending.keys()) {
+    if (!serverNames.has(name)) pending.delete(name)
+  }
+  if (pending.size === 0) workspaceMcpPendingValidations.delete(workspaceSlug)
+}
+
+function isWorkspaceMcpRefreshCurrent(workspaceSlug: string, generation: number): boolean {
+  return workspaceMcpRefreshGenerations.get(workspaceSlug) === generation
+}
+
+interface McpRefreshValidation {
+  name: string
+  fingerprint: string
+  lastTestResult: NonNullable<import('@guru/shared').McpServerEntry['lastTestResult']>
+}
+
+/**
+ * 生成 MCP 可运行配置的稳定摘要。摘要只用于内存中比较，绝不记录或返回，避免暴露 headers/env 中的敏感值。
+ */
+export function getMcpEntryFingerprint(entry: import('@guru/shared').McpServerEntry): string {
+  const sortedEntries = (record: Record<string, string> | undefined): Array<[string, string]> =>
+    Object.entries(record ?? {}).sort(([left], [right]) => left.localeCompare(right))
+
+  const canonical = {
+    type: entry.type,
+    command: entry.command ?? null,
+    args: entry.args ? [...entry.args] : null,
+    url: entry.url ?? null,
+    headers: sortedEntries(entry.headers),
+    env: sortedEntries(entry.env),
+    timeout: entry.timeout ?? null,
+    enabled: entry.enabled,
+    isBuiltin: entry.isBuiltin ?? false,
+  }
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex')
+}
+
+/** 在固定上限内并发执行任务，保留输入顺序，避免同时启动过多 MCP 进程或网络连接。 */
+export async function mapWithConcurrency<T, R>(
+  values: readonly T[],
+  maxConcurrency: number,
+  mapper: (value: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (!Number.isInteger(maxConcurrency) || maxConcurrency < 1) {
+    throw new Error('maxConcurrency 必须是正整数')
+  }
+
+  const results = new Array<R>(values.length)
+  let nextIndex = 0
+  const worker = async (): Promise<void> => {
+    while (nextIndex < values.length) {
+      const index = nextIndex++
+      results[index] = await mapper(values[index]!, index)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(maxConcurrency, values.length) }, worker))
+  return results
+}
+
+/**
+ * 只合并仍与验证开始时完全一致的条目。调用方还必须检查 refresh generation，
+ * 因而同名服务器被编辑、禁用、删除或被后一次刷新取代时，旧结果不会落盘。
+ */
+export function mergeMcpRefreshResults(
+  currentConfig: import('@guru/shared').WorkspaceMcpConfig,
+  validations: readonly McpRefreshValidation[],
+): import('@guru/shared').WorkspaceMcpConfig {
+  const servers = { ...currentConfig.servers }
+  for (const validation of validations) {
+    const currentEntry = servers[validation.name]
+    if (currentEntry?.enabled && getMcpEntryFingerprint(currentEntry) === validation.fingerprint) {
+      servers[validation.name] = {
+        ...currentEntry,
+        enabled: validation.lastTestResult.success,
+        lastTestResult: validation.lastTestResult,
+      }
+    }
+  }
+  return { servers }
+}
+
+/**
+ * 在该条目保持 disabled 落盘的状态下验证启用候选。若验证期间配置已被改动，
+ * 返回最新快照而不是覆盖它。验证失败会落盘为 disabled，确保无效 MCP 不会被运行时加载。
+ */
+async function validateAndConditionallyPersistMcp(
+  workspaceSlug: string,
+  name: string,
+  candidateEntry: import('@guru/shared').McpServerEntry,
+  expectedPersistedFingerprint: string,
+  expectedRefreshGeneration: number,
+): Promise<import('@guru/shared').McpConnectionMutationResult> {
+  const { validateMcpServer } = await import('./lib/mcp-validator')
+  const result = await validateMcpServer(name, candidateEntry, workspaceSlug)
+  const verification = {
+    success: result.valid,
+    message: result.valid ? (result.message ?? 'MCP 连接成功') : (result.reason ?? 'MCP 连接失败'),
+  }
+  const current = getWorkspaceMcpConfig(workspaceSlug)
+  const currentEntry = current.servers[name]
+  if (
+    !isWorkspaceMcpRefreshCurrent(workspaceSlug, expectedRefreshGeneration) ||
+    !currentEntry ||
+    getMcpEntryFingerprint(currentEntry) !== expectedPersistedFingerprint
+  ) {
+    return { config: current, verification }
+  }
+
+  const nextEntry = {
+    ...candidateEntry,
+    enabled: verification.success,
+    lastTestResult: { ...verification, timestamp: Date.now() },
+  }
+  const config = { servers: { ...current.servers, [name]: nextEntry } }
+  clearWorkspaceMcpPendingValidation(workspaceSlug, name)
+  saveWorkspaceMcpConfig(workspaceSlug, config)
+  return { config, verification }
+}
 
 function stopWorkspaceMemoryWatch(webContentsId: number, workspaceSlug: string): void {
   const subscriptions = workspaceMemoryWatchSubscriptions.get(webContentsId)
@@ -3159,7 +3307,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 获取工作区 MCP 配置
+  // 获取工作区 MCP 配置（对齐上游 #2037：MCP 为工作区级存储，UI 唯一入口）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_MCP_CONFIG,
     async (_, workspaceSlug: string): Promise<WorkspaceMcpConfig> => {
@@ -3167,27 +3315,197 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 保存工作区 MCP 配置
+  // 防御式保存整个工作区 MCP 配置：renderer 传入的测试结果仅是可展示数据，不能作为加载授权。
+  // 新启用或变更的条目先以 disabled 落盘，并走与卡片开关一致的真实验证后才允许启用。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SAVE_MCP_CONFIG,
-    async (_, workspaceSlug: string, config: WorkspaceMcpConfig): Promise<void> => {
-      return saveWorkspaceMcpConfig(workspaceSlug, config)
+    async (_, workspaceSlug: string, config: WorkspaceMcpConfig, options?: import('@guru/shared').SaveWorkspaceMcpConfigOptions): Promise<void> => {
+      for (const name of options?.explicitlyDisabledServerNames ?? []) {
+        clearWorkspaceMcpPendingValidation(workspaceSlug, name)
+      }
+      const pendingValidations: Array<{ name: string; candidate: import('@guru/shared').McpServerEntry }> = []
+      const servers: WorkspaceMcpConfig['servers'] = {}
+
+      const configServerNames = new Set(Object.keys(config.servers))
+      clearMissingWorkspaceMcpPendingValidations(workspaceSlug, configServerNames)
+      for (const [name, entry] of Object.entries(config.servers)) {
+        const entryWithoutTestResult = { ...entry }
+        delete entryWithoutTestResult.lastTestResult
+        const candidate = { ...entryWithoutTestResult, enabled: true }
+        if (entry.enabled) {
+          // lastTestResult 是 renderer 可见的展示数据，不是可加载证明。
+          // 每个 enabled 条目都必须重新真实验证，包括旧版本创建或手工编辑过的配置。
+          servers[name] = { ...entryWithoutTestResult, enabled: false }
+          pendingValidations.push({ name, candidate })
+          setWorkspaceMcpPendingValidation(workspaceSlug, name, candidate)
+        } else {
+          const pendingCandidate = getWorkspaceMcpPendingValidation(workspaceSlug, name)
+          const pendingEntry = pendingCandidate ? { ...pendingCandidate, enabled: false } : undefined
+          if (pendingEntry && getMcpEntryFingerprint(pendingEntry) === getMcpEntryFingerprint(entry)) {
+            servers[name] = pendingEntry
+            pendingValidations.push({ name, candidate: pendingCandidate! })
+          } else {
+            clearWorkspaceMcpPendingValidation(workspaceSlug, name)
+            // 不为 disabled 条目持久化 renderer 提供的验证数据。
+            servers[name] = entryWithoutTestResult
+          }
+        }
+      }
+
+      const pendingConfig = { servers }
+      const refreshGeneration = advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+      saveWorkspaceMcpConfig(workspaceSlug, pendingConfig)
+      for (const validation of pendingValidations) {
+        await validateAndConditionallyPersistMcp(
+          workspaceSlug,
+          validation.name,
+          validation.candidate,
+          getMcpEntryFingerprint(pendingConfig.servers[validation.name]!),
+          refreshGeneration,
+        )
+      }
     }
   )
 
-  // 获取全局 MCP 配置（~/.guru/mcp.json，所有工作区共享，设置页真实编辑入口）
+  // 原子切换单个 MCP：任何更晚的保存都会推进工作区 refresh generation，
+  // 而 fingerprint 匹配保护本条目的验证回写。
   ipcMain.handle(
-    AGENT_IPC_CHANNELS.GET_GLOBAL_MCP_CONFIG,
-    async (): Promise<WorkspaceMcpConfig> => {
-      return getGlobalMcpConfig()
+    AGENT_IPC_CHANNELS.SET_MCP_ENABLED_AND_VALIDATE,
+    async (_, workspaceSlug: string, name: string, enabled: boolean): Promise<import('@guru/shared').McpConnectionMutationResult> => {
+      const current = getWorkspaceMcpConfig(workspaceSlug)
+      const entry = current.servers[name]
+      if (!entry) throw new Error('找不到 MCP 配置')
+
+      const entryWithoutTestResult = { ...entry }
+      delete entryWithoutTestResult.lastTestResult
+      if (!enabled) {
+        const config = { servers: { ...current.servers, [name]: { ...entry, enabled: false } } }
+        advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+        clearWorkspaceMcpPendingValidation(workspaceSlug, name)
+        saveWorkspaceMcpConfig(workspaceSlug, config)
+        return { config, verification: { success: true, message: 'MCP 已关闭' } }
+      }
+
+      // 保持条目 disabled 直到真实握手成功，避免运行时反复启动已知无效的服务器。
+      const pendingEntry = { ...entryWithoutTestResult, enabled: false }
+      const pendingConfig = { servers: { ...current.servers, [name]: pendingEntry } }
+      // 将候选条目保留在内存中：握手期间发生无关的整配置保存时，
+      // 会保留并继续验证，而不是把临时 disabled 当成用户主动关闭。
+      const refreshGeneration = advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+      setWorkspaceMcpPendingValidation(workspaceSlug, name, { ...entryWithoutTestResult, enabled: true })
+      saveWorkspaceMcpConfig(workspaceSlug, pendingConfig)
+      return validateAndConditionallyPersistMcp(
+        workspaceSlug,
+        name,
+        { ...entryWithoutTestResult, enabled: true },
+        getMcpEntryFingerprint(pendingEntry),
+        refreshGeneration,
+      )
     }
   )
 
-  // 保存全局 MCP 配置
+  // 原子安装目录 MCP：已有配置优先，不被 renderer 的过期快照覆盖。
   ipcMain.handle(
-    AGENT_IPC_CHANNELS.SAVE_GLOBAL_MCP_CONFIG,
-    async (_, config: WorkspaceMcpConfig): Promise<void> => {
-      return saveGlobalMcpConfig(config)
+    AGENT_IPC_CHANNELS.INSTALL_MCP_AND_VALIDATE,
+    async (_, workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): Promise<import('@guru/shared').McpInstallMutationResult> => {
+      const current = getWorkspaceMcpConfig(workspaceSlug)
+      if (current.servers[name]) {
+        return {
+          installed: false,
+          config: current,
+          verification: { success: Boolean(current.servers[name]?.lastTestResult?.success), message: 'MCP 已存在' },
+        }
+      }
+
+      const entryWithoutTestResult = { ...entry }
+      delete entryWithoutTestResult.lastTestResult
+      if (!entry.enabled) {
+        const config = { servers: { ...current.servers, [name]: entryWithoutTestResult } }
+        advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+        saveWorkspaceMcpConfig(workspaceSlug, config)
+        return { installed: true, config, verification: { success: true, message: 'MCP 已添加，等待配置' } }
+      }
+
+      // 新安装的目录 MCP 同样保持 disabled 直到验证通过。
+      const pendingEntry = { ...entryWithoutTestResult, enabled: false }
+      const pendingConfig = { servers: { ...current.servers, [name]: pendingEntry } }
+      // 将候选条目保留在内存中：握手期间发生无关的整配置保存时，
+      // 会保留并继续验证，而不是把临时 disabled 当成用户主动关闭。
+      const refreshGeneration = advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+      setWorkspaceMcpPendingValidation(workspaceSlug, name, { ...entryWithoutTestResult, enabled: true })
+      saveWorkspaceMcpConfig(workspaceSlug, pendingConfig)
+      const result = await validateAndConditionallyPersistMcp(
+        workspaceSlug,
+        name,
+        { ...entryWithoutTestResult, enabled: true },
+        getMcpEntryFingerprint(pendingEntry),
+        refreshGeneration,
+      )
+      return { installed: true, ...result }
+    }
+  )
+
+  // 刷新并持久化工作区 MCP 真实连接状态
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.REFRESH_MCP_CONNECTIONS,
+    async (_, workspaceSlug: string): Promise<WorkspaceMcpConfig> => {
+      const refreshGeneration = advanceWorkspaceMcpRefreshGeneration(workspaceSlug)
+      const config = getWorkspaceMcpConfig(workspaceSlug)
+      const entries = Object.entries(config.servers).filter(([, entry]) => entry.enabled)
+      const { validateMcpServer } = await import('./lib/mcp-validator')
+      const validations = await mapWithConcurrency(entries, 4, async ([name, entry]) => {
+        const result = await validateMcpServer(name, entry, workspaceSlug)
+        return {
+          name,
+          fingerprint: getMcpEntryFingerprint(entry),
+          lastTestResult: {
+            success: result.valid,
+            message: result.valid ? (result.message ?? 'MCP 连接成功') : (result.reason ?? 'MCP 连接失败'),
+            timestamp: Date.now(),
+          },
+        }
+      })
+
+      // 保存或更晚发起的刷新会使本次 generation 过期；直接返回最新完整配置，不写任何旧验证结果。
+      if (!isWorkspaceMcpRefreshCurrent(workspaceSlug, refreshGeneration)) {
+        return getWorkspaceMcpConfig(workspaceSlug)
+      }
+
+      const refreshed = mergeMcpRefreshResults(getWorkspaceMcpConfig(workspaceSlug), validations)
+      saveWorkspaceMcpConfig(workspaceSlug, refreshed)
+      return refreshed
+    }
+  )
+
+  // 启动远程 MCP 的 OAuth PKCE 授权（不向 renderer 暴露任何凭据）
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.START_MCP_OAUTH,
+    async (_, input: import('@guru/shared').StartMcpOAuthInput): Promise<import('@guru/shared').McpOAuthStartResult> => {
+      return startMcpOAuth(input)
+    }
+  )
+
+  // 将 OAuth client secret 加密保存到系统 Keychain
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.SAVE_MCP_OAUTH_CLIENT_SECRET,
+    (_, input: import('@guru/shared').SaveMcpOAuthClientSecretInput): void => {
+      saveMcpOAuthClientSecret(input)
+    }
+  )
+
+  // 安全保存远程 MCP 的静态 API Key / Token
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.SAVE_MCP_API_KEY,
+    async (_, input: import('@guru/shared').SaveMcpApiKeyInput): Promise<void> => {
+      return saveMcpApiKey(input)
+    }
+  )
+
+  // renderer 先移除传输配置，再调用此 handler 只删除匹配的加密 Keychain 载荷。
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.DELETE_MCP_CREDENTIAL,
+    async (_, workspaceSlug: string, serverName: string): Promise<void> => {
+      return deleteMcpCredential(workspaceSlug, serverName)
     }
   )
 
@@ -3208,15 +3526,15 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 测试 MCP 服务器连接
+  // 测试 MCP 服务器连接（真实握手；传 workspaceSlug 以注入该工作区的 OAuth/API-key 凭据）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TEST_MCP_SERVER,
-    async (_, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
+    async (_, workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
       const { validateMcpServer } = await import('./lib/mcp-validator')
-      const result = await validateMcpServer(name, entry)
+      const result = await validateMcpServer(name, entry, workspaceSlug)
       return {
         success: result.valid,
-        message: result.valid ? '连接成功' : (result.reason || '连接失败'),
+        message: result.valid ? (result.message ?? '连接成功') : (result.reason || '连接失败'),
       }
     }
   )
@@ -3357,36 +3675,12 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.HAS_PROJECT_MCP_SERVERS,
-    async (_, workspaceSlug: string, projectId: string): Promise<boolean> => {
-      return hasProjectMcpServers(workspaceSlug, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.GET_PROJECT_MCP_CONFIG,
-    async (_, workspaceSlug: string, projectId: string): Promise<WorkspaceMcpConfig> => {
-      return getProjectMcpConfig(workspaceSlug, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.SAVE_PROJECT_MCP_CONFIG,
-    async (_, workspaceSlug: string, projectId: string, config: WorkspaceMcpConfig): Promise<void> => {
-      return saveProjectMcpConfig(workspaceSlug, projectId, config)
-    }
-  )
-
-  // 原子删除单个 MCP（projectId 为空时删全局条目），基于主进程当前配置，避免
-  // 渲染层旧快照整体回写时覆盖其他条目的新状态。
+  // 原子删除工作区内的单个 MCP 条目，基于主进程当前配置，避免渲染层旧快照整体回写时覆盖其他条目的新状态。
+  // MCP 已对齐上游 #2037 为工作区级存储，项目级 MCP 覆盖已移除。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.DELETE_MCP,
-    async (_, workspaceSlug: string, name: string, projectId?: string | null): Promise<WorkspaceMcpConfig> => {
-      if (projectId) {
-        return removeProjectMcpServer(workspaceSlug, projectId, name)
-      }
-      return removeGlobalMcpServer(name)
+    async (_, workspaceSlug: string, name: string): Promise<WorkspaceMcpConfig> => {
+      return removeWorkspaceMcpServer(workspaceSlug, name)
     }
   )
 
