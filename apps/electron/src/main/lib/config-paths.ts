@@ -349,6 +349,15 @@ export function getGlobalMcpPath(): string {
 }
 
 /**
+ * MCP OAuth/API-key 加密凭据索引文件路径（safeStorage 加密，绝不落明文进 mcp.json）
+ *
+ * @returns ~/.guru/mcp-oauth-credentials.json
+ */
+export function getMcpOAuthCredentialsPath(): string {
+  return join(getConfigDir(), 'mcp-oauth-credentials.json')
+}
+
+/**
  * 全局 Skills 目录路径（预制 skill 默认为全局；新建工作区不再复制）
  *
  * 如果目录不存在则自动创建。

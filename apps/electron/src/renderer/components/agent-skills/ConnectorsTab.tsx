@@ -7,7 +7,7 @@
  */
 
 import * as React from 'react'
-import { AlertTriangle, ArrowRight, FolderOpen, Globe, Plus, Search, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Globe, Plus, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { chatToolsAtom } from '@/atoms/chat-tool-atoms'
@@ -30,7 +30,6 @@ interface ConnectorsTabProps {
   builtinServers: BuiltinMcpServerSummary[]
   userEntries: Array<[string, McpServerEntry]>
   query: string
-  mcpIsProjectOverride: boolean
   reviewHints: GlobalScopeReviewHints | null
   onDismissHints: () => void
   onAddMcp: () => void
@@ -53,7 +52,6 @@ export function ConnectorsTab({
   builtinServers,
   userEntries,
   query,
-  mcpIsProjectOverride,
   reviewHints,
   onDismissHints,
   onAddMcp,
@@ -233,7 +231,7 @@ export function ConnectorsTab({
 
   return (
     <div className="flex flex-col gap-5">
-      <ScopeBanner mcpIsProjectOverride={mcpIsProjectOverride} />
+      <ScopeBanner />
       {hasReviewHints && reviewHints && (
         <HintsBanner hints={reviewHints} onDismiss={onDismissHints} />
       )}
@@ -271,7 +269,6 @@ export function ConnectorsTab({
         builtinServers={builtinServers}
         userEntries={userEntries}
         workspaceSlug={workspaceSlug}
-        projectId={projectId}
         onToggle={(item, enabled) => void toggle(item, enabled)}
         onUserMcpChanged={onUserMcpChanged}
         onDeletedHttp={() => setSelected(null)}
@@ -280,20 +277,11 @@ export function ConnectorsTab({
   )
 }
 
-function ScopeBanner({ mcpIsProjectOverride }: { mcpIsProjectOverride: boolean }): React.ReactElement {
+function ScopeBanner(): React.ReactElement {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-content-area px-3 py-2 text-[13px] text-foreground/60">
-      {mcpIsProjectOverride ? (
-        <>
-          <FolderOpen size={14} className="shrink-0 text-foreground/45" />
-          <span>当前项目已配置专属连接器，完全覆盖全局配置，仅本项目生效</span>
-        </>
-      ) : (
-        <>
-          <Globe size={14} className="shrink-0 text-foreground/45" />
-          <span>连接器配置全局共享，所有工作区共用；切换工作区不会改变这份列表</span>
-        </>
-      )}
+      <Globe size={14} className="shrink-0 text-foreground/45" />
+      <span>连接器配置按工作区保存，仅当前工作区生效；切换工作区会看到各自的连接器列表</span>
     </div>
   )
 }

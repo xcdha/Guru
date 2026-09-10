@@ -37,9 +37,15 @@ import {
   fileBrowserAutoRevealAtom,
   agentSelectedWorktreeAtom,
   agentSessionsAtom,
+  agentSessionComponentTabsAtomFamily,
   agentFileSourceFilterMapAtom,
+  isWorkspaceComponentTab,
+  WORKSPACE_COMPONENT_TAB_LABELS,
 } from '@/atoms/agent-atoms'
-import type { AgentFileSourceFilter, AgentSidePanelTab } from '@/atoms/agent-atoms'
+import type { AgentFileSourceFilter, AgentSidePanelTab, WorkspaceComponentTab } from '@/atoms/agent-atoms'
+import { PlanningView } from '@/components/planning/PlanningView'
+import { AgentSkillsView } from '@/components/agent-skills/AgentSkillsView'
+import { WorkspaceMemoryTab } from '@/components/agent-skills/WorkspaceMemoryTab'
 import { WorkspaceMemoryChangeDock } from '@/components/agent-skills/WorkspaceMemoryChangeDock'
 import { agentSideChatMapAtom } from '@/atoms/chat-atoms'
 // Project 文件根由主进程统一解析。
@@ -501,6 +507,16 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
       ? 'files'
       : activeTab
 
+  // 工作区组件 Tab 必须处于本会话已注册列表中才能保持激活：
+  // 关闭 Tab（closeWorkspaceComponentAtom）或切换到其他会话时，避免顶栏无高亮项、
+  // 内容却仍在渲染已关闭组件的自相矛盾状态。
+  const sessionComponentTabs = useAtomValue(agentSessionComponentTabsAtomFamily(sessionId))
+  React.useEffect(() => {
+    if (isWorkspaceComponentTab(activeTab) && !sessionComponentTabs.includes(activeTab)) {
+      onTabChange('files')
+    }
+  }, [activeTab, onTabChange, sessionComponentTabs])
+
   const handleCloseChatTab = React.useCallback(() => {
     setSideChatMap((prev) => {
       if (!prev.has(sessionId)) return prev
@@ -773,8 +789,78 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-xs">等待会话初始化...</div>
               )}
             </div>
+          ) : isWorkspaceComponentTab(effectiveActiveTab) ? (
+            <WorkspaceComponentPanel
+              componentTab={effectiveActiveTab}
+              workspaceSlug={workspaceSlug}
+              onSelectFiles={() => onTabChange('files')}
+            />
           ) : null}
         </div>
+    </div>
+  )
+}
+
+// ===== 右侧工作区组件面板 =====
+
+/**
+ * 右侧工作区组件面板。
+ *
+ * 本会话通过变更工具自动展示（revealChangedWorkspaceComponentAtom）或用户主动打开
+ * （openWorkspaceComponentAtom）的项目级组件，在此渲染为右侧栏内容，取代此前的空白面板。
+ * 本地尚未在右侧栏实现的组件（vault）给出占位与回退入口，保证不会出现「Tab 可见、内容空白」。
+ */
+function WorkspaceComponentPanel({
+  componentTab,
+  workspaceSlug,
+  onSelectFiles,
+}: {
+  componentTab: WorkspaceComponentTab
+  workspaceSlug: string | null
+  onSelectFiles: () => void
+}): React.ReactElement {
+  if (componentTab === 'todos' || componentTab === 'calendar' || componentTab === 'automations') {
+    // PlanningView 自管高度与滚动；componentTab 决定子页且不写全局 planningTabAtom。
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <PlanningView componentTab={componentTab} />
+      </div>
+    )
+  }
+  if (componentTab === 'skills' || componentTab === 'mcp') {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-2 pb-3">
+        <AgentSkillsView embedded componentTab={componentTab} />
+      </div>
+    )
+  }
+  if (componentTab === 'memory') {
+    if (!workspaceSlug) {
+      return (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center text-xs text-muted-foreground">
+          当前会话尚未绑定工作区，无法查看项目记忆。
+        </div>
+      )
+    }
+    // WorkspaceMemoryTab 是宽屏双栏（左侧 280px 导航 + 内容列），而右侧栏最宽 560px，
+    // 因此外层提供横向滚动并给定内容最小宽度，避免内容列被压成 0 宽。
+    return (
+      <div className="min-h-0 flex-1 overflow-auto scrollbar-thin">
+        <div className="min-w-[640px]">
+          <WorkspaceMemoryTab workspaceSlug={workspaceSlug} search="" />
+        </div>
+      </div>
+    )
+  }
+  // vault 等本地右侧工作区尚未提供渲染的组件。
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="text-xs text-muted-foreground">
+        「{WORKSPACE_COMPONENT_TAB_LABELS[componentTab]}」暂不支持在右侧工作区展示。
+      </div>
+      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[11px]" onClick={onSelectFiles}>
+        返回文件
+      </Button>
     </div>
   )
 }

@@ -16,7 +16,7 @@ import { formatProjectContextForPrompt } from '@guru/shared/projects'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { getUserProfile } from './user-profile-service'
-import { getEffectiveMcpConfig, hasProjectMcpServers, getProjectMcpConfig } from './agent-workspace-manager'
+import { getEffectiveMcpConfig } from './agent-workspace-manager'
 import { getConfigDirName } from './config-paths'
 import { buildGitAttributionPromptSection, isGitAttributionEnabled } from './agent-git-attribution'
 import { buildGitWorktreePromptSection } from './agent-git-worktree-policy'
@@ -211,7 +211,8 @@ Guru 提供内置 \`collaboration\` 工具，用来创建真实可见、可追�
 - 工作区长期记忆目录: ${workspacePaths?.autoMemoryDir}
 - 工作区长期记忆索引: ${workspacePaths?.autoMemoryIndex}
 - SDK 隔离配置目录: ${workspacePaths?.sdkConfigDir}（用于 Guru 与 Claude Code CLI 的 SDK 配置隔离；不要把它当作工作区长期 memory 目录）
-- MCP 配置: ${workspacePaths?.mcpConfig}（顶层 key 是 \`servers\`）
+- MCP 配置: ${workspacePaths?.mcpConfig}（顶层 key 是 \`servers\`；优先使用 \`guru_workspace_list_mcp_servers\` / \`guru_workspace_configure_mcp_server\` 工具配置）
+- 配置 MCP 时，先调用 \`guru_workspace_list_mcp_servers\`，再用 \`guru_workspace_configure_mcp_server\` 写入和验证非敏感 transport；不要直接编辑 \`mcp.json\`。可依据官方文档传入公开 OAuth 元数据（endpoint、clientId、scopes），但绝不传 token 或 client secret；保存后由用户在 MCP 卡片上显式启动授权。Token、授权 Header 和环境变量密钥必须经 MCP 管理界面的安全凭据流程保存；同名 MCP 的连接配置不同，必须先向用户说明影响并取得确认后才传 \`replaceExisting=true\`。
 - Skills 目录: ${workspacePaths?.skillsDir}/（Guru 只从此目录加载 skill；npx skills add 等外部命令安装到 .agents/skills/ 不会被加载，需手动 mv 到此目录）
 
 ### .context 目录层级
@@ -505,12 +506,9 @@ export function buildDynamicContext(ctx: DynamicContext): string {
       wsLines.push(`工作区: ${ctx.workspaceName}`)
     }
 
-    // MCP 服务器列表：与 buildMcpServers 同样的 fallback 规则（项目自己配置过才用项目级，
-    // 否则读生效的全局配置）。不能用 getWorkspaceMcpConfig——工作区级 mcp.json 迁移后已改名，
-    // 继续读旧路径会让模型看到的服务器列表长期为空，即使全局配置里实际存在。
-    const mcpConfig = ctx.projectId && hasProjectMcpServers(ctx.workspaceSlug, ctx.projectId)
-      ? getProjectMcpConfig(ctx.workspaceSlug, ctx.projectId)
-      : getEffectiveMcpConfig(ctx.workspaceSlug)
+    // MCP 服务器列表：读当前工作区生效配置（getEffectiveMcpConfig → 工作区 mcp.json，带全局兜底）。
+    // MCP 已对齐上游 #2037 为工作区级存储，项目级 MCP 覆盖已移除。
+    const mcpConfig = getEffectiveMcpConfig(ctx.workspaceSlug)
     const serverEntries = Object.entries(mcpConfig.servers ?? {})
     if (serverEntries.length > 0) {
       wsLines.push('MCP 服务器:')

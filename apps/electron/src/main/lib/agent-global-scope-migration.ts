@@ -46,6 +46,7 @@ import {
   listAgentWorkspaces,
   normalizeWorkspaceMcpConfig,
   saveGlobalMcpConfig,
+  saveWorkspaceMcpConfig,
 } from './agent-workspace-manager'
 import { projectRepository } from './project-repository'
 import {
@@ -60,13 +61,14 @@ interface MigrationState {
   migratedAt?: string
 }
 
-const MIGRATION_VERSION = 3
+const MIGRATION_VERSION = 4
 const REQUIRED_MIGRATION_STEPS = [
   'mcp',
   'skills-default',
   'skills-lift',
   'skills-cleanup',
   'mcp-rename',
+  'mcp-workspace-distribute',
 ] as const
 
 function isMigrationComplete(state: MigrationState): boolean {
@@ -487,6 +489,18 @@ export async function migrateGlobalScopes(): Promise<string[]> {
     }
   }
 
+  // v4 新增（对齐上游 #2037）：把全局唯一 MCP 配置分发回每个工作区，
+  // 全局文件改名 .global-distributed 保留。必须在 v3 合并/改名步骤之后运行（先汇聚再分发）；
+  // 分发失败则保留未完成状态，下次启动幂等重试。
+  if (!state.completedSteps.includes('mcp-workspace-distribute')) {
+    const distributeWarnings = distributeMcpToWorkspaces()
+    warnings.push(...distributeWarnings)
+    if (distributeWarnings.length === 0) {
+      state.completedSteps.push('mcp-workspace-distribute')
+      writeState(state)
+    }
+  }
+
   if (REQUIRED_MIGRATION_STEPS.every((step) => state.completedSteps.includes(step))) {
     state.version = MIGRATION_VERSION
     state.migratedAt = new Date().toISOString()
@@ -501,16 +515,70 @@ export async function migrateGlobalScopes(): Promise<string[]> {
   return warnings
 }
 
-/** 给插件页的迁移后续提示：遗留 MCP、冲突后缀 */
+/**
+ * 给插件页的迁移后续提示。
+ *
+ * MCP 已对齐上游 #2037 为工作区级存储：v4 分发后各工作区 mcp.json 是正常状态，
+ * 不再存在“遗留工作区配置”概念（leftoverWorkspaceMcp 恒为空）。
+ * 同名冲突后缀项（升级合并时产生）现分布在各工作区配置中，扫描去重后返回。
+ */
 export function getGlobalScopeReviewHints(): GlobalScopeReviewHints {
-  const leftoverWorkspaceMcp: string[] = []
+  const suffixed = new Set<string>()
   for (const workspace of listAgentWorkspaces()) {
-    if (existsSync(getWorkspaceMcpPath(workspace.slug))) {
-      leftoverWorkspaceMcp.push(workspace.slug)
+    try {
+      const config = getWorkspaceMcpConfig(workspace.slug)
+      for (const name of Object.keys(config.servers ?? {})) {
+        if (name.includes('@')) suffixed.add(name)
+      }
+    } catch {
+      // 单个工作区读取失败不影响其他工作区的提示
     }
   }
 
-  const mcpSuffixedServers = Object.keys(getGlobalMcpConfig().servers ?? {}).filter((name) => name.includes('@'))
+  return { leftoverWorkspaceMcp: [], mcpSuffixedServers: [...suffixed] }
+}
 
-  return { leftoverWorkspaceMcp, mcpSuffixedServers }
+// ===== v4 反向迁移：全局 MCP → 工作区（workspace 级对齐上游 #2037） =====
+
+/**
+ * 步骤 v4：把全局唯一 MCP 配置分发到每个工作区（对齐上游 workspace 级存储）。
+ *
+ * 语义：
+ * - 读当前权威全局 ~/.guru/mcp.json（含 0.10.16 后用户经 Connectors UI 新增的全部 server）。
+ * - 对每个工作区写一份相同配置（saveWorkspaceMcpConfig）；重复分发幂等（覆盖写同内容无害）。
+ * - 全部写成功后把全局文件改名 `mcp.json.global-distributed` 保留（不删除），供回滚/审计；
+ *   改名失败则告警并保持未完成，下次启动重试（此时重复分发幂等，不丢数据）。
+ * - 若全局文件已不存在（此前已改名/从未生成），视为已分发完成，不再把空配置写入工作区。
+ *
+ * ⚠️ 接线注意：本函数由 Phase 3（消费端切 workspace + MIGRATION_VERSION bump）统一启用；
+ *    在消费端仍读全局的过渡期不得调用，否则全局改名后运行时会读到空配置。
+ */
+export function distributeMcpToWorkspaces(): string[] {
+  const warnings: string[] = []
+  const workspaces = listAgentWorkspaces()
+  if (workspaces.length === 0) return warnings
+
+  const globalMcpPath = getGlobalMcpPath()
+  // 全局文件不存在 → 已分发过（或从未生成），保持工作区现状即可。
+  if (!existsSync(globalMcpPath)) return warnings
+
+  const config = getGlobalMcpConfig()
+  for (const workspace of workspaces) {
+    try {
+      saveWorkspaceMcpConfig(workspace.slug, normalizeWorkspaceMcpConfig(config))
+      console.log(`[迁移] 已将全局 MCP 配置分发到工作区 ${workspace.slug}`)
+    } catch (error) {
+      warnings.push(`分发全局 MCP 到工作区 ${workspace.slug} 失败: ${error instanceof Error ? error.message : error}`)
+    }
+  }
+
+  if (warnings.length > 0) return warnings
+
+  try {
+    renameSync(globalMcpPath, `${globalMcpPath}.global-distributed`)
+    console.log('[迁移] 全局 MCP 配置已分发至各工作区，全局文件保留为 mcp.json.global-distributed')
+  } catch (error) {
+    warnings.push(`改名全局 MCP 文件失败: ${error instanceof Error ? error.message : error}`)
+  }
+  return warnings
 }
