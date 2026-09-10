@@ -4,6 +4,7 @@
  * 顶部：作用域说明 + 需配置引导；分类/生命周期 chip；主体按品类分块的卡片网格。
  * 卡片不暴露 MCP/API；详情统一走居中 ConnectorDetailDialog。
  * 「添加连接器」下拉：本地/远程服务（MCP 表单）或自定义 HTTP。已有连接的编辑在详情弹层内完成。
+ * 末尾「集成目录」：上游 IntegrationCatalog 的可见条目，提供安装/凭据/引导三类接入动作。
  */
 
 import * as React from 'react'
@@ -11,6 +12,8 @@ import { AlertTriangle, ArrowRight, Globe, Plus, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { chatToolsAtom } from '@/atoms/chat-tool-atoms'
+import { agentPendingPromptAtom } from '@/atoms/agent-atoms'
+import { useCreateSession } from '@/hooks/useCreateSession'
 import { cn } from '@/lib/utils'
 import {
   buildConnectorItems,
@@ -25,6 +28,20 @@ import type { BuiltinMcpServerSummary, GlobalScopeReviewHints, McpServerEntry } 
 import { ConnectorCard } from './ConnectorCard'
 import { ConnectorDetailDialog } from './ConnectorDetailDialog'
 import { AddConnectorMenu } from './AddConnectorMenu'
+import { CredentialDialog } from './CredentialDialog'
+import { IntegrationCatalog } from './IntegrationCatalog'
+import {
+  MCP_INTEGRATION_CATALOG,
+  isCatalogIntegrationVisible,
+  matchesCatalogSearch,
+  type CatalogCliIntegration,
+  type CatalogCredentialIntegration,
+  type CatalogGuidedIntegration,
+  type CatalogMcpIntegration,
+} from './integration-catalog'
+
+/** 未提供 activeSkillSlugs 时的稳定空集合（避免每次渲染新建 Set 触发子组件重算）。 */
+const EMPTY_SKILL_SLUGS = new Set<string>()
 
 interface ConnectorsTabProps {
   builtinServers: BuiltinMcpServerSummary[]
@@ -34,12 +51,12 @@ interface ConnectorsTabProps {
   onDismissHints: () => void
   onAddMcp: () => void
   onAddHttp: () => void
-  /** 选择一个官方搜索 MCP 模板（Brave/Tavily），由上层预填连接表单 */
-  onAddPreset?: (presetId: import('@/lib/mcp-search-presets').SearchMcpPresetId) => void
   onToggleBuiltin: (id: string, enabled: boolean) => Promise<void> | void
   onToggleMcp: (name: string, enabled: boolean) => Promise<void> | void
   workspaceSlug: string
   projectId?: string | null
+  /** 已启用的 Skill slug 集合：供引导类集成的「Skill 已安装」状态使用 */
+  activeSkillSlugs?: Set<string>
   onUserMcpChanged?: () => void
   /** 要自动打开的连接器完整 id（带 kind 命名空间，如 builtin:chrome-devtools） */
   openConnectorId?: string | null
@@ -56,11 +73,11 @@ export function ConnectorsTab({
   onDismissHints,
   onAddMcp,
   onAddHttp,
-  onAddPreset,
   onToggleBuiltin,
   onToggleMcp,
   workspaceSlug,
   projectId,
+  activeSkillSlugs,
   onUserMcpChanged,
   openConnectorId,
   onOpenConnectorConsumed,
@@ -93,6 +110,13 @@ export function ConnectorsTab({
   }, [chatTools.length, setChatTools])
   const [selected, setSelected] = React.useState<ConnectorItem | null>(null)
   const [chip, setChip] = React.useState<ConnectorFilterChip>('all')
+  // ===== 集成目录（上游 IntegrationCatalog 移植）状态 =====
+  const { createAgent } = useCreateSession()
+  const setPendingPrompt = useSetAtom(agentPendingPromptAtom)
+  const [installingCatalogId, setInstallingCatalogId] = React.useState<string | null>(null)
+  const [credentialRequest, setCredentialRequest] = React.useState<CatalogCredentialIntegration | null>(null)
+  /** 安装后等「我的连接」刷新出该 MCP，再自动打开详情（如 OAuth 条目需要用户继续授权）。 */
+  const [pendingOpenMcpName, setPendingOpenMcpName] = React.useState<string | null>(null)
 
   const items = React.useMemo(
     () => buildConnectorItems({ builtinServers, userEntries, chatTools }),
@@ -103,6 +127,39 @@ export function ConnectorsTab({
     [chip, items, query],
   )
   const groups = React.useMemo(() => groupConnectorItems(filtered), [filtered])
+
+  // 目录卡状态输入：安装 / 启用 / 真实握手验证三份集合均来自当前工作区 MCP 配置。
+  const installedMcpNames = React.useMemo(() => new Set(userEntries.map(([name]) => name)), [userEntries])
+  const enabledMcpNames = React.useMemo(
+    () => new Set(userEntries.filter(([, entry]) => entry.enabled).map(([name]) => name)),
+    [userEntries],
+  )
+  const verifiedMcpNames = React.useMemo(
+    () => new Set(userEntries.filter(([, entry]) => entry.lastTestResult?.success === true).map(([name]) => name)),
+    [userEntries],
+  )
+  const catalogQuery = query.trim()
+  const catalogMcps = React.useMemo(
+    () => MCP_INTEGRATION_CATALOG.filter((integration): integration is CatalogMcpIntegration =>
+      isCatalogIntegrationVisible(integration) && integration.kind === 'mcp' && matchesCatalogSearch(integration, catalogQuery)),
+    [catalogQuery],
+  )
+  const catalogClis = React.useMemo(
+    () => MCP_INTEGRATION_CATALOG.filter((integration): integration is CatalogCliIntegration =>
+      isCatalogIntegrationVisible(integration) && integration.kind === 'cli' && matchesCatalogSearch(integration, catalogQuery)),
+    [catalogQuery],
+  )
+  const catalogGuided = React.useMemo(
+    () => MCP_INTEGRATION_CATALOG.filter((integration): integration is CatalogGuidedIntegration =>
+      isCatalogIntegrationVisible(integration) && integration.kind === 'guided' && matchesCatalogSearch(integration, catalogQuery)),
+    [catalogQuery],
+  )
+  const catalogCredentials = React.useMemo(
+    () => MCP_INTEGRATION_CATALOG.filter((integration): integration is CatalogCredentialIntegration =>
+      isCatalogIntegrationVisible(integration) && integration.kind === 'credential' && matchesCatalogSearch(integration, catalogQuery)),
+    [catalogQuery],
+  )
+  const catalogCardCount = catalogMcps.length + catalogClis.length + catalogGuided.length + catalogCredentials.length
 
   const openItem = React.useCallback((item: ConnectorItem): void => {
     setSelected(item)
@@ -168,13 +225,139 @@ export function ConnectorsTab({
     }
   }, [onToggleBuiltin, onToggleMcp, setChatTools])
 
+  React.useEffect(() => {
+    if (!pendingOpenMcpName) return
+    const item = items.find((candidate) => candidate.id === `mcp:${pendingOpenMcpName}`)
+    if (!item) return
+    setPendingOpenMcpName(null)
+    openItem(item)
+  }, [items, openItem, pendingOpenMcpName])
+
+  /** 目录 MCP 的连接动作：未配置走原子安装，已存在则直接重新握手验证；已连接改为打开本地详情。 */
+  const handleCatalogMcpAction = React.useCallback(async (integration: CatalogMcpIntegration): Promise<void> => {
+    const connected = installedMcpNames.has(integration.serverName)
+      && enabledMcpNames.has(integration.serverName)
+      && verifiedMcpNames.has(integration.serverName)
+    if (connected) {
+      const item = items.find((candidate) => candidate.id === `mcp:${integration.serverName}`)
+      if (item) {
+        openItem(item)
+        return
+      }
+    }
+
+    setInstallingCatalogId(integration.id)
+    try {
+      // OAuth 条目先写入非敏感模板，授权在「我的连接」详情里由 McpCredentialActions 完成；
+      // 不能把「模板已写入」当成已连接，也不要在这里伪造授权状态。
+      if (integration.authentication === 'oauth') {
+        const existed = installedMcpNames.has(integration.serverName)
+        if (!existed) {
+          const installed = await window.electronAPI.installMcpAndValidate(workspaceSlug, integration.serverName, integration.entry)
+          if (!installed.installed) {
+            toast.info(`${integration.name} 已存在`, { description: '可直接在「我的连接」中打开并完成授权。' })
+            return
+          }
+        }
+        setPendingOpenMcpName(integration.serverName)
+        toast.success(`${integration.name} ${existed ? '待授权' : '配置已写入'}`, {
+          description: '在打开的详情里点击「OAuth 授权」完成授权。',
+        })
+        return
+      }
+
+      const result = installedMcpNames.has(integration.serverName)
+        ? await window.electronAPI.setMcpEnabledAndValidate(workspaceSlug, integration.serverName, true)
+        : await window.electronAPI.installMcpAndValidate(workspaceSlug, integration.serverName, integration.entry)
+      if (result.verification.success) {
+        toast.success(`${integration.name} 已连接`, { description: '已完成真实握手与工具发现验证。' })
+        return
+      }
+      toast.warning(`${integration.name} 尚未连接`, { description: result.verification.message })
+    } catch (error) {
+      console.error(`[连接器] 安装 ${integration.name} 失败:`, error)
+      toast.error(`${integration.name} 安装失败`, { description: error instanceof Error ? error.message : '请稍后重试' })
+    } finally {
+      setInstallingCatalogId(null)
+      onUserMcpChanged?.()
+    }
+  }, [enabledMcpNames, installedMcpNames, items, onUserMcpChanged, openItem, verifiedMcpNames, workspaceSlug])
+
+  /**
+   * 目录「单凭据」条目：写入模板 → 凭据存 Keychain → 显式启用做真实握手与工具发现。
+   * 只有验证成功才保持启用，避免无效配置被下一轮 Agent 注入。
+   */
+  const connectCatalogCredential = React.useCallback(async (
+    integration: CatalogCredentialIntegration,
+    value: string,
+  ): Promise<void> => {
+    setInstallingCatalogId(integration.id)
+    try {
+      if (!installedMcpNames.has(integration.serverName)) {
+        const installed = await window.electronAPI.installMcpAndValidate(workspaceSlug, integration.serverName, integration.entry)
+        if (!installed.installed) throw new Error('无法创建连接配置')
+      }
+
+      const rawValue = value.trim()
+      const valuePrefix = integration.credential.valuePrefix ?? ''
+      // 用户可能直接粘贴带前缀的完整请求头值（如 "Bearer abc"）：先剥离再统一拼接，
+      // 避免写出 "Bearer Bearer ..." 导致 401 且错误凭据已进 Keychain。
+      const bareValue = valuePrefix && rawValue.toLowerCase().startsWith(valuePrefix.trim().toLowerCase())
+        ? rawValue.slice(valuePrefix.trim().length).trimStart()
+        : rawValue
+
+      await window.electronAPI.saveMcpApiKey({
+        workspaceSlug,
+        serverName: integration.serverName,
+        serverUrl: integration.credential.credentialStorageUrl,
+        headerName: integration.credential.headerName,
+        ...(integration.credential.envName ? { envName: integration.credential.envName } : {}),
+        ...(integration.entry.type === 'stdio' && integration.entry.command
+          ? { stdioBinding: { command: integration.entry.command, args: integration.entry.args ?? [] } }
+          : {}),
+        value: `${valuePrefix}${bareValue}`,
+      })
+
+      const result = await window.electronAPI.setMcpEnabledAndValidate(workspaceSlug, integration.serverName, true)
+      if (!result.verification.success) {
+        throw new Error(result.verification.message || 'MCP 握手或工具发现失败，请检查 Token 与权限后重试')
+      }
+      toast.success(`${integration.name} 已连接`, {
+        description: '凭据已加密保存到系统 Keychain，并已通过真实握手和工具发现验证。',
+      })
+    } catch (error) {
+      console.error(`[连接器] ${integration.name} 凭据配置失败:`, error)
+      toast.error(`${integration.name} 连接失败`, { description: error instanceof Error ? error.message : '请检查凭据后重试' })
+      throw error
+    } finally {
+      setInstallingCatalogId(null)
+      onUserMcpChanged?.()
+    }
+  }, [installedMcpNames, onUserMcpChanged, workspaceSlug])
+
+  /** 引导类条目（含 CLI）：把 agentPrompt 交给一个新的 Agent 会话执行（复用本地 Skills 分类会话的做法）。 */
+  const guideWithAgentPrompt = React.useCallback(async (name: string, prompt: string): Promise<void> => {
+    try {
+      const sessionId = await createAgent()
+      if (!sessionId) {
+        toast.error('创建 Agent 会话失败')
+        return
+      }
+      setPendingPrompt({ sessionId, message: prompt })
+      toast.success(`已创建 ${name} 配置会话`, { description: 'Agent 会按官方文档引导你完成配置。' })
+    } catch (error) {
+      console.error(`[连接器] 创建 ${name} 配置会话失败:`, error)
+      toast.error(error instanceof Error ? error.message : `创建 ${name} 配置会话失败`)
+    }
+  }, [createAgent, setPendingPrompt])
+
   const hasReviewHints = !!reviewHints && (
     reviewHints.leftoverWorkspaceMcp.length > 0 || reviewHints.mcpSuffixedServers.length > 0
   )
 
   let body: React.ReactNode
   if (items.length === 0) {
-    body = <EmptyConnectors onAddMcp={onAddMcp} onAddHttp={onAddHttp} onAddPreset={onAddPreset} />
+    body = <EmptyConnectors onAddMcp={onAddMcp} onAddHttp={onAddHttp} />
   } else if (filtered.length === 0) {
     body = <EmptySearch />
   } else if (chip === 'all' && !query.trim()) {
@@ -203,7 +386,7 @@ export function ConnectorsTab({
           </section>
         ))}
         <p className="text-[12px] leading-relaxed text-foreground/45">
-          当前内置 Chrome 浏览器、联网搜索、AI 生图。更多第三方连接后续加入；现在可添加本地/远程服务或自定义 HTTP。
+          当前内置 Chrome 浏览器、联网搜索、AI 生图；第三方服务可在下方「集成目录」中连接，也可手动添加本地/远程服务或自定义 HTTP。
         </p>
       </div>
     )
@@ -261,6 +444,32 @@ export function ConnectorsTab({
       )}
 
       {body}
+
+      {chip === 'all' && catalogCardCount > 0 && (
+        <IntegrationCatalog
+          mcps={catalogMcps}
+          clis={catalogClis}
+          guided={catalogGuided}
+          credentials={catalogCredentials}
+          embedded={false}
+          installedMcpNames={installedMcpNames}
+          enabledMcpNames={enabledMcpNames}
+          verifiedMcpNames={verifiedMcpNames}
+          activeSkillSlugs={activeSkillSlugs ?? EMPTY_SKILL_SLUGS}
+          installingMcpId={installingCatalogId}
+          onInstallMcp={(integration) => { void handleCatalogMcpAction(integration) }}
+          onGuideCli={(integration) => { void guideWithAgentPrompt(integration.name, integration.agentPrompt) }}
+          onGuide={(integration) => { void guideWithAgentPrompt(integration.name, integration.agentPrompt) }}
+          onRequestCredential={setCredentialRequest}
+          onToggleMcp={onToggleMcp}
+        />
+      )}
+
+      <CredentialDialog
+        integration={credentialRequest}
+        onOpenChange={(open) => { if (!open) setCredentialRequest(null) }}
+        onSave={connectCatalogCredential}
+      />
 
       <ConnectorDetailDialog
         open={!!selected}
@@ -358,11 +567,9 @@ function NeedsConfigGuide({
 function EmptyConnectors({
   onAddMcp,
   onAddHttp,
-  onAddPreset,
 }: {
   onAddMcp: () => void
   onAddHttp: () => void
-  onAddPreset?: (presetId: import('@/lib/mcp-search-presets').SearchMcpPresetId) => void
 }): React.ReactElement {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 pt-24 text-center">
@@ -375,7 +582,7 @@ function EmptyConnectors({
           添加自定义连接，或配置内置搜索 / 生图 / 浏览器能力。
         </p>
       </div>
-      <AddConnectorMenu onAddMcp={onAddMcp} onAddHttp={onAddHttp} onAddPreset={onAddPreset} className="mt-2" />
+      <AddConnectorMenu onAddMcp={onAddMcp} onAddHttp={onAddHttp} className="mt-2" />
     </div>
   )
 }
