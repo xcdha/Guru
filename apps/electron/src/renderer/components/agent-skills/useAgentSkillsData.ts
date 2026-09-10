@@ -28,7 +28,31 @@ import {
   currentAgentWorkspaceIdAtom,
   workspaceCapabilitiesVersionAtom,
 } from '@/atoms/agent-atoms'
-import type { BuiltinMcpServerSummary, SkillMeta, WorkspaceCapabilities, WorkspaceMcpConfig } from '@guru/shared'
+import type { BuiltinMcpServerSummary, CliIntegrationStatus, SkillMeta, WorkspaceCapabilities, WorkspaceMcpConfig } from '@guru/shared'
+import type { CatalogCliProbeState } from './integration-catalog'
+
+const CLI_STATUS_CACHE_TTL_MS = 5 * 60 * 1000
+const cliIntegrationStatusCache = new Map<string, { statuses: CliIntegrationStatus[]; cachedAt: number }>()
+const cliIntegrationStatusRequests = new Map<string, Promise<CliIntegrationStatus[]>>()
+
+/** 短时间内复用最近的探测结果：重新进入同一工作区时不闪「检测中」。 */
+function probeCliIntegrationStatuses(workspaceSlug: string): Promise<CliIntegrationStatus[]> {
+  const cached = cliIntegrationStatusCache.get(workspaceSlug)
+  if (cached && Date.now() - cached.cachedAt < CLI_STATUS_CACHE_TTL_MS) return Promise.resolve(cached.statuses)
+
+  const inFlight = cliIntegrationStatusRequests.get(workspaceSlug)
+  if (inFlight) return inFlight
+
+  const request = Promise.resolve().then(() => window.electronAPI.getCliIntegrationStatuses(workspaceSlug))
+  cliIntegrationStatusRequests.set(workspaceSlug, request)
+  void request.then((statuses) => {
+    cliIntegrationStatusCache.set(workspaceSlug, { statuses, cachedAt: Date.now() })
+    if (cliIntegrationStatusRequests.get(workspaceSlug) === request) cliIntegrationStatusRequests.delete(workspaceSlug)
+  }, () => {
+    if (cliIntegrationStatusRequests.get(workspaceSlug) === request) cliIntegrationStatusRequests.delete(workspaceSlug)
+  })
+  return request
+}
 
 /**
  * Skill 在“全局+工作区+项目三层合并列表”里的唯一 key。
@@ -60,6 +84,10 @@ export interface AgentSkillsData {
   /** 工作区级能力摘要（builtinMcpServers / memory），不随 projectId 变化 */
   capabilities: WorkspaceCapabilities | null
   builtinMcpServers: BuiltinMcpServerSummary[]
+  /** CLI 集成探测结果（工作区级；不包含任何凭据） */
+  cliIntegrationStatuses: CliIntegrationStatus[]
+  /** CLI 探测加载状态：loading / ready / failed */
+  cliIntegrationProbeState: CatalogCliProbeState
   /** 判断某个具体 Skill（按 scope+slug 定位）当前是否处于“来源更新中” */
   isSkillUpdating: (skill: SkillMeta) => boolean
   toggleSkill: (skill: SkillMeta, enabled: boolean) => Promise<void>
@@ -74,6 +102,8 @@ export interface AgentSkillsData {
   openSkillFolder: (skill: SkillMeta) => void
   /** 静默重读当前 scope（不把 loading 打回 true）。切换工作区后刷新卡片状态。 */
   reload: () => Promise<void>
+  /** 仅切换 Guru 对某个 CLI 集成的使用权限；不登出、不撤销第三方授权 */
+  setCliIntegrationEnabled: (id: string, enabled: boolean) => Promise<void>
 }
 
 export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
@@ -93,6 +123,9 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
   const [mcpConfig, setMcpConfig] = React.useState<WorkspaceMcpConfig>({ servers: {} })
   const [capabilities, setCapabilities] = React.useState<WorkspaceCapabilities | null>(null)
   const [builtinMcpServers, setBuiltinMcpServers] = React.useState<BuiltinMcpServerSummary[]>([])
+  const [cliIntegrationStatuses, setCliIntegrationStatuses] = React.useState<CliIntegrationStatus[]>([])
+  const [cliIntegrationProbeState, setCliIntegrationProbeState] = React.useState<CatalogCliProbeState>('loading')
+  const cliProbeRequestRef = React.useRef(0)
   /** 存 getSkillKey(skill)，不能单存 slug（同名跨 scope 会串号） */
   const [updatingSkillKey, setUpdatingSkillKey] = React.useState<string | null>(null)
   const isSkillUpdating = React.useCallback((skill: SkillMeta) => updatingSkillKey === getSkillKey(skill), [updatingSkillKey])
@@ -105,6 +138,8 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
       setBuiltinMcpServers([])
       setSkillsDir('')
       setGlobalSkillsDir('')
+      setCliIntegrationStatuses([])
+      setCliIntegrationProbeState('ready')
       setLoading(false)
       return
     }
@@ -133,6 +168,26 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
       ])
       setSkills(skillList)
       setSkillsDir(dir)
+
+      // CLI 认证探测会启动多个本机命令，刻意排除在首屏关键批次之外：先顶上短时缓存，再后台探测。
+      const cachedCliStatuses = cliIntegrationStatusCache.get(workspaceSlug)
+      const hasFreshCliCache = Boolean(cachedCliStatuses && Date.now() - cachedCliStatuses.cachedAt < CLI_STATUS_CACHE_TTL_MS)
+      setCliIntegrationProbeState(hasFreshCliCache ? 'ready' : 'loading')
+      setCliIntegrationStatuses(cachedCliStatuses?.statuses ?? [])
+
+      const cliProbeRequestId = ++cliProbeRequestRef.current
+      void probeCliIntegrationStatuses(workspaceSlug)
+        .then((statuses) => {
+          if (cliProbeRequestRef.current !== cliProbeRequestId) return
+          setCliIntegrationStatuses(statuses)
+          cliIntegrationStatusCache.set(workspaceSlug, { statuses, cachedAt: Date.now() })
+          setCliIntegrationProbeState('ready')
+        })
+        .catch((error) => {
+          if (cliProbeRequestRef.current !== cliProbeRequestId) return
+          console.warn('[Agent 技能] 后台检测 CLI 集成状态失败:', error)
+          setCliIntegrationProbeState('failed')
+        })
     } catch (error) {
       console.error('[Agent 技能] 加载配置失败:', error)
     } finally {
@@ -145,6 +200,7 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
   React.useEffect(() => {
     setLoading(true)
     void loadData()
+    return () => { ++cliProbeRequestRef.current }
   }, [loadData])
 
   const toggleSkill = React.useCallback(async (skill: SkillMeta, enabled: boolean) => {
@@ -231,6 +287,22 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     }
   }, [workspaceSlug])
 
+  /** 仅切换 Guru 对某个 CLI 集成的使用权限；不会登出或撤销第三方授权。 */
+  const setCliIntegrationEnabled = React.useCallback(async (id: string, enabled: boolean): Promise<void> => {
+    const cliProbeRequestId = ++cliProbeRequestRef.current
+    try {
+      const statuses = await window.electronAPI.setCliIntegrationEnabled(workspaceSlug, id, enabled)
+      if (cliProbeRequestRef.current !== cliProbeRequestId) return
+      setCliIntegrationStatuses(statuses)
+      cliIntegrationStatusCache.set(workspaceSlug, { statuses, cachedAt: Date.now() })
+      setCliIntegrationProbeState('ready')
+    } catch (error) {
+      if (cliProbeRequestRef.current === cliProbeRequestId) setCliIntegrationProbeState('failed')
+      console.error('[Agent 技能] 切换 CLI 集成状态失败:', error)
+      throw error
+    }
+  }, [workspaceSlug])
+
   const toggleMcp = React.useCallback(async (name: string, enabled: boolean) => {
     try {
       const entry = mcpConfig.servers[name]
@@ -290,10 +362,13 @@ export function useAgentSkillsData(projectId?: string | null): AgentSkillsData {
     mcpConfig,
     capabilities,
     builtinMcpServers,
+    cliIntegrationStatuses,
+    cliIntegrationProbeState,
     isSkillUpdating,
     toggleSkill,
     deleteSkill,
     updateSkill,
+    setCliIntegrationEnabled,
     refreshMcpConfig,
     toggleMcp,
     toggleBuiltinMcp,

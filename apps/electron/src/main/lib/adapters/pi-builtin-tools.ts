@@ -111,7 +111,7 @@ export interface PiBuiltinToolsContext {
   /** 图片外发前必须校验在这些已授权目录内。 */
   allowedRoots?: string[]
   permissionMode?: GuruPermissionMode
-  triggeredBy?: 'user' | 'automation' | 'delegation' | 'work'
+  triggeredBy?: 'user' | 'automation' | 'delegation' | 'external' | 'work'
   /** Windows 设备是否已有可供 Pi Bash 使用的 Git Bash 或 WSL。 */
   windowsShellAvailable?: boolean
   /** 用户关闭的生产力能力不能注入给 Agent。 */
@@ -1150,7 +1150,7 @@ export async function buildPiBuiltinTools(
   browserController.configureSession(ctx.sessionId, {
     profileKey: resolveBrowserProfileKey(ctx.workspaceId, ctx.sessionId),
     allowedRoots: ctx.allowedRoots,
-    executionSource: ctx.triggeredBy === 'work' ? 'user' : (ctx.triggeredBy ?? 'user'),
+    executionSource: ctx.triggeredBy === 'work' || ctx.triggeredBy === 'external' ? 'user' : (ctx.triggeredBy ?? 'user'),
   })
 
   const tools: ToolDefinition[] = []
@@ -1197,7 +1197,8 @@ export async function buildPiBuiltinTools(
         modelId: ctx.modelId,
         workspaceId: ctx.workspaceId,
         permissionMode: ctx.permissionMode,
-        triggeredBy: ctx.triggeredBy,
+        // external 按用户在场语义收窄（协作工具上下文取值范围不含 external）。
+        triggeredBy: ctx.triggeredBy === 'external' ? 'user' : ctx.triggeredBy,
       })
       tools.push(...collaborationTools as ToolDefinition[])
     } catch (error) {

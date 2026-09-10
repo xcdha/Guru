@@ -484,8 +484,16 @@ export function SidePanel({ sessionId, sessionPath, activeTab, onTabChange, widt
     consumedTabRevealTsRef.current = autoRevealSignal.ts
     setFileSourceFilter(nextSource)
     // 用户在「文件改动(changes)」页时保留其视图不被抢跳（改动列表实时更新）；
+    // 同理，正在查看工作区组件 Tab（待办/日程/定时任务/MCP/技能/记忆）时也不切走——
+    // 组件面板是用户主动或 Agent 变更展示的视图，被文件写入抢跳会打断阅读。
     // 其余非 files 场景（chat 等）仍切到 files 让最近修改高亮可见。
-    if (activeTab !== 'files' && activeTab !== 'session' && activeTab !== 'workspace' && activeTab !== 'changes') onTabChange('files')
+    if (
+      activeTab !== 'files'
+      && activeTab !== 'session'
+      && activeTab !== 'workspace'
+      && activeTab !== 'changes'
+      && !isWorkspaceComponentTab(activeTab)
+    ) onTabChange('files')
   }, [autoRevealSignal, sessionId, sessionPath, projectFilesPath, attachedDirs, attachedFiles, wsAttachedDirs, wsAttachedFiles, activeTab, onTabChange, setFileSourceFilter])
 
   // RightSidePanel 完全由用户控制，不因 Agent 文件变更自动打开

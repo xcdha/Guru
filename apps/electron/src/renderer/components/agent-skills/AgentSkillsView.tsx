@@ -622,6 +622,9 @@ export function AgentSkillsView({ embedded = false, componentTab }: { embedded?:
               onAddMcp={() => { setEditingMcp(null); setMcpSheetOpen(true) }}
               onAddHttp={() => setHttpDialogOpen(true)}
               activeSkillSlugs={activeSkillSlugs}
+              cliIntegrationStatuses={data.cliIntegrationStatuses}
+              cliIntegrationProbeState={data.cliIntegrationProbeState}
+              onSetCliIntegrationEnabled={data.setCliIntegrationEnabled}
               workspaceSlug={data.workspaceSlug}
               onUserMcpChanged={() => {
                 bumpCapabilities((v) => v + 1)

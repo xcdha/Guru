@@ -64,6 +64,7 @@ import { resolvePlanningDeletionPermission } from './planning-permission-policy'
 import { askUserService } from './agent-ask-user-service'
 import { exitPlanService, type ExitPlanPermissionResult } from './agent-exit-plan-service'
 import { validateToolInput } from './agent-tool-input-validator'
+import { isSessionPlanMarkdownPath } from './agent-plan-file-policy'
 import { estimateTokenCount, WRITE_CONTENT_TOKEN_THRESHOLD } from './agent-tool-token-estimator'
 import { injectBashDefaultTimeout } from './agent-bash-timeout'
 import { injectChromeDevtoolsMcpServer } from './builtin-mcp/chrome-devtools'
@@ -479,6 +480,10 @@ export class AgentOrchestrator {
    * 凭据注入（safeStorage 加密存储，绝不落 mcp.json）：
    * - stdio：getMcpApiKeyEnvironment 注入 API-key 环境变量（stdioBinding 不一致时拒绝注入）
    * - http/sse：getMcpOAuthHeaders 注入 OAuth/API-key 请求头；OAuth 不可用时跳过该服务器
+   *
+   * required 语义（对齐上游 #1976）：标记 true 让 pi-mcp-tools 桥接层在本回合等待
+   * 真实握手结果（刚连接/刚改配的服务器立即可用）；握手失败不阻断会话，转入 2 分钟
+   * 冷却并按可选服务器处理。
    */
   private async buildMcpServers(workspaceSlug: string | undefined, _projectId: string | undefined): Promise<Record<string, Record<string, unknown>>> {
     const mcpServers: Record<string, Record<string, unknown>> = {}
@@ -502,7 +507,7 @@ export class AgentOrchestrator {
           command: entry.command,
           ...(entry.args && entry.args.length > 0 && { args: entry.args }),
           ...(Object.keys(mergedEnv).length > 0 && { env: mergedEnv }),
-          required: false,
+          required: true,
           startup_timeout_sec: entry.timeout ?? 30,
         }
       } else if ((type === 'http' || type === 'sse') && entry.url) {
@@ -519,7 +524,7 @@ export class AgentOrchestrator {
           type,
           url: entry.url,
           ...(Object.keys(headers).length > 0 && { headers }),
-          required: false,
+          required: true,
           startup_timeout_sec: entry.timeout ?? 30,
         }
       } else {
@@ -1640,6 +1645,27 @@ export class AgentOrchestrator {
       /** 读取当前会话的实时权限模式（支持运行中切换） */
       const getPermissionMode = (): GuruPermissionMode => this.sessionPermissionModes.get(sessionId) ?? initialPermissionMode
 
+      // 计划工件只允许来自当前会话的计划目录；ExitPlanMode 服务会做 realpath + 哈希复核。
+      // Guru plan UX 保留：计划写入实际执行 cwd 的 .context/plan/（与系统提示词、右侧文件面板一致），
+      // 不再放行任意 .md；无工作区或执行目录时返回 undefined，plan 模式将拒绝一切写入。
+      const sessionPlanDirectory = (() => {
+        if (!workspace || !agentCwd) return undefined
+        return join(agentCwd, '.context', 'plan')
+      })()
+      // 计划目录由 Guru 创建，确保后续路径策略不需要为首次写入放宽符号链接校验。
+      // 运行中切换到 Plan 模式时，也会在首次写入前调用此函数。
+      const ensureSessionPlanDirectory = (): boolean => {
+        if (!sessionPlanDirectory) return false
+        try {
+          mkdirSync(sessionPlanDirectory, { recursive: true })
+          return true
+        } catch (error) {
+          console.warn(`[Agent 编排] 创建计划目录失败: ${sessionPlanDirectory}`, error)
+          return false
+        }
+      }
+      if (initialPermissionMode === 'plan') ensureSessionPlanDirectory()
+
       // ExitPlanMode 拦截器：plan 模式下走 UI 审批流程
       const handleExitPlanMode = (toolInput: Record<string, unknown>, signal: AbortSignal): Promise<ExitPlanPermissionResult> => {
         return exitPlanService.handleExitPlanMode(sessionId, toolInput, signal, (request: ExitPlanModeRequest) => {
@@ -1647,7 +1673,7 @@ export class AgentOrchestrator {
             kind: 'guru_event',
             event: { type: 'exit_plan_mode_request', request }
           })
-        })
+        }, { planDirectory: sessionPlanDirectory })
       }
 
       /**
@@ -1806,6 +1832,7 @@ export class AgentOrchestrator {
 
         // EnterPlanMode：标记进入状态，通知渲染进程
         if (toolName === 'EnterPlanMode') {
+          ensureSessionPlanDirectory()
           planModeEntered = true
           emitPlanModeChanged(true, 'tool')
           this.eventBus.emit(sessionId, {
@@ -1895,16 +1922,18 @@ export class AgentOrchestrator {
             return { behavior: 'allow' as const, updatedInput: input }
 
           case 'plan': {
-            // Plan 模式：只允许只读工具 + Write/Edit 任意 .md 文件（计划文档）
+            // Plan 模式：只允许只读工具，以及当前会话计划目录中的 Markdown 计划文档。
             if (PLAN_MODE_ALLOWED_TOOLS.has(toolName)) {
               return { behavior: 'allow' as const, updatedInput: input }
             }
-            // 允许 Write/Edit 到任意 .md 文件（计划文档一定是 markdown；非 .md 仍被拒）
+            // 计划文档必须位于当前会话计划目录（实际执行 cwd 的 .context/plan/），
+            // 避免以 Markdown 名义修改项目或用户文档。
             if (toolName === 'Write' || toolName === 'Edit') {
               const filePath = typeof input.file_path === 'string' ? input.file_path : ''
-              if (filePath.toLowerCase().endsWith('.md')) {
+              if (ensureSessionPlanDirectory() && isSessionPlanMarkdownPath(filePath, sessionPlanDirectory)) {
                 return { behavior: 'allow' as const, updatedInput: input }
               }
+              return { behavior: 'deny' as const, message: '计划模式下只能将 Markdown 计划文档写入当前会话计划目录（实际执行 cwd 的 .context/plan/），请在计划审批通过后再修改其他文件' }
             }
             // Bash 工具：只读命令（find、grep、cat 等）允许执行，写操作拒绝
             if (toolName === 'Bash') {
@@ -2766,8 +2795,9 @@ ${workContext}`
             return
           }
 
-          // Plan 模式：Agent 完成规划后注入"接受计划"建议
-          if (initialPermissionMode === 'plan' && planModeEntered && this.activeSessions.has(sessionId)) {
+          // Plan 模式：仅本地会话在规划完成后注入“接受计划”建议。
+          // 外部 Bridge（如 Slack/飞书）已在其所属渠道提供审批交互，不能在桌面输入框留下残留草稿。
+          if (input.triggeredBy !== 'external' && initialPermissionMode === 'plan' && planModeEntered && this.activeSessions.has(sessionId)) {
             this.eventBus.emit(sessionId, {
               kind: 'sdk_message',
               message: {

@@ -19,6 +19,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useOpenPreview } from '@/components/diff/preview-opener'
 import { allPendingExitPlanRequestsAtom, agentStreamingStatesAtom } from '@/atoms/agent-atoms'
 import type { ExitPlanModeAction, ExitPlanAllowedPrompt } from '@guru/shared'
 
@@ -62,6 +63,7 @@ interface ExitPlanModeBannerProps {
 export function ExitPlanModeBanner({ sessionId }: ExitPlanModeBannerProps): React.ReactElement | null {
   const [allRequests, setAllRequests] = useAtom(allPendingExitPlanRequestsAtom)
   const setStreamingStates = useSetAtom(agentStreamingStatesAtom)
+  const openPreview = useOpenPreview()
   const requests = allRequests.get(sessionId) ?? []
   const [focusedIdx, setFocusedIdx] = React.useState(0)
   const [showFeedback, setShowFeedback] = React.useState(false)
@@ -110,6 +112,16 @@ export function ExitPlanModeBanner({ sessionId }: ExitPlanModeBannerProps): Reac
   }
 
   handleActionRef.current = handleAction
+
+  /** 在右侧工作区以只读方式打开待审批的计划文档 */
+  const handleOpenPlanDocument = React.useCallback((): void => {
+    if (!request?.planDocument) return
+    openPreview(sessionId, {
+      filePath: request.planDocument.filePath,
+      previewOnly: true,
+      readOnly: true,
+    })
+  }, [openPreview, request?.planDocument, sessionId])
 
   /** 关闭计划审批 & 终止 Agent */
   const handleDismiss = (): void => {
@@ -198,6 +210,17 @@ export function ExitPlanModeBanner({ sessionId }: ExitPlanModeBannerProps): Reac
         <div className="flex items-center gap-2 mb-1">
           <FileText className="size-4 text-primary" />
           <span className="text-sm font-medium text-foreground flex-1">Agent 计划待审批</span>
+          {request.planDocument && (
+            <button
+              type="button"
+              className="flex h-6 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors duration-fast hover:bg-muted/60 hover:text-foreground"
+              onClick={handleOpenPlanDocument}
+              title={`在右侧查看 ${request.planDocument.displayName}`}
+            >
+              <FileText className="size-3.5" />
+              查看计划
+            </button>
+          )}
           <button
             type="button"
             className="size-5 flex items-center justify-center rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
