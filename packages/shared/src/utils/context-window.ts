@@ -56,7 +56,7 @@ const AGENT_SDK_1M_CONTEXT_RULES = {
     'claude-fable-5',
   ],
   // DeepSeek
-  deepseek: ['deepseek-v4'],
+  deepseek: ['deepseek-v4', 'deepseek-flash'],
   // 智谱 GLM
   glm: ['glm-5.3', 'glm-5.3-flash', 'glm-5.2'],
   // 小米 MiMo
