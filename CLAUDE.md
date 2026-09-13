@@ -123,7 +123,7 @@ State management is Jotai-only (not Redux/Zustand/Context) — this is a firm pr
 
 ### Renderer component layout (`renderer/components/`)
 
-- `app-shell/` — three-panel layout (LeftSidebar | NavigatorPanel | MainContentPanel); Code sidebar groups sessions by `AgentWorkspace`, with `Project` as a sub-grouping inside a workspace.
+- `app-shell/` — three-panel layout (LeftSidebar | MainArea | RightSidePanel); Code sidebar groups sessions by `AgentWorkspace`, with `Project` as a sub-grouping inside a workspace.
 - `agent/` — Code/Agent mode UI: `AgentView` (presentation only — IPC listening lives in the global hook, not here), `AgentMessages` (virtualized transcript, `@tanstack/react-virtual`), `SDKMessageRenderer` (message/turn grouping and rendering primitives shared with `AgentMessages`), `ToolActivityItem`, `PermissionBanner`/`AskUserBanner`.
 - `chat/` — Chat mode UI (`ChatView`, `ChatInput` on TipTap, `ChatMessages`).
 - `work/` — Kanban board UI, shares `serverKanbanProjectsAtom` with Code's project sub-grouping.

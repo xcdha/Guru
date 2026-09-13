@@ -8,9 +8,8 @@
 ## App Shell
 
 - path: `apps/electron/src/renderer/components/app-shell/`
-  - `AppShell.tsx` — 三面板根布局（LeftSidebar | NavigatorPanel | MainContentPanel）
+  - `AppShell.tsx` — 三面板根布局（LeftSidebar | MainArea | RightSidePanel）
   - `LeftSidebar.tsx` — 侧边栏：模式切换、置顶对话、日期分组会话列表、流式指示器
-  - `NavigatorPanel.tsx` — 中间导航面板
   - `RightSidePanel.tsx` — 右侧面板（文件预览 / 工具结果）
   - `ModeSwitcher.tsx` — Chat ↔ Agent 模式切换
   - `SearchDialog.tsx` — 全局搜索对话框
@@ -56,7 +55,7 @@
 ## Agent
 
 - path:
-  - `apps/electron/src/renderer/components/agent/` — AgentView、AgentHeader、AgentMessages、WorkspaceSelector、PermissionBanner、AskUserBanner、SDKMessageRenderer、ProcessBlockGroup、ContentBlock、TaskProgressCard、SidePanel、BackgroundTasksPanel、ExitPlanModeBanner 等
+  - `apps/electron/src/renderer/components/agent/` — AgentView、AgentHeader、AgentMessages、WorkspaceSelector、PermissionBanner、AskUserBanner、SDKMessageRenderer、ProcessBlockGroup、ContentBlock、TaskProgressCard、SidePanel、ExitPlanModeBanner 等
   - `apps/electron/src/renderer/atoms/agent-atoms.ts` — Agent 会话列表、流式状态（AgentStreamState）、权限/AskUser 请求队列 Jotai atoms
   - `apps/electron/src/renderer/hooks/useGlobalAgentListeners.ts` — 全局 Agent IPC 监听，main.tsx 顶层挂载，永不销毁
   - `apps/electron/src/main/lib/agent-orchestrator.ts` — 核心编排层（~71KB）：并发守卫、渠道查找、环境构建、消息持久化、事件流处理、自动标题生成
