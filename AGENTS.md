@@ -200,7 +200,6 @@ bun run generate:icons    # 生成应用图标
 |------|------|
 | `chat-tools/` | Chat 工具实现目录：内置工具函数 |
 | `workspace-watcher.ts` | 工作区文件监听：文件系统变化监控 |
-| `chat-tools-watcher.ts` | Chat 工具监听：工具配置变化监控 |
 | `attachment-service.ts` | 附件管理：存储/读取/删除、文件对话框 |
 | `document-parser.ts` | 文档解析：PDF/Office/文本文件提取 |
 
@@ -258,7 +257,7 @@ bun run generate:icons    # 生成应用图标
 
 ### 渲染进程组件架构（`renderer/components/`）
 
-- **`app-shell/`**：三面板布局（LeftSidebar | NavigatorPanel | MainContentPanel）；Code 侧边栏按工作区分组，工作区组内嵌 craft Project 子分组（`SidebarProjectSubgroup` + `sidebar-project-groups.ts` view-model）；会话可在项目内新建 / 右键迁移，显示项目色条
+- **`app-shell/`**：三面板布局（LeftSidebar | MainArea | RightSidePanel）；Code 侧边栏按工作区分组，工作区组内嵌 craft Project 子分组（`SidebarProjectSubgroup` + `sidebar-project-groups.ts` view-model）；会话可在项目内新建 / 右键迁移，显示项目色条
 - **`work/`**：Work 模式 — WorkBoardView（Kanban 看板 + 项目详情）、ProjectsListPanel、ProjectInfoPage、TeambitionPicker；与 Code 共享 `serverKanbanProjectsAtom`
 - **`chat/`**：聊天核心 — ChatView（消息加载/流式订阅）、ChatHeader（模型选择/上下文设置）、ChatInput（Tiptap 富文本编辑器）、ChatMessages（消息列表/自动滚动）、ParallelChatMessages（并排模式）
 - **`agent/`**：Code/Agent 模式 — AgentView（纯展示 + 交互，IPC 监听已提升到全局）、AgentHeader（渠道/模型选择）、AgentMessages（消息列表 + 工具活动）、AgentTaskPanel（编排条/子任务进度）、ToolActivityItem（工具调用展示）、WorkspaceSelector（工作区切换）、PermissionBanner/AskUserBanner（权限/问答请求 UI）
