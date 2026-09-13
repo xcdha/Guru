@@ -72,7 +72,7 @@ import {
 import type { SessionIndicatorStatus } from '@/atoms/agent-atoms'
 import { previewPanelOpenMapAtom, previewFileMapAtom } from '@/atoms/preview-atoms'
 import { cleanupDeletedBrowserSessionAtoms } from '@/atoms/browser-atoms'
-import { clearPreviewCacheForSession } from '@/components/diff/DiffTabContent'
+import { clearPreviewCacheForSession } from '@/components/diff/preview-cache'
 import {
   tabsAtom,
   activeTabIdAtom,
