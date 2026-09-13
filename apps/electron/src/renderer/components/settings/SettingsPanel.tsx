@@ -56,24 +56,68 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChannelSettings } from "./ChannelSettings";
-import { VisionRelaySettings } from "./VisionRelaySettings";
-import { OrganizationSettings } from "./OrganizationSettings";
-import { GeneralSettings } from "./GeneralSettings";
-import { CodingSettings } from "./CodingSettings";
-import { ProxySettings } from "./ProxySettings";
-import { AppearanceSettings } from "./AppearanceSettings";
-import { AboutSettings } from "./AboutSettings";
-import { PromptSettings } from "./PromptSettings";
-import { ToolSettings } from "./ToolSettings";
-import { BotHubSettings } from "./BotHubSettings";
-import { ShortcutSettings } from "./ShortcutSettings";
-import { VoiceInputSettings } from "./VoiceInputSettings";
-import { FeedbackSettings } from "./FeedbackSettings";
-import { MigrationSettings } from "./MigrationSettings";
-import { StorageSettings } from "./StorageSettings";
-import { UsageSettings } from "./UsageSettings";
-import { WorkspaceSettings } from "./WorkspaceSettings";
+// 设置面板一次只显示一个分区，原先 18 个分区全部静态引入会把它们的代码
+// （含 ChannelForm / ShortcutSettings / FeishuSettings 等大组件）全部塞进首屏入口包。
+// 改为按需加载：只有首次切到该分区时才加载对应 chunk。
+const ChannelSettings = React.lazy(() =>
+  import("./ChannelSettings").then((m) => ({ default: m.ChannelSettings })),
+);
+const VisionRelaySettings = React.lazy(() =>
+  import("./VisionRelaySettings").then((m) => ({ default: m.VisionRelaySettings })),
+);
+const OrganizationSettings = React.lazy(() =>
+  import("./OrganizationSettings").then((m) => ({ default: m.OrganizationSettings })),
+);
+const GeneralSettings = React.lazy(() =>
+  import("./GeneralSettings").then((m) => ({ default: m.GeneralSettings })),
+);
+const CodingSettings = React.lazy(() =>
+  import("./CodingSettings").then((m) => ({ default: m.CodingSettings })),
+);
+const ProxySettings = React.lazy(() =>
+  import("./ProxySettings").then((m) => ({ default: m.ProxySettings })),
+);
+const AppearanceSettings = React.lazy(() =>
+  import("./AppearanceSettings").then((m) => ({ default: m.AppearanceSettings })),
+);
+const AboutSettings = React.lazy(() =>
+  import("./AboutSettings").then((m) => ({ default: m.AboutSettings })),
+);
+const PromptSettings = React.lazy(() =>
+  import("./PromptSettings").then((m) => ({ default: m.PromptSettings })),
+);
+const ToolSettings = React.lazy(() =>
+  import("./ToolSettings").then((m) => ({ default: m.ToolSettings })),
+);
+const BotHubSettings = React.lazy(() =>
+  import("./BotHubSettings").then((m) => ({ default: m.BotHubSettings })),
+);
+const ShortcutSettings = React.lazy(() =>
+  import("./ShortcutSettings").then((m) => ({ default: m.ShortcutSettings })),
+);
+const VoiceInputSettings = React.lazy(() =>
+  import("./VoiceInputSettings").then((m) => ({ default: m.VoiceInputSettings })),
+);
+const FeedbackSettings = React.lazy(() =>
+  import("./FeedbackSettings").then((m) => ({ default: m.FeedbackSettings })),
+);
+const MigrationSettings = React.lazy(() =>
+  import("./MigrationSettings").then((m) => ({ default: m.MigrationSettings })),
+);
+const StorageSettings = React.lazy(() =>
+  import("./StorageSettings").then((m) => ({ default: m.StorageSettings })),
+);
+const UsageSettings = React.lazy(() =>
+  import("./UsageSettings").then((m) => ({ default: m.UsageSettings })),
+);
+const WorkspaceSettings = React.lazy(() =>
+  import("./WorkspaceSettings").then((m) => ({ default: m.WorkspaceSettings })),
+);
+
+/** 分区 chunk 加载中的占位（本地磁盘加载，通常一闪而过） */
+function SettingsSectionFallback(): React.ReactElement {
+  return <div className="h-40 animate-pulse rounded-md bg-muted/40" />;
+}
 import { useOpenSession } from '@/hooks/useOpenSession'
 import { ShortcutKeycaps } from "@/components/shortcuts/ShortcutKeycaps";
 
@@ -371,7 +415,9 @@ export function SettingsPanel({
         {/* 右侧内容区域 */}
         <ScrollArea className="min-w-0 flex-1 bg-content-area">
           <div className="mx-auto w-full max-w-[1080px] px-5 py-8 pb-12 sm:px-8">
-            {renderTabContent(activeTab)}
+            <React.Suspense fallback={<SettingsSectionFallback />}>
+              {renderTabContent(activeTab)}
+            </React.Suspense>
           </div>
         </ScrollArea>
       </div>

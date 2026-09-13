@@ -10,10 +10,23 @@ import { useAtomValue } from 'jotai'
 import { tabsAtom } from '@/atoms/tab-atoms'
 import { ChatView } from '@/components/chat'
 import { AgentView } from '@/components/agent'
-import { PreviewTabContent } from '@/components/diff/PreviewTabContent'
-import { GuideView } from '@/components/tutorial/GuideView'
 import { cn } from '@/lib/utils'
 import { TabErrorBoundary } from './TabErrorBoundary'
+
+// 预览类标签按需加载：PreviewTabContent → DiffTabContent 会连带引入
+// MarkdownRichEditor / katex / @pierre/diffs / dompurify 等重依赖，
+// 而这些只在用户打开预览标签时才用得到，不应计入首屏入口包。
+const PreviewTabContent = React.lazy(() =>
+  import('@/components/diff/PreviewTabContent').then((m) => ({ default: m.PreviewTabContent })),
+)
+const GuideView = React.lazy(() =>
+  import('@/components/tutorial/GuideView').then((m) => ({ default: m.GuideView })),
+)
+
+/** 按需 chunk 加载中的占位（本地磁盘加载，通常一闪而过） */
+function TabChunkFallback(): React.ReactElement {
+  return <div className="h-full min-h-0 animate-pulse bg-muted/30" />
+}
 
 const AGENT_SESSION_TRANSITION_MS = 140
 
@@ -77,7 +90,11 @@ function TabContentView({ tabId }: TabContentProps): React.ReactElement {
 
 
   if (tab.type === 'tutorial') {
-    return <TutorialTabContent />
+    return (
+      <React.Suspense fallback={<TabChunkFallback />}>
+        <TutorialTabContent />
+      </React.Suspense>
+    )
   }
 
   if (tab.type === 'chat') {
@@ -90,9 +107,11 @@ function TabContentView({ tabId }: TabContentProps): React.ReactElement {
 
   if (tab.type === 'preview') {
     return (
-      <TabErrorBoundary key={tab.id} sessionId={tab.sessionId}>
-        <PreviewTabContent sessionId={tab.sessionId} />
-      </TabErrorBoundary>
+      <React.Suspense fallback={<TabChunkFallback />}>
+        <TabErrorBoundary key={tab.id} sessionId={tab.sessionId}>
+          <PreviewTabContent sessionId={tab.sessionId} />
+        </TabErrorBoundary>
+      </React.Suspense>
     )
   }
 

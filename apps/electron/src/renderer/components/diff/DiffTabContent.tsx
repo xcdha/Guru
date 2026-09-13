@@ -41,7 +41,6 @@ import { SelectionActionPopover } from '@/components/selection/SelectionActionPo
 import { SELECTION_ACTION_POPOVER_SELECTOR } from '@/lib/quoted-selection'
 import { copyTextToClipboard } from '@/lib/clipboard'
 import {
-  clearMarkdownEditorStateForSession,
   createMarkdownEditorCacheKey,
   createMarkdownEditorViewState,
   enqueueMarkdownEditorSave,
@@ -54,6 +53,8 @@ import {
   type MarkdownEditorViewState,
   type MarkdownScrollPosition,
 } from '@/lib/markdown-editor-state'
+import { cacheGet, cacheSet, scrollCacheKey, scrollPositionCache } from './preview-cache'
+export { getPreviewScrollPosition } from './preview-cache'
 
 const MD_EXTS = new Set(['.md', '.markdown'])
 const HTML_EXTS = new Set(['.html', '.htm'])
@@ -65,32 +66,6 @@ const LEGACY_OFFICE_EXTS = new Set(['.doc', '.xls', '.ppt'])
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'])
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv', '.ogg'])
 const FILE_FIND_SHORTCUT_OPTIONS = { exclusive: true }
-
-/**
- * 简易 LRU 缓存：保留最近访问的 N 个 entries。
- * key 设计：
- * - diff 模式：`${sessionId}:diff:${filePath}@v${refreshVersion}:${scope}`
- * - preview 模式：`${sessionId}:preview:${filePath}@v${refreshVersion}:${scope}`
- * refreshVersion 变化时（agent 写文件、git 突变）key 自然变化，
- * 老 entry 不会被命中，最终被 LRU 淘汰；无需主动失效。
- */
-type CacheEntry = {
-  oldContent: string
-  newContent: string
-  /** 非文本文件预览数据 */
-  pdfSrc?: string
-  htmlUrl?: string
-  videoUrl?: string
-  imageDataUrl?: string
-  imagePath?: string
-  docxHtml?: string
-  officeHtml?: string
-  officeText?: string
-  /** HTML 预览的目录级 token URL，允许加载同目录相对资源 */
-  htmlPreviewUrl?: string
-  /** 二进制或其他不可安全内联渲染的文件提示 */
-  unsupportedPreviewReason?: string
-}
 
 interface DeepSelection {
   text: string
@@ -104,56 +79,11 @@ interface PreviewTextSelection {
   filePath: string
 }
 
-const CACHE_MAX = 50
-const contentCache = new Map<string, CacheEntry>()
-
 /** 超过此字符数的文本文件将跳过 PierreFile 高亮，直接以纯文本展示，避免大文件卡顿 */
 const MAX_PREVIEW_CHARS = 500_000
 
 /** 选中文本最大字符数（与 Bozeman DOM 模式一致） */
 const MAX_QUOTED_CHARS = 2000
-
-/** 滚动位置持久化，按会话、路径与预览解析范围隔离。 */
-const scrollPositionCache = new Map<string, { top: number; left: number }>()
-
-function scrollCacheKey(sessionId: string, filePath: string, scope = ''): string {
-  return `${sessionId}:${filePath}:${scope}`
-}
-
-/** 获取缓存的滚动位置 */
-export function getPreviewScrollPosition(sessionId: string, filePath: string, scope?: string): { top: number; left: number } | undefined {
-  return scrollPositionCache.get(scrollCacheKey(sessionId, filePath, scope))
-}
-
-/**
- * 清除指定 session 的预览缓存，供 useCloseTab 调用。
- */
-export function clearPreviewCacheForSession(sessionId: string): void {
-  const prefix = `${sessionId}:`
-  for (const key of scrollPositionCache.keys()) {
-    if (key.startsWith(prefix)) scrollPositionCache.delete(key)
-  }
-  for (const key of contentCache.keys()) {
-    if (key.startsWith(prefix)) contentCache.delete(key)
-  }
-  clearMarkdownEditorStateForSession(sessionId)
-}
-function cacheGet(key: string): CacheEntry | undefined {
-  const v = contentCache.get(key)
-  if (!v) return undefined
-  // 重新插入到末尾，更新 LRU 位置
-  contentCache.delete(key)
-  contentCache.set(key, v)
-  return v
-}
-function cacheSet(key: string, value: CacheEntry): void {
-  if (contentCache.has(key)) contentCache.delete(key)
-  contentCache.set(key, value)
-  if (contentCache.size > CACHE_MAX) {
-    const oldestKey = contentCache.keys().next().value
-    if (oldestKey !== undefined) contentCache.delete(oldestKey)
-  }
-}
 
 function getExtension(filePath: string): string {
   const dot = filePath.lastIndexOf('.')

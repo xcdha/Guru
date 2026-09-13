@@ -17,18 +17,43 @@ import {
 import { Panel } from '@/components/app-shell/Panel'
 import { WelcomeView } from '@/components/welcome/WelcomeView'
 import { previewPanelOpenMapAtom, previewSplitRatioAtom } from '@/atoms/preview-atoms'
-import { PreviewPanel } from '@/components/diff/PreviewPanel'
+const PreviewPanel = React.lazy(() =>
+  import('@/components/diff/PreviewPanel').then((m) => ({ default: m.PreviewPanel })),
+)
 import { useTrackSessionView } from '@/hooks/useTrackSessionView'
 import { TabBar } from './TabBar'
 import { TabContent } from './TabContent'
-import { AutomationFormView } from '@/components/automation/AutomationFormView'
-import { PlanningView } from '@/components/planning/PlanningView'
-import { AgentSkillsView } from '@/components/agent-skills/AgentSkillsView'
-import { RepoWikiView } from '@/components/repo-wiki/RepoWikiView'
-import { BotHubSettings } from '@/components/settings/BotHubSettings'
-import { DiscoverView } from '@/components/discover/DiscoverView'
-import { ExcalidrawView } from '@/components/excalidraw/ExcalidrawView'
-import { VaultView } from '@/components/vault/VaultView'
+// 路由级视图按需加载：这些视图同时只有一个可见，且不需要在启动时求值。
+// 静态引入会把看板 / 日历 / 插件 / 画布 / 消息等重模块全部计入首屏入口包。
+const AutomationFormView = React.lazy(() =>
+  import('@/components/automation/AutomationFormView').then((m) => ({ default: m.AutomationFormView })),
+)
+const PlanningView = React.lazy(() =>
+  import('@/components/planning/PlanningView').then((m) => ({ default: m.PlanningView })),
+)
+const AgentSkillsView = React.lazy(() =>
+  import('@/components/agent-skills/AgentSkillsView').then((m) => ({ default: m.AgentSkillsView })),
+)
+const RepoWikiView = React.lazy(() =>
+  import('@/components/repo-wiki/RepoWikiView').then((m) => ({ default: m.RepoWikiView })),
+)
+const BotHubSettings = React.lazy(() =>
+  import('@/components/settings/BotHubSettings').then((m) => ({ default: m.BotHubSettings })),
+)
+const DiscoverView = React.lazy(() =>
+  import('@/components/discover/DiscoverView').then((m) => ({ default: m.DiscoverView })),
+)
+const ExcalidrawView = React.lazy(() =>
+  import('@/components/excalidraw/ExcalidrawView').then((m) => ({ default: m.ExcalidrawView })),
+)
+const VaultView = React.lazy(() =>
+  import('@/components/vault/VaultView').then((m) => ({ default: m.VaultView })),
+)
+
+/** 路由级视图 chunk 加载中的占位（本地磁盘加载，通常一闪而过） */
+function MainViewFallback(): React.ReactElement {
+  return <div className="flex-1 min-h-0 animate-pulse bg-muted/30" />;
+}
 import { FullscreenSidebarToggleBar } from '@/components/app-shell/FullscreenSidebarToggleBar'
 import { automationFormAtom } from '@/atoms/automation-atoms'
 import { activeViewAtom } from '@/atoms/active-view'
@@ -37,13 +62,19 @@ import { appModeAtom } from '@/atoms/app-mode'
 import { codeMainViewAtom } from '@/atoms/project-atoms'
 import { cn } from '@/lib/utils'
 import { resolveCodeMainRoute } from '@/components/app-shell/code-main-view-model'
-import { WorkBoardView } from '@/components/work/WorkBoardView'
-import { ProjectPageRoute } from '@/components/project/ProjectPageRoute'
+const WorkBoardView = React.lazy(() =>
+  import('@/components/work/WorkBoardView').then((m) => ({ default: m.WorkBoardView })),
+)
+const ProjectPageRoute = React.lazy(() =>
+  import('@/components/project/ProjectPageRoute').then((m) => ({ default: m.ProjectPageRoute })),
+)
 import { browserPanelMinimizedMapAtom, browserPanelOpenMapAtom, browserPendingNavigationMapAtom, browserStateMapAtom } from '@/atoms/browser-atoms'
 import { BrowserPanel } from '@/components/browser/BrowserPanel'
 import { nextBrowserLayoutRevision } from '@/components/browser/browser-layout-revision'
 import { terminalPanelOpenMapAtom, terminalStateMapAtom } from '@/atoms/terminal-atoms'
-import { TerminalPanel } from '@/components/terminal/TerminalPanel'
+const TerminalPanel = React.lazy(() =>
+  import('@/components/terminal/TerminalPanel').then((m) => ({ default: m.TerminalPanel })),
+)
 
 interface BrowserClosingState {
   sessionId: string
@@ -368,7 +399,8 @@ export function MainArea(): React.ReactElement {
             {(appMode !== 'cowork' && codeMainRoute !== 'task-board' && codeMainRoute !== 'project-page' && activeView === 'conversations')
               ? null
               : <FullscreenSidebarToggleBar />}
-            {appMode === 'cowork' ? (
+            <React.Suspense fallback={<MainViewFallback />}>
+              {appMode === 'cowork' ? (
               // 遗留 cowork 兜底：AppShell 会迁移到 agent + codeMainView='work'；
               // 保留此分支避免迁移前一帧空白。
               <WorkBoardView />
@@ -428,6 +460,7 @@ export function MainArea(): React.ReactElement {
                 )}
               </>
             )}
+            </React.Suspense>
           </div>
 
           {/* 右侧：预览/草稿工作区。Preview 和草稿可在同一右侧槽位内并排显示。 */}
@@ -462,7 +495,9 @@ export function MainArea(): React.ReactElement {
                 )}
                 {showPreviewPane && previewSessionId && (
                   <div className="min-w-0 h-full overflow-hidden" style={previewPaneStyle}>
-                    <PreviewPanel sessionId={previewSessionId} />
+                    <React.Suspense fallback={<MainViewFallback />}>
+                      <PreviewPanel sessionId={previewSessionId} />
+                    </React.Suspense>
                   </div>
                 )}
               </div>
