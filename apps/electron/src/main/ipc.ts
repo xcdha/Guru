@@ -346,6 +346,17 @@ import { askUserService } from './lib/agent-ask-user-service'
 import { exitPlanService } from './lib/agent-exit-plan-service'
 import { getAgentSessionWorkspacePath, getAgentWorkspacesDir, getConfigDir, getWorkspaceSkillsDir, getWorkspaceFilesDir, getScratchPadPath, getExpertsDir, getDefaultExpertTemplatesDir } from './lib/config-paths'
 import { realpathOrResolve, getAuthorizedRoots, isUnderRoot, isPathAllowed, getResolvedAuthorizedRoots, isResolvedPathAllowed, getWorkspaceSlugsForAccess, getManagedSkillBasePath, getAllowedCandidateBasePaths, getLegacySkillBasePath, getPreviewCandidateBasePaths, resolveFileAccessPath, getAccessRootMainRepo, ensurePathAllowed, ensurePathAllowedWithWorktree } from './ipc/path-access'
+import { registerThirdPartyInstallHandlers } from './ipc/third-party-install-handlers'
+import { registerRepoMapHandlers } from './ipc/repo-map-handlers'
+import { registerAgentQueueHandlers } from './ipc/agent-queue-handlers'
+import { registerWindowControlHandlers } from './ipc/window-control-handlers'
+import { registerSkillFileHandlers } from './ipc/skill-file-handlers'
+import { registerSystemPromptHandlers } from './ipc/system-prompt-handlers'
+import { registerQuickTaskHandlers } from './ipc/quick-task-handlers'
+import { registerCalendarSyncHandlers } from './ipc/calendar-sync-handlers'
+import { registerSlackHandlers } from './ipc/slack-handlers'
+import { registerFeedbackHandlers } from './ipc/feedback-handlers'
+import { registerVoiceInputHandlers } from './ipc/voice-input-handlers'
 import { registerWorkspaceCapabilityHandlers } from './ipc/workspace-capability-handlers'
 import { registerRuntimeHandlers } from './ipc/runtime-handlers'
 import { registerAttachmentHandlers } from './ipc/attachment-handlers'
@@ -615,44 +626,7 @@ export function registerIpcHandlers(): void {
   )
 
   // ===== 第三方安装包（Git / Node.js）相关 =====
-
-  ipcMain.handle(
-    INSTALLER_IPC_CHANNELS.MANIFEST,
-    async (): Promise<InstallerManifest> => {
-      return fetchInstallerManifest()
-    }
-  )
-
-  ipcMain.handle(
-    INSTALLER_IPC_CHANNELS.DOWNLOAD,
-    async (event, req: InstallerDownloadRequest): Promise<InstallerDownloadResult> => {
-      const manifest = await fetchInstallerManifest()
-      const source = findInstallerSource(manifest, req.id, req.arch)
-      if (!source) {
-        throw new Error(`未找到安装包：id=${req.id}, arch=${req.arch}`)
-      }
-      const window = BrowserWindow.fromWebContents(event.sender)
-      if (!window) {
-        throw new Error('发起下载的窗口已关闭')
-      }
-      const key = `${req.id}:${req.arch}`
-      return downloadInstaller(source, key, window)
-    }
-  )
-
-  ipcMain.handle(
-    INSTALLER_IPC_CHANNELS.CANCEL,
-    async (_event, key: string): Promise<boolean> => {
-      return cancelInstallerDownload(key)
-    }
-  )
-
-  ipcMain.handle(
-    INSTALLER_IPC_CHANNELS.LAUNCH,
-    async (_event, filePath: string): Promise<void> => {
-      await launchInstaller(filePath)
-    }
-  )
+  registerThirdPartyInstallHandlers()
 
   // ===== 代理配置相关 =====
 
@@ -719,97 +693,13 @@ export function registerIpcHandlers(): void {
   registerProjectSkillMcpHandlers()
 
   // ===== Skill 子文件管理 =====
-  // 以下通道均支持可选 scope/projectId 参数（默认 scope='workspace' 保持既有行为不变），
-  // 用于定位到全局/项目层 Skill 的子文件。
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.LIST_SKILL_FILES,
-    async (_, workspaceSlug: string, skillSlug: string, scope?: SkillScope, projectId?: string) => {
-      return listSkillFiles(workspaceSlug, skillSlug, scope, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.READ_SKILL_FILE,
-    async (_, workspaceSlug: string, skillSlug: string, relativePath: string, scope?: SkillScope, projectId?: string) => {
-      return readSkillFile(workspaceSlug, skillSlug, relativePath, scope, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.WRITE_SKILL_FILE,
-    async (_, workspaceSlug: string, skillSlug: string, relativePath: string, content: string, scope?: SkillScope, projectId?: string): Promise<void> => {
-      writeSkillFile(workspaceSlug, skillSlug, relativePath, content, scope, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.CREATE_SKILL_ENTRY,
-    async (_, workspaceSlug: string, skillSlug: string, relativePath: string, type: 'file' | 'directory', scope?: SkillScope, projectId?: string): Promise<void> => {
-      createSkillEntry(workspaceSlug, skillSlug, relativePath, type, scope, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.DELETE_SKILL_ENTRY,
-    async (_, workspaceSlug: string, skillSlug: string, relativePath: string, scope?: SkillScope, projectId?: string): Promise<void> => {
-      deleteSkillEntry(workspaceSlug, skillSlug, relativePath, scope, projectId)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.RENAME_SKILL_ENTRY,
-    async (_, workspaceSlug: string, skillSlug: string, fromRelative: string, toRelative: string, scope?: SkillScope, projectId?: string): Promise<void> => {
-      renameSkillEntry(workspaceSlug, skillSlug, fromRelative, toRelative, scope, projectId)
-    }
-  )
+  registerSkillFileHandlers()
 
   // ===== 工作区记忆文件管理 =====
   registerWorkspaceMemoryHandlers()
 
   // ===== Agent 队列消息 =====
-
-  // 排队发送消息
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.QUEUE_MESSAGE,
-    async (event, input: import('@guru/shared').AgentQueueMessageInput): Promise<string> => {
-      return queueAgentMessage(input, event.sender)
-    }
-  )
-
-  // 将等待当前 run 结束的消息交给主进程调度器
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.ENQUEUE_QUEUED_MESSAGE,
-    async (event, input: import('@guru/shared').AgentDeferredQueueMessageInput): Promise<void> => {
-      enqueueAgentQueuedMessage(input, event.sender)
-    }
-  )
-
-  // 获取主进程 deferred queue 的展示投影（renderer 重载后重建队列 UI）。
-  // renderer 重新挂载/窗口重开是天然的重连信号：顺手 poke 一次，
-  // 让因 webContents 缺失而搁置的派发在 renderer 回来后恢复。
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.GET_QUEUED_MESSAGES,
-    async (_, sessionId: string): Promise<import('@guru/shared').AgentQueuedMessageSnapshot[]> => {
-      const snapshots = getAgentQueuedMessageSnapshots(sessionId)
-      pokeAgentQueuedMessages()
-      return snapshots
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.CANCEL_QUEUED_MESSAGE,
-    async (_, input: import('@guru/shared').AgentQueuedMessageControlInput): Promise<boolean> => {
-      return cancelAgentQueuedMessage(input)
-    }
-  )
-
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.MOVE_QUEUED_MESSAGE,
-    async (_, input: import('@guru/shared').AgentMoveQueuedMessageInput): Promise<boolean> => {
-      return moveAgentQueuedMessage(input)
-    }
-  )
+  registerAgentQueueHandlers()
 
   // ===== Agent 后台任务管理 =====
 
@@ -1014,47 +904,7 @@ export function registerIpcHandlers(): void {
   )
 
   // ===== 代码图谱工具（repo map + Graphify，2026-08-13） =====
-
-  // 查询图谱工具状态（纯读，无副作用）
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_GET_STATE,
-    (_event, cwd: string) => repoMapToolsService.getState(cwd)
-  )
-
-  // 幂等创建（对话栏按钮唯一主动入口；构建异步完成，经 STATUS 推送）
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_ENSURE,
-    (_event, cwd: string, forceUpdate?: boolean) => repoMapToolsService.ensureMapTools(cwd, { forceUpdate: forceUpdate === true })
-  )
-
-  // 一键安装 graphify（进度经 INSTALL_PROGRESS 推送）
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_INSTALL,
-    (event) => repoMapToolsService.installGraphify((line) => {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_INSTALL_PROGRESS, line)
-      }
-    })
-  )
-
-  // 卸载 graphify
-  ipcMain.handle(
-    AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_UNINSTALL,
-    (event) => repoMapToolsService.uninstallGraphify((line) => {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_INSTALL_PROGRESS, line)
-      }
-    })
-  )
-
-  // 状态变更推送（服务事件 → 所有窗口广播，渲染进程不轮询）
-  repoMapToolsService.onStateChange((state) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send(AGENT_IPC_CHANNELS.REPO_MAP_TOOLS_STATUS, state)
-      }
-    }
-  })
+  registerRepoMapHandlers()
 
   // ===== Agent 附件 =====
   registerAgentAttachmentHandlers()
@@ -1105,54 +955,7 @@ export function registerIpcHandlers(): void {
   registerSessionFilesAndTerminalHandlers()
 
   // ===== 系统提示词管理 =====
-
-  // 获取系统提示词配置
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.GET_CONFIG,
-    async (): Promise<SystemPromptConfig> => {
-      return getSystemPromptConfig()
-    }
-  )
-
-  // 创建提示词
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.CREATE,
-    async (_, input: SystemPromptCreateInput): Promise<SystemPrompt> => {
-      return createSystemPrompt(input)
-    }
-  )
-
-  // 更新提示词
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.UPDATE,
-    async (_, id: string, input: SystemPromptUpdateInput): Promise<SystemPrompt> => {
-      return updateSystemPrompt(id, input)
-    }
-  )
-
-  // 删除提示词
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.DELETE,
-    async (_, id: string): Promise<void> => {
-      return deleteSystemPrompt(id)
-    }
-  )
-
-  // 更新追加日期时间和用户名开关
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.UPDATE_APPEND_SETTING,
-    async (_, enabled: boolean): Promise<void> => {
-      return updateAppendSetting(enabled)
-    }
-  )
-
-  // 设置默认提示词
-  ipcMain.handle(
-    SYSTEM_PROMPT_IPC_CHANNELS.SET_DEFAULT,
-    async (_, id: string | null): Promise<void> => {
-      return setDefaultPrompt(id)
-    }
-  )
+  registerSystemPromptHandlers()
 
   // ===== GitHub Release =====
 
@@ -1208,142 +1011,13 @@ export function registerIpcHandlers(): void {
   )
 
   // ===== 用户反馈（→ GitHub Issues）=====
-
-  // 提交反馈到 GitHub Issues（含截图 user-attachments 上传，失败自动落本地草稿）
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.SUBMIT,
-    async (_event, input: FeedbackSubmitInput, appVersion?: string, platform?: string) => {
-      const { submitFeedback } = await import('./lib/feedback-service')
-      return submitFeedback(input, appVersion ?? '', platform ?? '')
-    }
-  )
-
-  // 测试 GitHub 凭证（PAT 是否有效且有目标仓库权限）
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.TEST_CONNECTION,
-    async (_event, config: FeedbackGithubConfig) => {
-      const { testFeedbackConnection } = await import('./lib/feedback-service')
-      return testFeedbackConnection(config)
-    }
-  )
-
-  // 读取反馈渠道配置（不返回 token 明文）
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.GET_CONFIG,
-    async () => {
-      const { getFeedbackConfigPublic } = await import('./lib/feedback-service')
-      return getFeedbackConfigPublic()
-    }
-  )
-
-  // 保存反馈渠道配置
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.SAVE_CONFIG,
-    async (_event, config: FeedbackGithubConfig) => {
-      const { saveFeedbackConfig } = await import('./lib/feedback-service')
-      saveFeedbackConfig(config)
-    }
-  )
-
-  // 截取当前应用窗口（renderer 会在调用前短暂隐藏反馈弹窗自身）
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.CAPTURE_WINDOW,
-    async (event) => {
-      const { captureFeedbackWindow } = await import('./lib/feedback-service')
-      return captureFeedbackWindow(event.sender)
-    }
-  )
-
-  // 选择本地图片（压缩后返回预览 dataUrl + 提交用 filePath）
-  ipcMain.handle(
-    FEEDBACK_IPC_CHANNELS.PICK_IMAGES,
-    async (event) => {
-      const { pickFeedbackImages } = await import('./lib/feedback-service')
-      return pickFeedbackImages(event.sender)
-    }
-  )
-
-  // 列出本地反馈草稿（v2 可重试，v1 旧格式标记 legacy）
-  ipcMain.handle(FEEDBACK_IPC_CHANNELS.LIST_DRAFTS, async () => {
-    const { listFeedbackDrafts } = await import('./lib/feedback-service')
-    return listFeedbackDrafts()
-  })
-
-  // 删除本地反馈草稿（按文件名）
-  ipcMain.handle(FEEDBACK_IPC_CHANNELS.DELETE_DRAFT, async (_event, fileName: string) => {
-    const { deleteFeedbackDraft } = await import('./lib/feedback-service')
-    return deleteFeedbackDraft(fileName)
-  })
+  registerFeedbackHandlers()
 
   // ===== 「发现」面板（官方内容流 + 社区 + 反馈入口）=====
   registerDiscoverHandlers()
 
   // ===== Slack 集成 =====
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.GET_CONFIG,
-    async (): Promise<import('@guru/shared').SlackSettingsConfig> => {
-      return getSlackSettingsConfig()
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (_event, input: import('@guru/shared').SlackBotConfigInput) => {
-      const saved = saveSlackBotConfig(input)
-      if (saved.enabled && saved.botToken && saved.appToken) {
-        void slackBridgeManager.restartBot(saved.id).catch((error) => {
-          console.error(`[Slack IPC] Bot "${saved.name}" 重启失败:`, redactSensitiveLogValue(error))
-        })
-      } else {
-        void slackBridgeManager.stopBot(saved.id)
-      }
-      return toSlackBotSettingsConfig(saved)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.REMOVE_BOT,
-    async (_event, botId: string) => {
-      await slackBridgeManager.stopBot(botId)
-      return removeSlackBot(botId)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.GET_MANIFEST,
-    async (_event, options?: { botName?: string }) => {
-      return buildSlackManifest(options)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.TEST_CONNECTION,
-    async (_event, botToken: string): Promise<import('@guru/shared').SlackTestResult> => {
-      return slackBridgeManager.testConnection(botToken)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.START_BOT,
-    async (_event, botId: string): Promise<void> => {
-      await slackBridgeManager.startBot(botId)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.STOP_BOT,
-    async (_event, botId: string): Promise<void> => {
-      await slackBridgeManager.stopBot(botId)
-    },
-  )
-
-  ipcMain.handle(
-    SLACK_IPC_CHANNELS.GET_STATUS,
-    async (): Promise<import('@guru/shared').SlackMultiBridgeState> => {
-      return slackBridgeManager.getStates()
-    },
-  )
+  registerSlackHandlers()
 
   // ===== 飞书集成 =====
   registerFeishuHandlers()
@@ -1421,220 +1095,10 @@ export function registerIpcHandlers(): void {
   runStartupCleanup()
 
   // ===== 快速任务窗口 =====
-
-  // 提交快速任务 → 隐藏窗口 + 转发到主窗口（由渲染进程创建会话并发送消息）
-  ipcMain.handle(
-    QUICK_TASK_IPC_CHANNELS.SUBMIT,
-    async (_, input: QuickTaskSubmitInput): Promise<void> => {
-      const { hideQuickTaskWindow } = await import('./lib/quick-task-window')
-      const { getMainWindow } = await import('./index')
-      hideQuickTaskWindow()
-
-      const mainWin = getMainWindow()
-      if (mainWin && !mainWin.isDestroyed()) {
-        // 转发到主窗口渲染进程，由 GlobalShortcuts 创建会话并触发发送
-        mainWin.webContents.send('quick-task:open-session', {
-          mode: input.mode,
-          text: input.text,
-          files: input.files,
-        })
-        mainWin.show()
-        mainWin.focus()
-      }
-    }
-  )
-
-  // 隐藏快速任务窗口
-  ipcMain.handle(
-    QUICK_TASK_IPC_CHANNELS.HIDE,
-    async (): Promise<void> => {
-      const { hideQuickTaskWindow } = await import('./lib/quick-task-window')
-      hideQuickTaskWindow()
-    }
-  )
-
-  // 重新注册全局快捷键（设置中修改快捷键后调用）
-  ipcMain.handle(
-    QUICK_TASK_IPC_CHANNELS.REREGISTER_GLOBAL_SHORTCUTS,
-    async (): Promise<Record<string, boolean>> => {
-      const { reregisterAllGlobalShortcuts } = await import('./lib/global-shortcut-service')
-      return reregisterAllGlobalShortcuts()
-    }
-  )
-
-  // 查询系统实际接受的全局快捷键，供快捷键地图标示未注册项。
-  ipcMain.handle(
-    QUICK_TASK_IPC_CHANNELS.GET_GLOBAL_SHORTCUT_REGISTRATION_STATUS,
-    async (): Promise<Record<string, boolean>> => {
-      const { getGlobalShortcutRegistrationStatus } = await import('./lib/global-shortcut-service')
-      return getGlobalShortcutRegistrationStatus()
-    }
-  )
+  registerQuickTaskHandlers()
 
   // ===== 语音输入 =====
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.GET_SETTINGS,
-    async (): Promise<VoiceDictationSettings> => {
-      const { getVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      return getVoiceDictationSettings()
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.UPDATE_SETTINGS,
-    async (_, updates: VoiceDictationSettingsUpdate): Promise<VoiceDictationSettings> => {
-      const { updateVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      return updateVoiceDictationSettings(updates)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.TEST_CONNECTION,
-    async (_, updates?: VoiceDictationSettingsUpdate): Promise<VoiceDictationTestResult> => {
-      const { getVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      const { testDoubaoAsrConnection } = await import('./lib/doubao-asr-service')
-      const settings = { ...getVoiceDictationSettings(), ...(updates ?? {}) }
-      return testDoubaoAsrConnection(settings)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.TOGGLE,
-    async (event, input?: VoiceDictationToggleInput): Promise<void> => {
-      const { toggleVoiceDictationWindow } = await import('./lib/voice-dictation-window')
-      const sourceWindow = BrowserWindow.fromWebContents(event.sender)
-      const sourceInputId = typeof input?.sourceInputId === 'string' && input.sourceInputId.length > 0 && input.sourceInputId.length <= 512
-        ? input.sourceInputId
-        : undefined
-      toggleVoiceDictationWindow({ targetIsGuru: !!sourceWindow, sourceInputId })
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.START,
-    async (event, input: VoiceDictationStartInput): Promise<void> => {
-      const { getVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      const { startDoubaoAsrSession } = await import('./lib/doubao-asr-service')
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (!win) throw new Error('语音输入窗口不存在')
-      await startDoubaoAsrSession(input.sessionId, getVoiceDictationSettings(), win)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.SEND_AUDIO,
-    async (_, input: VoiceDictationAudioChunkInput): Promise<void> => {
-      const { sendDoubaoAsrAudio } = await import('./lib/doubao-asr-service')
-      sendDoubaoAsrAudio(input.sessionId, input.data)
-    }
-  )
-
-  ipcMain.on(VOICE_DICTATION_IPC_CHANNELS.REPORT_VOLUME, (event, volume: unknown) => {
-    void Promise.all([
-      import('./index'),
-      import('./lib/voice-dictation-window'),
-    ]).then(([{ getMainWindow }, { updateVoiceDictationIndicatorVolume }]) => {
-      const mainWindow = getMainWindow()
-      if (!mainWindow || mainWindow.isDestroyed() || event.sender.id !== mainWindow.webContents.id) return
-      updateVoiceDictationIndicatorVolume(typeof volume === 'number' ? volume : 0)
-    }).catch(console.error)
-  })
-
-  ipcMain.on(VOICE_DICTATION_IPC_CHANNELS.REPORT_TRANSCRIPT, (event, text: unknown) => {
-    void Promise.all([
-      import('./index'),
-      import('./lib/voice-dictation-window'),
-    ]).then(([{ getMainWindow }, { updateVoiceDictationIndicatorTranscript }]) => {
-      const mainWindow = getMainWindow()
-      if (!mainWindow || mainWindow.isDestroyed() || event.sender.id !== mainWindow.webContents.id) return
-      updateVoiceDictationIndicatorTranscript(typeof text === 'string' ? text.slice(-4_000) : '')
-    }).catch(console.error)
-  })
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.STOP,
-    async (_, input: VoiceDictationStopInput): Promise<void> => {
-      const { stopDoubaoAsrSession } = await import('./lib/doubao-asr-service')
-      await stopDoubaoAsrSession(input.sessionId)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.CANCEL,
-    async (_, input: VoiceDictationStopInput): Promise<void> => {
-      const { cancelDoubaoAsrSession } = await import('./lib/doubao-asr-service')
-      const { clearVoiceDictationPreview } = await import('./lib/text-output-service')
-      clearVoiceDictationPreview(
-        input.previewSessionId ?? input.sessionId,
-        input.targetInputId,
-        input.outputContextId,
-      )
-      cancelDoubaoAsrSession(input.sessionId)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.PREVIEW,
-    async (_, input: VoiceDictationPreviewInput): Promise<void> => {
-      const { getVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      const { previewVoiceDictationText } = await import('./lib/text-output-service')
-      previewVoiceDictationText(input, getVoiceDictationSettings())
-    }
-  )
-
-  ipcMain.on(VOICE_DICTATION_IPC_CHANNELS.ACK_INSERT_TEXT, (event, input: VoiceDictationTextDeliveryInput) => {
-    void Promise.all([
-      import('./index'),
-      import('./lib/text-output-service'),
-    ]).then(([{ getMainWindow }, { acknowledgeVoiceDictationTextDelivery }]) => {
-      const mainWindow = getMainWindow()
-      if (!mainWindow || mainWindow.isDestroyed() || event.sender.id !== mainWindow.webContents.id) return
-      if (!input || typeof input.sessionId !== 'string' || typeof input.delivered !== 'boolean') return
-      acknowledgeVoiceDictationTextDelivery(input.sessionId, input.delivered)
-    }).catch(console.error)
-  })
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.COMMIT,
-    async (_, input: VoiceDictationCommitInput): Promise<VoiceDictationCommitResult> => {
-      const { getVoiceDictationSettings } = await import('./lib/voice-dictation-settings-service')
-      const { commitVoiceDictationText } = await import('./lib/text-output-service')
-      return commitVoiceDictationText(input, getVoiceDictationSettings())
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.HIDE,
-    async (): Promise<void> => {
-      const { hideVoiceDictationWindow } = await import('./lib/voice-dictation-window')
-      hideVoiceDictationWindow()
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.RESIZE,
-    async (_, input: VoiceDictationResizeInput): Promise<void> => {
-      const { resizeVoiceDictationWindow } = await import('./lib/voice-dictation-window')
-      resizeVoiceDictationWindow(input.height)
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.CHECK_MIC_PERMISSION,
-    async (): Promise<MicPermissionResult> => {
-      const { checkMicrophonePermission } = await import('./lib/microphone-permission-service')
-      return checkMicrophonePermission()
-    }
-  )
-
-  ipcMain.handle(
-    VOICE_DICTATION_IPC_CHANNELS.REQUEST_MIC_PERMISSION,
-    async (): Promise<MicPermissionResult> => {
-      const { requestMicrophonePermission } = await import('./lib/microphone-permission-service')
-      return requestMicrophonePermission()
-    }
-  )
+  registerVoiceInputHandlers()
 
   // ===== 数据迁移 =====
 
@@ -1645,112 +1109,13 @@ export function registerIpcHandlers(): void {
   })
 
   // ===== 窗口控制（Windows 自定义标题栏按钮）=====
-
-  ipcMain.handle(
-    IPC_CHANNELS.WINDOW_MINIMIZE,
-    async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (win && !win.isDestroyed()) win.minimize()
-    }
-  )
-
-  ipcMain.handle(
-    IPC_CHANNELS.WINDOW_MAXIMIZE,
-    async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (win && !win.isDestroyed()) {
-        win.isMaximized() ? win.unmaximize() : win.maximize()
-      }
-    }
-  )
-
-  ipcMain.handle(
-    IPC_CHANNELS.WINDOW_CLOSE,
-    async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (win && !win.isDestroyed()) win.close()
-    }
-  )
-
-  ipcMain.handle(
-    IPC_CHANNELS.WINDOW_IS_MAXIMIZED,
-    async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      return win && !win.isDestroyed() ? win.isMaximized() : false
-    }
-  )
-
-  ipcMain.handle(
-    IPC_CHANNELS.WINDOW_IS_FULLSCREEN,
-    async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      return win && !win.isDestroyed() ? win.isFullScreen() : false
-    }
-  )
+  registerWindowControlHandlers()
 
   // ===== 任务 / 日程（Planning）=====
   registerPlanningHandlers()
 
   // ===== macOS Calendar / Reminders 同步（授权、受管目标与单向发布） =====
-  const isPlanningNativeSyncEntity = (value: unknown): value is PlanningNativeSyncEntity => value === 'calendar' || value === 'reminder'
-  ipcMain.handle(PLANNING_IPC_CHANNELS.GET_NATIVE_SYNC_STATUS, async (): Promise<PlanningNativeSyncStatus> => getPlanningNativeSyncStatus())
-  ipcMain.handle(PLANNING_IPC_CHANNELS.REQUEST_NATIVE_SYNC_ACCESS, async (_, entity: unknown): Promise<PlanningNativeSyncPermissionResult> => {
-    if (!isPlanningNativeSyncEntity(entity)) throw new Error('同步实体类型非法')
-    return requestPlanningNativeSyncAccess(entity)
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.OPEN_NATIVE_SYNC_PRIVACY_SETTINGS, async (_, entity: unknown): Promise<void> => {
-    if (!isPlanningNativeSyncEntity(entity)) throw new Error('同步实体类型非法')
-    if (process.platform !== 'darwin') return
-    await shell.openExternal(entity === 'calendar'
-      ? 'x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars'
-      : 'x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders')
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_SYNC_TARGETS, async (_, entity: unknown): Promise<PlanningNativeSyncTarget[]> => {
-    if (!isPlanningNativeSyncEntity(entity)) throw new Error('同步实体类型非法')
-    return listPlanningNativeSyncTargets(entity)
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_CONNECTION_TARGETS, async (_, entity: unknown): Promise<PlanningNativeSyncTarget[]> => {
-    if (!isPlanningNativeSyncEntity(entity)) throw new Error('同步实体类型非法')
-    return listPlanningNativeConnectionTargets(entity)
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_CONNECTIONS, async (_, entity?: unknown): Promise<PlanningNativeConnection[]> => {
-    if (entity !== undefined && !isPlanningNativeSyncEntity(entity)) throw new Error('同步实体类型非法')
-    return listPlanningNativeConnections(entity)
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.CONNECT_NATIVE_CONNECTION, async (_, input: ConnectPlanningNativeConnectionInput): Promise<PlanningNativeConnection> => {
-    if (!input || !isPlanningNativeSyncEntity(input.entity) || !input.target || typeof input.target.id !== 'string') throw new Error('连接参数非法')
-    // renderer 不可信：用 EventKit 当前返回的完整目标覆盖传入元数据。
-    const target = (await listPlanningNativeConnectionTargets(input.entity)).find((item) => item.id === input.target.id)
-    if (!target) throw new Error('系统集合不存在或尚未授权')
-    const connection = connectPlanningNativeConnection({ entity: input.entity, target })
-    // 用户刚确认连接时必须立刻回流，不能被全局定期同步 cooldown 延后。
-    void runPlanningNativeSync(true)
-    return connection
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.DISCONNECT_NATIVE_CONNECTION, async (_, id: unknown): Promise<boolean> => {
-    if (typeof id !== 'string' || !id) throw new Error('连接 id 非法')
-    const disconnected = disconnectPlanningNativeConnection(id)
-    if (disconnected) broadcastPlanningChanged(['todos', 'calendar_events'])
-    return disconnected
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_SYNC_CONFLICTS, async (): Promise<PlanningNativeSyncConflict[]> => listPlanningNativeSyncConflicts())
-  ipcMain.handle(PLANNING_IPC_CHANNELS.RESOLVE_NATIVE_SYNC_CONFLICT, async (_, input: ResolvePlanningNativeSyncConflictInput): Promise<boolean> => {
-    if (!input || typeof input.id !== 'string' || !['keep_guru', 'keep_system'].includes(input.resolution)) throw new Error('冲突解决参数非法')
-    const resolved = resolvePlanningNativeSyncConflict(input)
-    if (resolved) { broadcastPlanningChanged(['todos', 'calendar_events']); void runPlanningNativeSync(true) }
-    return resolved
-  })
-  ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_SYNC_PROFILES, async (): Promise<PlanningSyncProfile[]> => listPlanningSyncProfiles())
-  ipcMain.handle(PLANNING_IPC_CHANNELS.SAVE_SYNC_PROFILE, async (_, input: SavePlanningSyncProfileInput): Promise<PlanningSyncProfile> => {
-    if (!input || !isPlanningNativeSyncEntity(input.entity) || !input.target || typeof input.target.id !== 'string' || typeof input.target.title !== 'string' || typeof input.target.sourceTitle !== 'string' || (input.enabled !== undefined && typeof input.enabled !== 'boolean')) throw new Error('同步目标参数非法')
-    // renderer 不可信：必须由主进程重新确认目标仍存在且可写，不能接受伪造的 Calendar/List 标识。
-    const target = (await listPlanningNativeSyncTargets(input.entity)).find((item) => item.id === input.target.id)
-    if (!target) throw new Error('同步目标不存在、不可写或尚未授权')
-    const profile = savePlanningSyncProfile({ ...input, target })
-    // 受管 Calendar 的系统存量也必须立即回流；不能被 30 秒 reconcile 冷却窗口延后。
-    void runPlanningNativeSync(true)
-    return profile
-  })
+  registerCalendarSyncHandlers()
 
   // ===== 定时任务（Automation）=====
   registerAutomationHandlers()
