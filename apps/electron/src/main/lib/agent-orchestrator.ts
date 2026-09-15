@@ -99,7 +99,7 @@ export interface SessionCallbacks {
   /** 发送标题更新 */
   onTitleUpdated: (title: string) => void
   /** 用户消息已持久化，外部入口可据此通知前端切到实时会话 */
-  onRunStarted?: (opts: { startedAt: number }) => void
+  onRunStarted?: (opts: { startedAt: number; userMessage?: string; userMessageUuid?: string }) => void
 }
 
 type RecoverableAgentQueryOptions = {
@@ -1209,7 +1209,13 @@ export class AgentOrchestrator {
     }
     const runGeneration = ++this.nextRunGeneration
     this.activeSessions.set(sessionId, runGeneration)
-    callbacks.onRunStarted?.({ startedAt: streamStartedAt })
+    callbacks.onRunStarted?.({
+      startedAt: streamStartedAt,
+      ...(initialUserMessageUuid ? {
+        userMessage: rawUserMessage ?? userMessage,
+        userMessageUuid: initialUserMessageUuid,
+      } : {}),
+    })
 
     const releaseActiveRun = (): void => {
       // 在发送 STREAM_COMPLETE 前释放 active slot，避免渲染进程已进入空闲态、
