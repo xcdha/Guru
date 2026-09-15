@@ -23,7 +23,6 @@ import type {
   AgentSaveWorkspaceFilesInput,
   AgentSavedFile,
   AgentStreamEvent,
-  AgentStreamPayload,
   AgentQueueMessageInput,
   AgentDeferredQueueMessageInput,
   AgentQueuedMessageControlInput,

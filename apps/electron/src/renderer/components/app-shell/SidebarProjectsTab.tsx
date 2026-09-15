@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import {
   AlertTriangle,
   ChevronRight,
@@ -21,7 +21,6 @@ import {
   FolderOpen,
   LayoutDashboard,
   MoreHorizontal,
-  Pencil,
   Plus,
   Settings,
   Trash2,
@@ -37,7 +36,6 @@ import {
 } from '@/atoms/agent-atoms'
 import { activeSessionIdAtom } from '@/atoms/tab-atoms'
 import { draftSessionIdsAtom } from '@/atoms/draft-session-atoms'
-import { getActiveAccelerator, getAcceleratorDisplay } from '@/lib/shortcut-registry'
 import {
   activeProjectPageIdAtom,
   codeMainViewAtom,
@@ -45,7 +43,6 @@ import {
 } from '@/atoms/project-atoms'
 import { activeViewAtom, agentSkillsTabAtom } from '@/atoms/active-view'
 import { MarqueeText } from '@/components/ui/marquee-text'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,16 +58,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { AgentSessionItem } from './AgentSessionItem'
 import { LocalProjectBadge } from '@/components/agent-skills/LocalProjectBadge'
 import {

@@ -10,7 +10,7 @@
  * 连接配置仅存单组织（当前版本）；未来可扩展多组织。
  */
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'

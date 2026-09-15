@@ -17,7 +17,6 @@ import { Badge } from '@/components/ui/badge'
 import { SettingsCard, SettingsInput, SettingsSection } from './primitives'
 import type {
   OrganizationConnection,
-  OrganizationInfo,
   OrganizationMember,
   OrganizationMembership,
   OrganizationSkill,

@@ -26,7 +26,6 @@ import { RichTextInput } from '@/components/ai-elements/rich-text-input'
 import { SpeechButton } from '@/components/ai-elements/speech-button'
 import { InputToolbarOverflow, type ToolbarItem } from '@/components/ai-elements/InputToolbarOverflow'
 import {
-  inputToolbarActiveButtonClass,
   inputToolbarButtonClass,
   inputToolbarDangerButtonClass,
   inputToolbarDisabledButtonClass,

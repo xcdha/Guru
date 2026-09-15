@@ -19,7 +19,6 @@ import {
   AUTOMATION_MAX_CONSECUTIVE_FAILURES,
   AUTOMATION_IPC_CHANNELS,
   AUTOMATION_DEFAULT_SESSION_MODE,
-  type AgentRuntime,
   type Automation,
   type AutomationRun,
 } from '@guru/shared'

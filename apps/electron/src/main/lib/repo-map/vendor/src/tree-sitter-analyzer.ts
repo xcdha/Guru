@@ -5,7 +5,7 @@ import { PageRankCalculator } from './pagerank';
 import { TreeRenderer } from './tree-renderer';
 import { CacheManager } from './cache-manager';
 import { getAllFiles } from './file-utils';
-import type { RepoMapOptions, SymbolOptions, Tag, Symbol, ParseResult } from './types';
+import type { RepoMapOptions, SymbolOptions, Symbol, ParseResult } from './types';
 import logger from './logger';
 
 export class TreeSitterAnalyzer {
