@@ -26,6 +26,23 @@ export interface ExternalAgentRunActivation {
   streamState: AgentStreamState
 }
 
+/** Build the live copy of an externally submitted message after it is persisted. */
+export function createExternalAgentRunUserMessage(input: {
+  userMessage?: string
+  userMessageUuid?: string
+  startedAt: number
+}): SDKMessage | undefined {
+  if (input.userMessage === undefined || !input.userMessageUuid) return undefined
+  return {
+    type: 'user',
+    uuid: input.userMessageUuid,
+    message: { content: [{ type: 'text', text: input.userMessage }] },
+    parent_tool_use_id: null,
+    _createdAt: input.startedAt,
+    _promaLiveRunStartedAt: input.startedAt,
+  } as unknown as SDKMessage
+}
+
 /** 迟到的启动事件不得复活已结束运行，或覆盖同一会话的更新运行。 */
 export function shouldActivateExternalAgentRun(
   currentStreamState: AgentStreamState | undefined,

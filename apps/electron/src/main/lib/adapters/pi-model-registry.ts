@@ -60,6 +60,10 @@ const VOLCENGINE_GLM_MAX_TOKENS = 128_000
 const GLM_53_FAMILY_MAX_TOKENS = 131_072
 const CODEX_BASE_URL = 'https://chatgpt.com/backend-api'
 const CODEX_MAX_TOKENS = 128_000
+/** 已从 ChatGPT Codex 订阅下线、不得再展示或运行的模型。 */
+const UNSUPPORTED_CODEX_MODEL_IDS = new Set([
+  'gpt-5.3-codex-spark',
+])
 // GPT-6 Astra 与 GPT-5.6 系列共享同一 Codex 对齐上下文（372K），与共享上下文推断保持一致。
 const CODEX_GPT_6_ASTRA_CONTEXT_WINDOW = CODEX_GPT_56_CONTEXT_WINDOW
 function toReasoningTransport(api: Api): ReasoningTransport {
@@ -781,9 +785,13 @@ function isCompleteCatalogModel(model: PiCatalogModelPatch): model is PiCatalogM
   )
 }
 
+function isSupportedCodexModel(model: Pick<PiCatalogModel, 'id'>): boolean {
+  return !UNSUPPORTED_CODEX_MODEL_IDS.has(model.id.trim().toLowerCase())
+}
+
 export async function getCodexCatalogModels(): Promise<PiCatalogModel[]> {
   const { getModels } = await loadPiAiCompat()
-  return mergeCodexModels(getModels('openai-codex'))
+  return mergeCodexModels(getModels('openai-codex')).filter(isSupportedCodexModel)
 }
 
 /**
@@ -809,7 +817,7 @@ export async function buildCodexModel(sdk: PiSdk, input: CodexModelInput) {
   })
 
   const resolvedModelId = stripAgentSdkContextSuffix(input.model)
-  const runtimeModels = modelRuntime.getModels('openai-codex')
+  const runtimeModels = modelRuntime.getModels('openai-codex').filter(isSupportedCodexModel)
   const codexModels = await getCodexCatalogModels()
   const model = resolvedModelId
     ? runtimeModels.find((candidate) => candidate.id === resolvedModelId)

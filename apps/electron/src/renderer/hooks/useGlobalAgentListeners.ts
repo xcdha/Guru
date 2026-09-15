@@ -75,7 +75,7 @@ import type { NotificationSoundType } from '@/types/settings'
 import { toast } from 'sonner'
 import type { AgentStreamEvent, AgentStreamCompletePayload, AgentEvent, AgentStreamPayload, AgentAssistantDelta, AgentAssistantDeltaPayload, SDKAssistantMessage, SDKMessage, SDKUserMessage, SDKSystemMessage, SDKContentBlock, SDKUserContentBlock, GuruEvent, AgentSessionMeta, ProviderType } from '@guru/shared'
 import { inferAgentSdkContextWindow, inferContextWindow } from '@guru/shared'
-import { buildExternalAgentRunActivation, shouldActivateExternalAgentRun } from '@/lib/external-agent-run'
+import { buildExternalAgentRunActivation, createExternalAgentRunUserMessage, shouldActivateExternalAgentRun } from '@/lib/external-agent-run'
 import { upsertAgentSession, mergeFetchedAgentSessions } from '@/lib/agent-session-list'
 import { buildTodoAgentPrompt } from '@/lib/todo-agent-prompt'
 import { getAgentCompletionMarkers, notifyAgentCompletion } from '@/lib/agent-completion-presence'
@@ -777,6 +777,20 @@ export function useGlobalAgentListeners(): void {
           map.set(event.sessionId, activation.streamState)
           return map
         })
+
+        // 外部消息已先在主进程持久化；把同一 UUID 的原文加入 live 消息，
+        // 让当前已打开的会话无需等待完整刷新也能立即看见微信输入。
+        const externalUserMessage = createExternalAgentRunUserMessage(event)
+        if (externalUserMessage) {
+          store.set(liveMessagesMapAtom, (prev) => {
+            const current = prev.get(event.sessionId) ?? []
+            const incomingUuid = (externalUserMessage as unknown as { uuid?: string }).uuid
+            if (current.some((message) => (message as unknown as { uuid?: string }).uuid === incomingUuid)) return prev
+            const map = new Map(prev)
+            map.set(event.sessionId, [...current, externalUserMessage])
+            return map
+          })
+        }
       }
 
       if (event.session) {
