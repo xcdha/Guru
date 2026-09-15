@@ -13,7 +13,7 @@
  */
 
 import { existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { execSync, spawnSync } from 'child_process'
 import { app } from 'electron'
 import type { BunRuntimeStatus, PlatformArch } from '@guru/shared'

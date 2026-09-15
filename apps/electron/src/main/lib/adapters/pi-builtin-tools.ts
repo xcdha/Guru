@@ -19,7 +19,7 @@ import type {
   CreateAutomationInput,
   UpdateAutomationInput,
 } from '@guru/shared'
-import { AGENT_IPC_CHANNELS, getTerminalProfilesForPlatform, normalizePathForCompare, parseTerminalProfile } from '@guru/shared'
+import { getTerminalProfilesForPlatform, parseTerminalProfile } from '@guru/shared'
 import {
   createAutomation,
   deleteAutomation,
@@ -85,7 +85,6 @@ import {
   discardInapplicableAutomationScheduleFields,
 } from './automation-tool-schema'
 import type { ProductivityToolsSettings } from '../../../types'
-import { getConfiguredVaultFileSystem, getVaultConfig } from '../vault-service'
 import {
   getAgentWorkspace,
   getLocalProjectRootStatus,

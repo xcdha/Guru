@@ -8,7 +8,6 @@ import {
   GURU_DEFAULT_PERMISSION_MODE,
   type AgentDelegationRole,
   type AgentDelegationStatus,
-  type AgentRuntime,
   type AgentSessionMeta,
   type GuruPermissionMode,
 } from '@guru/shared'

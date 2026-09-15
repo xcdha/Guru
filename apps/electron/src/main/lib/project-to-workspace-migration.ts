@@ -16,13 +16,12 @@
 
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { getConfigDir, getAgentWorkspacePath, getWorkspaceMcpPath, getWorkspaceSkillsDir, getInactiveSkillsDir, getWorkspaceFilesDir } from './config-paths'
+import { getConfigDir, getAgentWorkspacePath, getWorkspaceSkillsDir, getInactiveSkillsDir, getWorkspaceFilesDir } from './config-paths'
 import { getAgentWorkspace, createAgentWorkspace, listAgentWorkspaces, updateAgentWorkspace } from './agent-workspace-manager'
 import { projectRepository } from './project-repository'
 import { listAgentSessions, moveSessionToWorkspace, updateAgentSessionMeta } from './agent-session-manager'
 import { listAutomations, updateAutomation } from './automation-manager'
 import { quarantineForRecovery } from './recovery-trash-service'
-import type { Automation } from '@guru/shared'
 import { getProjectPath, getProjectMemoryPath } from '../../../../../packages/shared/src/projects/storage.ts'
 
 // ===== Marker =====

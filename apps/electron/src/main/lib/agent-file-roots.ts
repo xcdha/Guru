@@ -5,8 +5,6 @@
  */
 
 import type { AgentSessionFileRoots, AgentSessionMeta } from '@guru/shared'
-import { join } from 'node:path'
-import { mkdirSync } from 'node:fs'
 import { projectRepository } from './project-repository'
 import { resolveSessionCwd } from './agent-cwd-resolver'
 import { getAgentSessionWorkspacePath, getAgentWorkspacePath, getWorkspaceFilesDir } from './config-paths'

@@ -11,7 +11,7 @@ import {
   loadTaskRecord,
   loadTaskSpec,
 } from '@guru/shared/tasks/storage'
-import type { ProjectAsset, ProjectConfig } from '@guru/shared/projects'
+import type { ProjectConfig } from '@guru/shared/projects'
 
 function countProjectSessions(
   projectId: string,

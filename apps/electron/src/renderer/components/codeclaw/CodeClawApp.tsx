@@ -22,9 +22,7 @@ import {
   type CodeClawInteraction,
   type CodeClawMiniVisual,
   type CodeClawPhase,
-  type CodeClawSize,
   type CodeClawState,
-  type CodeClawThemeId,
   type CodeClawVisual,
 } from '@guru/shared'
 import './codeclaw.css'

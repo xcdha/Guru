@@ -11,7 +11,7 @@
 import * as React from 'react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { toast } from 'sonner'
-import { AlertTriangle, ArrowLeft, Bell, Box, Check, ChevronDown, Clock, FileText, Loader2, Pencil, Play, Settings, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Bell, Check, Clock, FileText, Loader2, Pencil, Play, Settings, X } from 'lucide-react'
 import { detectIsWindows, WINDOW_CONTROLS_INSET_RIGHT } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
@@ -29,7 +29,6 @@ import { ModelSelector } from '@/components/chat/ModelSelector'
 import {
   automationFormAtom,
   automationsAtom,
-  AUTOMATION_INTERVAL_OPTIONS,
   AUTOMATION_WEEKDAY_OPTIONS,
   automationToDraft,
   type AutomationDraft,

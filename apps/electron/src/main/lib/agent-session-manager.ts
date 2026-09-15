@@ -37,7 +37,6 @@ import type {
   AgentMessageSearchResult,
   AgentSessionReferenceSearchInput,
   AgentSessionReferenceSearchResult,
-  AgentRuntime,
   AgentCwdMode,
   AgentActiveWorktree,
   SessionWorkbenchLayout,
@@ -56,7 +55,6 @@ import { convertLegacyMessage } from '@guru/session-core'
 import { clearNanoBananaAgentHistory } from './chat-tools/nano-banana-mcp'
 import { assertEnabledModelForChannel } from './agent-model-selection'
 import { copyForkWorkspaceFiles } from './agent-fork-workspace-copy'
-import { isGitAttributionEnabled } from './agent-git-attribution'
 import { assertRecoveryRootSafe, quarantineForRecovery, type RecoveryTrashRecord } from './recovery-trash-service'
 
 /**

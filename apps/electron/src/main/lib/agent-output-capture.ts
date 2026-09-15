@@ -5,7 +5,7 @@
  */
 
 import type { AgentOutputRecord, AgentSessionFileRoots } from '@guru/shared'
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, renameSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
 export interface OutputSnapshotEntry {

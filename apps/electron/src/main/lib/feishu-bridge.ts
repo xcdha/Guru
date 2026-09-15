@@ -72,7 +72,6 @@ import type { ToolSummary, FormattedAgentResult, WorkspaceListItem } from './fei
 import { CardStream } from './feishu/card-stream'
 import {
   createInitialState,
-  finalizeIfRunning,
   markError,
   markInterrupted,
   reduce as reduceRunState,

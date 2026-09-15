@@ -17,7 +17,7 @@ import * as React from 'react'
 import { unstable_batchedUpdates } from 'react-dom'
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai'
 import { toast } from 'sonner'
-import { Box, CornerDownLeft, Square, Settings, X, Copy, Check, Brain, Sparkles, ChevronDown, ListTodo, Paperclip, UserPlus, Network, Loader2 } from 'lucide-react'
+import { CornerDownLeft, Square, Settings, X, Brain, Sparkles, ListTodo, Paperclip, UserPlus, Network, Loader2 } from 'lucide-react'
 import { AgentMessages } from './AgentMessages'
 import { AgentHeader } from './AgentHeader'
 import { CoworkTeamStrip } from './CoworkTeamStrip'
@@ -135,7 +135,7 @@ import {
   isSessionReferenceDrag,
   type InsertSessionReferenceMentionDetail,
 } from '@/lib/session-reference-drag'
-import { buildQuotedSelectionBlock, expandAgentHistoryQuoteMentions } from '@/lib/quoted-selection'
+import { buildQuotedSelectionBlock } from '@/lib/quoted-selection'
 import { createClipboardPendingFile, createClipboardTextDraft, makeUniqueAttachmentName } from '@/lib/clipboard-text-attachment'
 import { copyTextToClipboard } from '@/lib/clipboard'
 import {

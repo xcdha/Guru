@@ -4,348 +4,44 @@
  * 负责注册主进程和渲染进程之间的通信处理器
  */
 
-import { ipcMain, nativeTheme, shell, dialog, BrowserWindow, app, clipboard, nativeImage } from 'electron'
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { realpath, stat, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { createHash } from 'node:crypto'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, SLACK_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, EXPERT_IPC_CHANNELS, AGENT_THINKING_LEVELS, isGuruPermissionMode, normalizePathForCompare, PLANNING_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS, FEEDBACK_IPC_CHANNELS, DISCOVER_IPC_CHANNELS, VAULT_IPC_CHANNELS, type FeedbackGithubConfig, type FeedbackSubmitInput, type PlanningWorkspaceScope, type DiscoverContentItem, type DiscussionCategorySlug, MAX_ATTACHMENT_SIZE } from '@guru/shared'
-import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, QUICK_TASK_IPC_CHANNELS, VOICE_DICTATION_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
+import { ipcMain, shell } from 'electron'
+import { join } from 'node:path'
+import { AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, EXPERT_IPC_CHANNELS, RELEASE_NOTES_IPC_CHANNELS } from '@guru/shared'
+import { USER_PROFILE_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, USAGE_IPC_CHANNELS } from '../types'
 import type {
-  QuickTaskSubmitInput,
-  VoiceDictationAudioChunkInput,
-  VoiceDictationCommitInput,
-  VoiceDictationCommitResult,
-  VoiceDictationPreviewInput,
-  VoiceDictationResizeInput,
-  VoiceDictationSettings,
-  VoiceDictationSettingsUpdate,
-  VoiceDictationStartInput,
-  VoiceDictationStopInput,
-  VoiceDictationTestResult,
-  VoiceDictationTextDeliveryInput,
-  VoiceDictationToggleInput,
-  MicPermissionResult,
-} from '../types'
-import type {
-  RuntimeStatus,
-  GitRepoStatus,
-  GitBranchInfo,
-  ListGitBranchesInput,
-  PrepareSessionGitContextInput,
-  PrepareSessionGitContextResult,
-  RefreshSessionGitBranchInput,
-  RefreshSessionGitBranchResult,
-  Channel,
-  ChannelCreateInput,
-  ChannelUpdateInput,
-  ChannelTestResult,
-  ChannelDirectTestInput,
-  FetchModelsInput,
-  FetchModelsResult,
-  ConversationMeta,
-  ChatMessage,
-  ChatSendInput,
-  GenerateTitleInput,
-  AttachmentSaveInput,
-  AttachmentSaveResult,
-  FileDialogResult,
-  FileOrFolderDialogResult,
-  RecentMessagesResult,
-  AgentSessionMeta,
-  SetAgentSessionActiveWorktreeInput,
-  AgentSendInput,
   AgentRuntime,
-  AgentThinkingLevel,
-  AgentWorkspace,
-  AgentGenerateTitleInput,
-  AgentSaveFilesInput,
-  AgentSaveWorkspaceFilesInput,
-  AgentSavedFile,
-  AgentAttachDirectoryInput,
-  AgentAttachFileInput,
-  WorkspaceAttachDirectoryInput,
-  WorkspaceAttachFileInput,
   GetTaskOutputInput,
   GetTaskOutputResult,
-  StopTaskInput,
-  WorkspaceMcpConfig,
-  SkillMeta,
-  SkillScope,
-  BulkImportSkillItemResult,
-  BulkImportSkillsResult,
-  BulkImportWorkspaceSelection,
-  BulkImportProjectSelection,
-  OtherProjectSkillsGroup,
-  SkillFileContent,
-  WorkspaceCapabilities,
-  WorkspaceMemorySummary,
-  OrganizationConnection,
-  OrganizationSkill,
-  CommunitySkill,
-  CommunitySkillInstallResult,
-  FileEntry,
-  FileSearchResult,
   EnvironmentCheckResult,
-  InstallerManifest,
-  InstallerDownloadRequest,
-  InstallerDownloadResult,
   ProxyConfig,
   SystemProxyDetectResult,
   GitHubRelease,
   GitHubReleaseListOptions,
-  PermissionResponse,
-  GuruPermissionMode,
   AskUserResponse,
   ExitPlanModeResponse,
-  SystemPromptConfig,
-  SystemPrompt,
-  SystemPromptCreateInput,
-  SystemPromptUpdateInput,
-  ChatToolInfo,
-  ChatToolState,
-  ChatToolMeta,
-  MoveSessionToWorkspaceInput,
-  ForkSessionInput,
-  RewindSessionInput,
-  RewindSessionResult,
-  AgentSessionReferenceSearchInput,
-  FeishuConfigInput,
-  FeishuConfig,
-  FeishuBridgeState,
-  FeishuTestResult,
-  FeishuChatBinding,
-  FeishuPresenceReport,
-  FeishuUpdateBindingInput,
-  FeishuRegisterAppQRCode,
-  FeishuRegisterAppStatus,
-  FeishuRegisterAppResult,
-  DingTalkConfigInput,
-  DingTalkConfig,
-  DingTalkBridgeState,
-  DingTalkTestResult,
-  WeChatConfig,
-  WeChatBridgeState,
-  SDKMessage,
-  GetFileDiffInput,
-  DetachedPreviewWindowInput,
-  RevertFileInput,
-  FileAccessOptions,
-  ResolvedFileUrl,
   Automation,
-  CreateAutomationInput,
-  UpdateAutomationInput,
-  Todo,
-  TodoListQuery,
-  CalendarEvent,
-  CalendarEventListQuery,
-  PlanningGroup,
-  PlanningGroupScope,
-  PlanningTag,
-  PlanningReminder,
-  ActivePlanningReminder,
-  CreateTodoInput,
-  UpdateTodoInput,
-  StartTodoAgentInput,
-  StartTodoAgentResult,
-  TodoAgentSessionActivation,
-  CreateCalendarEventInput,
-  UpdateCalendarEventInput,
-  CreatePlanningGroupInput,
-  UpdatePlanningGroupInput,
-  SnoozePlanningReminderInput,
-  PlanningNativeSyncEntity,
-  PlanningNativeSyncStatus,
-  PlanningNativeSyncPermissionResult,
-  PlanningNativeSyncTarget,
-  PlanningNativeConnection,
-  PlanningNativeSyncConflict,
-  ConnectPlanningNativeConnectionInput,
-  ResolvePlanningNativeSyncConflictInput,
-  PlanningSyncProfile,
-  SavePlanningSyncProfileInput,
-  BrowserViewState,
-  BrowserViewLayout,
-  BrowserNavigateInput,
-  BrowserTabInput,
-  BrowserCreateTabInput,
 } from '@guru/shared'
-import type { ExpertManifest, ExpertPackage } from '@guru/shared/experts'
-import type { UserProfile, AppSettings } from '../types'
-import { getRuntimeStatus, getGitRepoStatus, reinitializeRuntime } from './lib/runtime-init'
-import { browserController } from './lib/browser-controller'
-import { agentTerminalController } from './lib/agent-terminal'
-import { resolveBrowserProfileKey } from './lib/browser-profile-policy'
-import {
-  getUnstagedChanges,
-  invalidateGitDiffCache,
-  getFileDiff,
-  getUntrackedContent,
-  revertFile,
-  getDiffContents,
-  listWorktrees,
-  getWorktreeChanges,
-  getMainRepoRoot,
-} from './lib/git-diff-service'
-import { listGitBranchesForSession, prepareSessionGitContext, refreshSessionGitBranch } from './lib/git-session-context-service'
-import { registerGuruDirectoryPath, registerGuruFilePath } from './lib/local-file-protocol'
-import { applyWindowZoomIn, applyWindowZoomOut } from './lib/window-zoom'
-import {
-  authorizeDiscoveredVault,
-  configureVault,
-  createUntitledVaultFile,
-  createUntitledVaultFileInFolder,
-  createVaultFolder,
-  discoverObsidianVaultCandidates,
-  discoverVaultCandidates,
-  selectDefaultVault,
-  getConfiguredVaultFileSystem,
-  getVaultSummary,
-  setVaultUserContext,
-  clearVaultUserContext,
-} from './lib/vault-service'
-import { registerUpdaterIpc } from './lib/updater/updater-ipc'
-import {
-  listChannels,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  decryptApiKey,
-  testChannel,
-  testChannelDirect,
-  fetchModels,
-  getChannelById,
-  getChannelPlanQuota,
-} from './lib/channel-manager'
-import { loginCodexOAuth, cancelCodexOAuthLogin } from './lib/codex-oauth-service'
-import { loginGithubCopilotOAuth, cancelGithubCopilotOAuthLogin } from './lib/github-copilot-oauth-service'
-import { loginXaiOAuth, cancelXaiOAuthLogin } from './lib/xai-oauth-service'
-import { resolvePiReasoningCapability } from './lib/adapters/pi-model-registry'
-import { serializeCodexCredentials, serializeClaudeOAuthCredentials, serializeGithubCopilotCredentials, serializeXaiCredentials } from '@guru/shared'
-import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, GithubCopilotOAuthDeviceCode, XaiOAuthDeviceCode } from '@guru/shared'
-import { prepareClaudeOAuthLogin, exchangeClaudeOAuthCode, cancelClaudeOAuthLogin } from './lib/claude-oauth-service'
-import {
-  listConversations,
-  createConversation,
-  getConversationMessages,
-  getRecentMessages,
-  updateConversationMeta,
-  deleteConversation,
-  deleteMessage,
-  truncateMessagesFrom,
-  updateContextDividers,
-  autoArchiveConversations,
-  searchConversationMessages,
-} from './lib/conversation-manager'
-import { sendMessage, stopGeneration, generateTitle } from './lib/chat-service'
-import {
-  saveAttachment,
-  readAttachmentAsBase64,
-  deleteAttachment,
-  openFileDialog,
-  openFileOrFolderDialog,
-} from './lib/attachment-service'
-import { extractTextFromAttachment } from './lib/document-parser'
-import { getTutorialContent, createWelcomeConversation } from './lib/tutorial-service'
+import type { ExpertPackage } from '@guru/shared/experts'
+import type { UserProfile } from '../types'
 import { getUserProfile, updateUserProfile } from './lib/user-profile-service'
-import { getSettings, updateSettings, updateSettingsAsync } from './lib/settings-service'
-import { applyIconForCurrentTheme } from './lib/icon-applier'
-import { refreshCodeClawConfiguration } from './lib/codeclaw-service'
-import { setBuiltinMcpUserEnabled } from './lib/builtin-mcp/settings'
+import { getSettings, updateSettings } from './lib/settings-service'
 import { setDockBadgeCount } from './lib/dock-badge-service'
 
 import { checkEnvironment } from './lib/environment-checker'
-import { fetchInstallerManifest, findInstallerSource } from './lib/installer-manifest'
-import {
-  cancelInstallerDownload,
-  downloadInstaller,
-  launchInstaller,
-} from './lib/installer-downloader'
 import { getProxySettings, saveProxySettings } from './lib/proxy-settings-service'
 import { detectSystemProxy } from './lib/system-proxy-detector'
 import {
-  listAutomations,
-  getAutomation,
-  createAutomation,
-  getEffectiveAutomationScheduleFields,
-  validateExplicitAutomationScheduleFields,
-  updateAutomation,
-  deleteAutomation,
-} from './lib/automation-manager'
-import { runAutomationNow, broadcastChanged as broadcastAutomationsChanged } from './lib/automation-scheduler'
-import {
-  listTodos,
-  getTodo,
-  createTodo,
-  updateTodo,
-  deleteTodo,
-  touchTodoSession,
-  listCalendarEvents,
-  createCalendarEvent,
-  updateCalendarEvent,
-  deleteCalendarEvent,
-  listPlanningGroups,
-  createPlanningGroup,
-  updatePlanningGroup,
-  deletePlanningGroup,
-  listPlanningTags,
-  listActivePlanningReminders,
-  acknowledgePlanningReminder,
-  snoozePlanningReminder,
-  listPlanningSyncProfiles,
-  listPlanningNativeConnections,
-  connectPlanningNativeConnection,
-  disconnectPlanningNativeConnection,
-  listPlanningNativeSyncConflicts,
-  resolvePlanningNativeSyncConflict,
-  savePlanningSyncProfile,
-} from './lib/planning-manager'
-import { broadcastPlanningChanged } from './lib/planning-events'
-import {
-  getPlanningNativeSyncStatus,
-  listPlanningNativeSyncTargets,
-  listPlanningNativeConnectionTargets,
-  requestPlanningNativeSyncAccess,
-} from './lib/planning-native-sync-service'
-import { runPlanningNativeSync } from './lib/planning-native-sync-coordinator'
-import {
-  createExpert,
-  createTeam,
   getExpert,
-  getTeam,
   listExperts,
-  listTeams,
-  updateExpertFiles,
-  updateExpertManifest,
-  updateTeam,
-  type CreateTeamInput,
-  type UpdateTeamInput,
 } from './lib/expert-service'
-import type { TeamSquad, ExpertTemplate } from '@guru/shared/experts'
 import {
-  listAgentSessions,
-  createAgentSession,
   getAgentSessionMeta,
-  getAgentSessionSDKMessages,
   updateAgentSessionMeta,
-  deleteAgentSession,
-  assertAgentSessionDeletionSafe,
-  migrateChatToAgentSession,
-  moveSessionToWorkspace,
-  forkAgentSession,
-  autoArchiveAgentSessions,
-  cleanupStaleAttachedPaths,
-  searchAgentSessionMessages,
-  searchAgentSessionReferences,
 } from './lib/agent-session-manager'
-import { runAgent, stopAgent, generateAgentTitle, saveFilesToAgentSession, saveFilesToWorkspaceFiles, isAgentSessionActive, isAgentSessionBusy, reserveAgentSessionStart, queueAgentMessage, enqueueAgentQueuedMessage, cancelAgentQueuedMessage, moveAgentQueuedMessage, clearAgentQueuedMessages, getAgentQueuedMessageSnapshots, pokeAgentQueuedMessages, updateAgentPermissionMode, rewindAgentSession, setVisibleAgentSession } from './lib/agent-service'
-import { spawnExpertCowork } from './lib/agent-cowork'
 import { permissionService } from './lib/agent-permission-service'
 import { askUserService } from './lib/agent-ask-user-service'
 import { exitPlanService } from './lib/agent-exit-plan-service'
-import { getAgentSessionWorkspacePath, getAgentWorkspacesDir, getConfigDir, getWorkspaceSkillsDir, getWorkspaceFilesDir, getScratchPadPath, getExpertsDir, getDefaultExpertTemplatesDir } from './lib/config-paths'
-import { realpathOrResolve, getAuthorizedRoots, isUnderRoot, isPathAllowed, getResolvedAuthorizedRoots, isResolvedPathAllowed, getWorkspaceSlugsForAccess, getManagedSkillBasePath, getAllowedCandidateBasePaths, getLegacySkillBasePath, getPreviewCandidateBasePaths, resolveFileAccessPath, getAccessRootMainRepo, ensurePathAllowed, ensurePathAllowedWithWorktree } from './ipc/path-access'
+import { getConfigDir, getExpertsDir } from './lib/config-paths'
 import { registerAgentExpertTeamHandlers } from './ipc/agent-expert-team-handlers'
 import { registerChatToolHandlers } from './ipc/chat-tool-handlers'
 import { registerThirdPartyInstallHandlers } from './ipc/third-party-install-handlers'
@@ -363,7 +59,6 @@ import { registerWorkspaceCapabilityHandlers } from './ipc/workspace-capability-
 import { registerRuntimeHandlers } from './ipc/runtime-handlers'
 import { registerAttachmentHandlers } from './ipc/attachment-handlers'
 import { getBundledResourcesDir } from './lib/resources-path'
-import { runCmd } from './lib/run-command'
 import { registerVaultHandlers } from './ipc/vault-handlers'
 import { registerAutomationHandlers } from './ipc/automation-handlers'
 import { isNonEmptyString } from './ipc/validators'
@@ -386,112 +81,19 @@ import { registerAgentFilesystemHandlers } from './ipc/agent-filesystem-handlers
 import { registerProjectSkillMcpHandlers } from './ipc/project-skill-mcp-handlers'
 import { registerSessionFilesAndTerminalHandlers } from './ipc/session-files-and-terminal-handlers'
 import { registerExcalidrawHandlers } from './ipc/excalidraw-handlers'
-import { resolveAgentSessionFileRoots } from './lib/agent-file-roots'
-import { listSessionOutputs } from './lib/agent-output-capture'
-import { getAgentWorkspacePath } from './lib/config-paths'
-import { getCachedDefaultAppInfo, saveCachedDefaultAppInfo } from './lib/default-app-cache'
 import { calculateStorageStats, cleanupStorage, cleanupTempFiles, cleanupDiscoverCache, previewArchivedCleanup, previewStripOversizedImages, stripOversizedImages } from './lib/storage-service'
 import type { CleanupOptions } from './lib/storage-service'
 import { getAgentUsageStats } from './lib/agent-usage'
 import type { UsageRange } from './lib/agent-usage'
-import { getProjectToWorkspaceMigrationStatus, runProjectToWorkspaceMigration, type ProjectToWorkspaceMigrationResult } from './lib/project-to-workspace-migration'
 import { listWorkspaceAssets, uploadWorkspaceAsset, deleteWorkspaceAsset, type WorkspaceAssetInfo } from './lib/workspace-assets'
 import {
-  listAgentWorkspaces,
-  createAgentWorkspace,
-  updateAgentWorkspace,
-  deleteAgentWorkspace,
-  assertAgentWorkspaceDeletionSafe,
-  reorderAgentWorkspaces,
-  relinkAgentWorkspaceProjectRoot,
-  restoreAgentWorkspaceProjectRoot,
-  ensureDefaultWorkspace,
-  getWorkspaceMcpConfig,
-  saveWorkspaceMcpConfig,
-  getDisabledCliIntegrationIds,
-  setCliIntegrationEnabled,
-  getAllEffectiveSkills,
-  toggleGlobalSkill,
-  deleteGlobalSkill,
-  getAllWorkspaceSkills,
-  getOtherWorkspaceSkills,
-  getDefaultSkillSlugs,
-  getWorkspaceCapabilities,
-  getAgentWorkspace,
-  deleteWorkspaceSkill,
-  hasProjectSkills,
-  getProjectSkills,
-  getProjectSkillsDir,
-  deleteProjectSkill,
-  toggleProjectSkill,
-  removeWorkspaceMcpServer,
-  getOtherProjectSkills,
-  batchImportSkillsToProject,
-  importSkillFromWorkspace,
-  batchImportSkillsFromWorkspaces,
-  updateSkillFromSource,
-  importSkillFromOrganization,
-  updateSkillFromOrganizationSource,
-  readWorkspaceSkillContent,
-  writeWorkspaceSkillContent,
-  toggleWorkspaceSkill,
-  listSkillFiles,
-  readSkillFile,
-  writeSkillFile,
-  createSkillEntry,
-  deleteSkillEntry,
-  renameSkillEntry,
-  getWorkspaceMemorySummary,
-  readWorkspaceAgentsMd,
-  writeWorkspaceAgentsMd,
-  listWorkspaceAutoMemoryFiles,
-  readWorkspaceAutoMemoryFile,
-  writeWorkspaceAutoMemoryFile,
-  approveWorkspaceProjectKnowledgeMaintenance,
-  getWorkspaceAttachedDirectories,
-  getWorkspaceAttachedFiles,
-  attachWorkspaceDirectory,
-  attachWorkspaceFile,
-  detachWorkspaceDirectory,
-  detachWorkspaceFile,
   getWorktreeRepos,
   addWorktreeRepo,
   removeWorktreeRepo,
-  cleanupStaleWorkspaceAttachedPaths,
   getAgentDefaultWorkingDirectory,
   setAgentDefaultWorkingDirectory,
 } from './lib/agent-workspace-manager'
-import { getGlobalScopeReviewHints } from './lib/agent-global-scope-migration'
-import { deleteWorkspaceCascade } from './lib/workspace-deletion-service'
-import {
-  getOrganizationConnection,
-  setOrganizationConnection,
-  clearOrganizationConnection,
-  orgLogin,
-  orgRegister,
-  orgConnectWithApiKey,
-  orgMe,
-  orgCreate,
-  orgJoin,
-  orgListMembers,
-  orgListSkills,
-} from './lib/org-skill-service'
-import { fetchCommunityManifest, installCommunitySkill } from './lib/community-skill-service'
-import { projectRepository } from './lib/project-repository'
-import { subscribeWorkspaceMemoryChanges } from './lib/workspace-memory-change-watcher'
-import { confirmWorkspaceMemoryWindowClose, markWorkspaceMemoryWindowReady } from './lib/workspace-memory-window'
-import { deleteMcpCredential, startMcpOAuth, saveMcpApiKey, saveMcpOAuthClientSecret } from './lib/mcp-oauth-service'
 
-import { getAllToolInfos } from './lib/chat-tool-registry'
-import { updateToolState, updateToolCredentials, getToolCredentials, addCustomTool, deleteCustomTool } from './lib/chat-tool-config'
-import {
-  getSystemPromptConfig,
-  createSystemPrompt,
-  updateSystemPrompt,
-  deleteSystemPrompt,
-  updateAppendSetting,
-  setDefaultPrompt,
-} from './lib/system-prompt-manager'
 import {
   getLatestRelease,
   listReleases as listGitHubReleases,
@@ -502,32 +104,6 @@ import {
   getLatestReleaseVersion,
   getCombinedReleaseNotes,
 } from './lib/release-notes-service'
-import { watchAttachedDirectory, unwatchAttachedDirectory } from './lib/workspace-watcher'
-import {
-  getFeishuConfig,
-  saveFeishuConfig,
-  getDecryptedAppSecret,
-  getFeishuMultiBotConfig,
-  saveFeishuBotConfig,
-  removeFeishuBot,
-  getDecryptedBotAppSecret,
-} from './lib/feishu-config'
-import { feishuBridgeManager } from './lib/feishu-bridge-manager'
-import { syncFeishuSyncSleepBlocker } from './lib/feishu-sleep-blocker'
-import { presenceService } from './lib/feishu-presence'
-import { getDingTalkConfig, saveDingTalkConfig, getDecryptedClientSecret, getDingTalkMultiBotConfig, saveDingTalkBotConfig, removeDingTalkBot, getDecryptedBotClientSecret } from './lib/dingtalk-config'
-import { listShallowDirectory } from './lib/directory-listing'
-import { dingtalkBridgeManager } from './lib/dingtalk-bridge-manager'
-import { getWeChatConfig } from './lib/wechat-config'
-import { wechatBridge } from './lib/wechat-bridge'
-import { getSlackSettingsConfig, removeSlackBot, saveSlackBotConfig, toSlackBotSettingsConfig } from './lib/slack-config'
-import { slackBridgeManager } from './lib/slack-bridge-manager'
-import { buildSlackManifest } from './lib/slack/manifest'
-import { redactSensitiveLogValue } from './lib/bridge-log-redaction'
-import { normalizeFileAccessOptions } from './lib/file-access-policy'
-import { isSafeDeleteTarget } from './lib/destructive-file-policy'
-import { getWorkspaceMetadataDirNames } from './lib/storage-boundaries'
-import { repoMapToolsService } from './lib/repo-map-tools-service'
 
 /**
  * 检查路径是否在允许的目录范围内（解析 symlink）

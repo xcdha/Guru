@@ -17,8 +17,6 @@ import {
   Brain,
   MessageSquareText,
   Terminal,
-  Wrench,
-  Bot,
   CheckCircle2,
   History,
   BookOpen,
