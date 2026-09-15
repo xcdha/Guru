@@ -16,7 +16,8 @@ import { appModeAtom } from '@/atoms/app-mode'
 import { codeMainViewAtom } from '@/atoms/project-atoms'
 import { WorkspaceLabelManagerDialog } from '@/components/labels/WorkspaceLabelManagerDialog'
 import { labelManagerOpenAtom, labelManagerWorkspaceRootAtom } from '@/atoms/label-manager-atoms'
-import { agentSidePanelWidthAtom, agentWorkspacesAtom, currentAgentSessionIdAtom, currentAgentWorkspaceIdAtom, currentSessionSidePanelOpenAtom } from '@/atoms/agent-atoms'
+import { agentSidePanelLayoutAtomFamily, agentWorkspacesAtom, currentAgentSessionIdAtom, currentAgentWorkspaceIdAtom, currentSessionSidePanelOpenAtom } from '@/atoms/agent-atoms'
+import { clampRightPanelWidth } from './right-panel-layout'
 import { leftSidebarWidthAtom, MIN_LEFT_SIDEBAR_WIDTH } from '@/atoms/sidebar-atoms'
 import { sidebarCollapsedAtom } from '@/atoms/tab-atoms'
 import { automationFormAtom } from '@/atoms/automation-atoms'
@@ -32,11 +33,8 @@ import { detectIsWindows, WINDOW_CONTROLS_INSET_RIGHT } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 const MIN_RIGHT_PANEL_WIDTH = 300
-const MAX_RIGHT_PANEL_WIDTH = 560
-
-function clampRightPanelWidth(width: number): number {
-  return Math.max(MIN_RIGHT_PANEL_WIDTH, Math.min(MAX_RIGHT_PANEL_WIDTH, width))
-}
+/** 侧栏折叠态下仍占用的宽度（LeftSidebar 内部渲染的窄 rail）。 */
+const COLLAPSED_LEFT_SIDEBAR_WIDTH = 60
 
 const MAX_LEFT_SIDEBAR_WIDTH = 420
 
@@ -145,29 +143,52 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
     document.addEventListener('mouseup', onMouseUp)
   }, [clampedLeftSidebarWidth, setLeftSidebarWidth])
 
-  // 右侧面板可拖拽宽度
-  const [rightPanelWidth, setRightPanelWidth] = useAtom(agentSidePanelWidthAtom)
+  // 右侧工作区可拖拽到应用视口的 3/5；每个 Session 恢复自己的布局
+  // （不再共用一份全局宽度，新会话从 DEFAULT_AGENT_SIDE_PANEL_WIDTH 起步）。
+  const [rightPanelLayout, setRightPanelLayout] = useAtom(agentSidePanelLayoutAtomFamily(currentSessionId ?? ''))
+  const [viewportWidth, setViewportWidth] = React.useState(() => window.innerWidth)
   const dragging = React.useRef(false)
-  const clampedRightPanelWidth = clampRightPanelWidth(rightPanelWidth)
+  const leftSidebarOccupiedWidth = sidebarCollapsed ? COLLAPSED_LEFT_SIDEBAR_WIDTH : clampedLeftSidebarWidth
+  const clampedRightPanelWidth = clampRightPanelWidth(
+    rightPanelLayout.width,
+    viewportWidth,
+    MIN_RIGHT_PANEL_WIDTH,
+    leftSidebarOccupiedWidth,
+  )
 
   React.useEffect(() => {
-    if (clampedRightPanelWidth !== rightPanelWidth) {
-      setRightPanelWidth(clampedRightPanelWidth)
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', updateViewportWidth)
+    return () => window.removeEventListener('resize', updateViewportWidth)
+  }, [])
+
+  React.useEffect(() => {
+    if (currentSessionId && clampedRightPanelWidth !== rightPanelLayout.width) {
+      setRightPanelLayout((previous) => ({ ...previous, width: clampedRightPanelWidth }))
     }
-  }, [clampedRightPanelWidth, rightPanelWidth, setRightPanelWidth])
+  }, [clampedRightPanelWidth, currentSessionId, rightPanelLayout.width, setRightPanelLayout])
 
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    if (!currentSessionId) return
     e.preventDefault()
+    const dragSessionId = currentSessionId
     dragging.current = true
     const startX = e.clientX
     const startWidth = clampedRightPanelWidth
     // 记录最新光标位置，rAF 回调读取它而非调度时捕获的旧事件，避免快拖时坐标滞后
     let latestClientX = startX
+    let latestWidth = startWidth
     let rafId = 0
 
     const applyWidth = () => {
       const delta = startX - latestClientX
-      setRightPanelWidth(clampRightPanelWidth(startWidth + delta))
+      latestWidth = clampRightPanelWidth(
+        startWidth + delta,
+        viewportWidth,
+        MIN_RIGHT_PANEL_WIDTH,
+        leftSidebarOccupiedWidth,
+      )
+      setRightPanelLayout((previous) => ({ ...previous, width: latestWidth }))
     }
 
     const onMouseMove = (ev: MouseEvent) => {
@@ -186,15 +207,17 @@ export function AppShell({ contextValue }: AppShellProps): React.ReactElement {
         cancelAnimationFrame(rafId)
         rafId = 0
       }
-      // 补一次最终 flush，保证落点停在光标实际位置而非上一帧
+      // 补一次最终 flush，保证落点停在光标实际位置而非上一帧；
+      // 会话切换后不再把旧闭包的尺寸写回先前 Session。
       applyWidth()
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      void dragSessionId
     }
 
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
-  }, [clampedRightPanelWidth, setRightPanelWidth])
+  }, [clampedRightPanelWidth, currentSessionId, leftSidebarOccupiedWidth, setRightPanelLayout, viewportWidth])
 
   return (
     <AppShellProvider value={contextValue}>
