@@ -3594,3 +3594,201 @@ html.theme-custom body {
 .vault-ink-mde .vault-mermaid-block .mermaid-block-wrapper {
   margin: 0;
 }
+
+/* ===== live-markdown 模块化套件样式（2026-09-15 移植上游）=====
+   上游把 live-markdown 拆成 Editor / Preview / TableEditor / table-inline /
+   preview-syntax / frontmatter / media / lifecycle 等模块，本地旧版只有 3 条相关规则，
+   表格编辑器、KaTeX 结构、raw-html、查找高亮等样式缺失，此处补齐。 */
+.live-markdown-editor .live-markdown-find-match {
+background: rgb(250 204 21 / 0.48);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.live-markdown-editor .live-markdown-find-match-active {
+background: rgb(249 115 22 / 0.72);
+  box-shadow: 0 0 0 1px rgb(249 115 22 / 0.55);
+}
+.live-markdown-external-scroll, .live-markdown-external-scroll .ink-mde, .live-markdown-external-scroll .ink-mde-editor, .live-markdown-external-scroll .cm-editor, .live-markdown-external-scroll .cm-scroller {
+height: auto !important;
+  min-height: 100%;
+}
+.live-markdown-external-scroll .cm-scroller {
+overflow: visible !important;
+}
+.skill-detail-live-markdown {
+min-height: 26.25rem;
+}
+.live-markdown-editor .live-markdown-math-inline .katex, .live-markdown-editor .live-markdown-math-block .katex {
+font-size: 1.21em;
+  line-height: 1.2;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .base, .live-markdown-editor .ink-mde .cm-line .katex .strut, .live-markdown-editor .ink-mde .cm-line .katex .vlist > span > span, .live-markdown-editor .ink-mde .cm-line .katex .mfrac .frac-line, .live-markdown-editor .ink-mde .cm-line .katex .mspace, .live-markdown-editor .ink-mde .cm-line .katex .llap > .fix, .live-markdown-editor .ink-mde .cm-line .katex .rlap > .fix, .live-markdown-editor .ink-mde .cm-line .katex .clap > .fix, .live-markdown-editor .ink-mde .cm-line .katex .rule, .live-markdown-editor .ink-mde .cm-line .katex .overline .overline-line, .live-markdown-editor .ink-mde .cm-line .katex .underline .underline-line, .live-markdown-editor .ink-mde .cm-line .katex .hline, .live-markdown-editor .ink-mde .cm-line .katex .hdashline, .live-markdown-editor .ink-mde .cm-line .katex .nulldelimiter, .live-markdown-editor .ink-mde .cm-line .katex .mtable .vertical-separator, .live-markdown-editor .ink-mde .cm-line .katex .mtable .arraycolsep, .live-markdown-editor .ink-mde .cm-line .katex .cd-vert-arrow, .live-markdown-editor .ink-mde .cm-line .katex .cd-label-left, .live-markdown-editor .ink-mde .cm-line .katex .cd-label-right {
+display: inline-block !important;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .vlist-t {
+display: inline-table !important;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .vlist-r {
+display: table-row !important;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .vlist, .live-markdown-editor .ink-mde .cm-line .katex .vlist-s {
+display: table-cell !important;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .vlist > span, .live-markdown-editor .ink-mde .cm-line .katex .overlay, .live-markdown-editor .ink-mde .cm-line .katex .stretchy {
+display: block !important;
+}
+.live-markdown-editor .ink-mde .cm-line .katex .vbox, .live-markdown-editor .ink-mde .cm-line .katex .hbox, .live-markdown-editor .ink-mde .cm-line .katex .thinbox {
+display: inline-flex !important;
+}
+.live-markdown-editor .live-markdown-math-inline .katex .vlist, .live-markdown-editor .live-markdown-math-block .katex .vlist {
+line-height: 1.2;
+}
+.live-markdown-editor .live-markdown-image {
+display: inline-block;
+  max-width: 100%;
+  cursor: text;
+}
+.live-markdown-editor .live-markdown-image img {
+display: block;
+  max-width: min(100%, 56rem);
+  max-height: 44rem;
+  border: 1px solid hsl(var(--border) / 0.38);
+  border-radius: 0.5rem;
+  background: hsl(var(--muted) / 0.2);
+  object-fit: contain;
+}
+.live-markdown-editor .live-markdown-raw-html-block {
+display: block;
+  min-height: 1.625em;
+}
+.live-markdown-editor .live-markdown-raw-html-block center {
+display: block;
+}
+.live-markdown-editor .live-markdown-autolink {
+color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.vault-ink-mde .vault-markdown-table table, .live-markdown-table-editor table {
+width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.94em;
+}
+.vault-ink-mde .vault-markdown-table th, .vault-ink-mde .vault-markdown-table td, .live-markdown-table-editor th, .live-markdown-table-editor td {
+border-bottom: 1px solid hsl(var(--border) / 0.55);
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.vault-ink-mde .vault-markdown-table th, .live-markdown-table-editor th {
+background: hsl(var(--muted) / 0.45);
+  color: hsl(var(--foreground));
+  font-weight: 700;
+}
+.vault-ink-mde .vault-markdown-table td, .live-markdown-table-editor td {
+color: hsl(var(--foreground) / 0.88);
+}
+.live-markdown-table-editor .live-markdown-table-find-match {
+background: rgb(250 204 21 / 0.48);
+}
+.live-markdown-table-editor .live-markdown-table-find-match-active {
+background: rgb(249 115 22 / 0.72);
+  box-shadow: inset 0 0 0 1px rgb(249 115 22 / 0.55);
+}
+.live-markdown-table-editor-root {
+display: block;
+  max-width: 100%;
+}
+.live-markdown-table-editor {
+overflow-x: auto;
+  border-radius: 0.5rem;
+}
+.live-markdown-table-editor-hint {
+display: flex;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.2rem 0.55rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+.live-markdown-table-cell-trigger {
+display: block;
+  width: calc(100% + 1.4rem);
+  min-height: 1.35rem;
+  margin: -0.5rem -0.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  cursor: text;
+  transform-origin: center;
+  transition-property: background-color, transform;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+.live-markdown-table-cell-trigger:hover {
+background: hsl(var(--muted) / 0.58);
+}
+.live-markdown-table-cell-trigger:active {
+transform: scale(0.96);
+}
+.live-markdown-table-cell-trigger:focus-visible {
+outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+.live-markdown-table-editor .is-editing {
+background: hsl(var(--muted) / 0.38);
+}
+.live-markdown-table-input {
+display: block;
+  box-sizing: border-box;
+  width: calc(100% + 1.4rem);
+  min-width: 0;
+  min-height: 2.35rem;
+  margin: -0.5rem -0.7rem;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 0;
+  border-radius: 0.25rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  line-height: inherit;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+.live-markdown-table-value {
+display: block;
+  min-height: 1.35rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.live-markdown-table-value strong {
+font-weight: 700;
+}
+.live-markdown-table-math {
+display: inline-block;
+  vertical-align: baseline;
+  line-height: 1.2;
+}
+.live-markdown-table-math.is-display {
+display: block;
+  overflow-x: auto;
+  padding-block: 0.15rem;
+}
+.live-markdown-table-editor .katex {
+font-size: 1.06em;
+  line-height: 1.2;
+}
