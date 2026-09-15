@@ -21,7 +21,7 @@ import {
   type TaskRecord,
   type TaskRecordLoadResult,
 } from './task-record.ts';
-import type { ValidationResult, ValidationIssue } from './validate.ts';
+import type { ValidationResult } from './validate.ts';
 
 const TASKS_DIR = 'tasks';
 const TASK_FILE = 'task.yaml';

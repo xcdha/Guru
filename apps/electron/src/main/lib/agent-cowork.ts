@@ -17,7 +17,6 @@ import {
   type TeamSquad,
 } from '@guru/shared/experts'
 import {
-  type AgentMessage,
   type AgentSessionMeta,
   type SpawnExpertCoworkInput,
   type SpawnExpertCoworkResult,

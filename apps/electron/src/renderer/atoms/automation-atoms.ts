@@ -13,7 +13,6 @@ import type {
   AutomationScheduleType,
   AutomationPermissionMode,
   AutomationSessionMode,
-  AgentRuntime,
 } from '@guru/shared'
 import { AUTOMATION_DEFAULT_PERMISSION_MODE, AUTOMATION_DEFAULT_SESSION_MODE, AUTOMATION_DEFAULT_EXECUTION_MODE } from '@guru/shared'
 

@@ -6,7 +6,7 @@
  */
 
 import * as React from 'react'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useSetAtom } from 'jotai'
 import { Loader2 } from 'lucide-react'
 import {
   Dialog,

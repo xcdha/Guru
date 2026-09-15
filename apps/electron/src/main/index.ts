@@ -136,7 +136,7 @@ import { toggleQuickTaskWindow, destroyQuickTaskWindow } from './lib/quick-task-
 import { destroyPlanningWindow, showPlanningWindow } from './lib/planning-window'
 import { configurePlanningQuickEntries } from './lib/planning-quick-entry'
 import { hasOpenPlanningArgument } from './lib/planning-quick-entry-model'
-import { createCodeClawWindow, destroyCodeClawWindow } from './lib/codeclaw-window'
+import { destroyCodeClawWindow } from './lib/codeclaw-window'
 import { initCodeClawService, disposeCodeClawService, publishCodeClawNow } from './lib/codeclaw-service'
 import {
   createVoiceDictationWindow,

@@ -16,7 +16,6 @@ import {
   VOICE_DICTATION_CLEAR_PREVIEW_EVENT,
   VOICE_DICTATION_INSERT_EVENT,
   VOICE_DICTATION_PREVIEW_EVENT,
-  getLastFocusedVoiceInputId,
   isVoiceDictationTargetInput,
   setLastFocusedVoiceInputId,
 } from '@/lib/voice-input-focus'

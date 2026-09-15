@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { BookOpen, ChevronRight, ChevronLeft, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'

@@ -56,8 +56,7 @@ import { TaskEditor } from './TaskEditor'
 import { TaskFamilySheet } from './TaskFamilySheet'
 import { resolveTaskEditorTarget } from './task-editor-model'
 import { resolveTaskBoardEmptyState } from './task-board-empty-state'
-import { filterPickableKanbanProjects, type KanbanItem, type KanbanProject, type TaskEditorTarget } from './types'
-import type { TaskWorkflow } from '@guru/shared/tasks'
+import { filterPickableKanbanProjects, type KanbanItem, type KanbanProject } from './types'
 import type { KanbanColumnDef } from '@guru/shared/projects'
 
 /** 任务创建/运行后回调；`ran` 为 true 时打开编排会话。 */

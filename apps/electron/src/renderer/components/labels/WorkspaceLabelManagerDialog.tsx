@@ -1,6 +1,6 @@
 import * as React from 'react'
-import { useAtom, useAtomValue } from 'jotai'
-import { Check, Plus, Settings, Trash2, X } from 'lucide-react'
+import { useAtom } from 'jotai'
+import { Check, Plus, Settings, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { WorkspaceLabel } from '@guru/shared/labels'
 import { workspaceLabelsAtom } from '@/atoms/workspace-labels-atoms'

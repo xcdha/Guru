@@ -12,7 +12,6 @@
 
 import { randomUUID } from 'node:crypto'
 import type {
-  GuruPermissionMode,
   PermissionRequest,
   DangerLevel,
   AskUserRequest,

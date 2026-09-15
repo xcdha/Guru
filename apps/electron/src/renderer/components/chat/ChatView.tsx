@@ -34,7 +34,7 @@ import {
 } from '@/atoms/chat-atoms'
 import type { PendingAttachment, ChatPendingMessage } from '@/atoms/chat-atoms'
 import { quotedSelectionMapAtom } from '@/atoms/preview-atoms'
-import { promptConfigAtom, promptSidebarOpenAtom, conversationPromptIdAtom, resolveSystemMessage, selectedPromptIdAtom } from '@/atoms/system-prompt-atoms'
+import { promptConfigAtom, promptSidebarOpenAtom, resolveSystemMessage } from '@/atoms/system-prompt-atoms'
 import { activeToolIdsAtom } from '@/atoms/chat-tool-atoms'
 import { userProfileAtom } from '@/atoms/user-profile'
 import { ConversationProvider } from '@/contexts/session-context'

@@ -17,12 +17,11 @@ import {
   agentTerminalTabsAtom,
   getTerminalSidePanelTab,
   getBrowserSidePanelTab,
-  getPreviewSidePanelTab,
 } from '@/atoms/agent-atoms'
 import type { AgentSidePanelTab } from '@/atoms/agent-atoms'
 import { SidePanel } from '@/components/agent/SidePanel'
 import { browserFocusRequestMapAtom, browserPanelOpenMapAtom, browserStateMapAtom } from '@/atoms/browser-atoms'
-import { getPreviewFileId, previewFileMapAtom } from '@/atoms/preview-atoms'
+import { previewFileMapAtom } from '@/atoms/preview-atoms'
 
 export function RightSidePanel({ width }: { width?: number }): React.ReactElement | null {
   const appMode = useAtomValue(appModeAtom)

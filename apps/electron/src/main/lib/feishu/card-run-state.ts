@@ -1,6 +1,5 @@
 import type {
   AgentStreamPayload,
-  AgentAssistantDelta,
   SDKAssistantMessage,
   SDKResultMessage,
   SDKUserMessage,

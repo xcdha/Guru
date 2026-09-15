@@ -1,5 +1,4 @@
 import { resolveSkillMentionName, EMPTY_SKILL_MENTION_NAMES } from './skill-mention-name'
-import type { SDKMessage } from '@guru/shared'
 import type { AgentStreamState } from '@/atoms/agent-atoms'
 import type { QuotedSelection } from '@/atoms/preview-atoms'
 import { createMentionPattern } from './mention-patterns'
