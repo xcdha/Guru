@@ -346,6 +346,8 @@ import { askUserService } from './lib/agent-ask-user-service'
 import { exitPlanService } from './lib/agent-exit-plan-service'
 import { getAgentSessionWorkspacePath, getAgentWorkspacesDir, getConfigDir, getWorkspaceSkillsDir, getWorkspaceFilesDir, getScratchPadPath, getExpertsDir, getDefaultExpertTemplatesDir } from './lib/config-paths'
 import { realpathOrResolve, getAuthorizedRoots, isUnderRoot, isPathAllowed, getResolvedAuthorizedRoots, isResolvedPathAllowed, getWorkspaceSlugsForAccess, getManagedSkillBasePath, getAllowedCandidateBasePaths, getLegacySkillBasePath, getPreviewCandidateBasePaths, resolveFileAccessPath, getAccessRootMainRepo, ensurePathAllowed, ensurePathAllowedWithWorktree } from './ipc/path-access'
+import { registerAgentExpertTeamHandlers } from './ipc/agent-expert-team-handlers'
+import { registerChatToolHandlers } from './ipc/chat-tool-handlers'
 import { registerThirdPartyInstallHandlers } from './ipc/third-party-install-handlers'
 import { registerRepoMapHandlers } from './ipc/repo-map-handlers'
 import { registerAgentQueueHandlers } from './ipc/agent-queue-handlers'
@@ -725,113 +727,7 @@ export function registerIpcHandlers(): void {
   registerAgentPermissionHandlers()
 
   // ===== Chat 工具管理 =====
-
-  // 获取所有工具信息
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.GET_ALL_TOOLS,
-    async (): Promise<ChatToolInfo[]> => {
-      return getAllToolInfos()
-    }
-  )
-
-  // 获取工具凭据
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.GET_TOOL_CREDENTIALS,
-    async (_, toolId: string): Promise<Record<string, string>> => {
-      return getToolCredentials(toolId)
-    }
-  )
-
-  // 更新工具开关状态
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.UPDATE_TOOL_STATE,
-    async (_, toolId: string, state: ChatToolState): Promise<void> => {
-      updateToolState(toolId, state)
-    }
-  )
-
-  // 更新工具凭据
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.UPDATE_TOOL_CREDENTIALS,
-    async (_, toolId: string, credentials: Record<string, string>): Promise<void> => {
-      updateToolCredentials(toolId, credentials)
-    }
-  )
-
-  // 创建自定义工具
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.CREATE_CUSTOM_TOOL,
-    async (_, meta: ChatToolMeta): Promise<void> => {
-      addCustomTool(meta)
-    }
-  )
-
-  // 删除自定义工具
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.DELETE_CUSTOM_TOOL,
-    async (_, toolId: string): Promise<void> => {
-      deleteCustomTool(toolId)
-    }
-  )
-
-  // 测试工具连接
-  ipcMain.handle(
-    CHAT_TOOL_IPC_CHANNELS.TEST_TOOL,
-    async (_, toolId: string): Promise<{ success: boolean; message: string }> => {
-      // Nano Banana 生图工具测试
-      if (toolId === 'nano-banana') {
-        const { getToolCredentials: getCredentials } = await import('./lib/chat-tool-config')
-        const credentials = getCredentials('nano-banana')
-        if (!credentials.apiKey) {
-          return { success: false, message: '请先填写 API Key' }
-        }
-        try {
-          // ===== OpenAI Images 协议分支 =====
-          if (credentials.provider === 'openai-images') {
-            const baseUrl = (credentials.baseUrl?.trim() || 'https://api.openai.com/v1').replace(/\/$/, '')
-            const model = credentials.model?.trim() || 'gpt-image-2'
-            // 用 GET /models 验证 key 有效性（不消耗生图额度）
-            const response = await fetch(`${baseUrl}/models`, {
-              headers: { Authorization: `Bearer ${credentials.apiKey}` },
-              signal: AbortSignal.timeout(15_000),
-            })
-            if (!response.ok) {
-              const errorText = await response.text()
-              return { success: false, message: `API 请求失败 (${response.status}): ${errorText.slice(0, 200)}` }
-            }
-            return { success: true, message: `连接成功，模型 ${model} 将在生成时调用` }
-          }
-
-          // ===== Gemini 协议分支 =====
-          const baseUrl = credentials.baseUrl?.trim() || 'https://generativelanguage.googleapis.com'
-          const model = credentials.model?.trim() || 'gemini-3.1-flash-image-preview'
-          const url = `${baseUrl}/v1beta/models/${model}:generateContent`
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // 与调用路径一致：header 认证兼容官方与 nbility 等中转
-              'x-goog-api-key': credentials.apiKey,
-            },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: 'Hi' }] }],
-              generationConfig: { maxOutputTokens: 10 },
-            }),
-            signal: AbortSignal.timeout(15_000),
-          })
-          if (!response.ok) {
-            const errorText = await response.text()
-            return { success: false, message: `API 请求失败 (${response.status}): ${errorText.slice(0, 200)}` }
-          }
-          return { success: true, message: `连接成功，模型 ${model} 可用` }
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error)
-          return { success: false, message: `连接失败: ${msg}` }
-        }
-      }
-      return { success: false, message: `工具 ${toolId} 不支持测试` }
-    }
-  )
+  registerChatToolHandlers()
 
   // ===== AskUserQuestion 交互式问答 =====
 
@@ -1138,71 +1034,5 @@ export function registerIpcHandlers(): void {
   registerVaultHandlers()
 
   // ===== Agent 专家团（team.json 新结构） =====
-
-  ipcMain.handle(
-    EXPERT_IPC_CHANNELS.TEAMS_LIST,
-    async (): Promise<TeamSquad[]> => listTeams(getExpertsDir()),
-  )
-
-  ipcMain.handle(
-    EXPERT_IPC_CHANNELS.TEAMS_GET,
-    async (_, id: string): Promise<TeamSquad | null> => {
-      if (!isNonEmptyString(id)) throw new Error('id 必填')
-      return getTeam(getExpertsDir(), id)
-    },
-  )
-
-  ipcMain.handle(
-    EXPERT_IPC_CHANNELS.TEAMS_CREATE,
-    async (_, input: CreateTeamInput): Promise<TeamSquad> => {
-      if (!input || typeof input !== 'object') throw new Error('input 必须是对象')
-      if (!isNonEmptyString(input.id)) throw new Error('id 必填')
-      if (!isNonEmptyString(input.label)) throw new Error('label 必填')
-      if (!isNonEmptyString(input.leaderExpertId)) throw new Error('leaderExpertId 必填')
-      return createTeam(getExpertsDir(), input)
-    },
-  )
-
-  ipcMain.handle(
-    EXPERT_IPC_CHANNELS.TEAMS_UPDATE,
-    async (_, id: string, patch: UpdateTeamInput): Promise<TeamSquad> => {
-      if (!isNonEmptyString(id)) throw new Error('id 必填')
-      if (!patch || typeof patch !== 'object') throw new Error('patch 必须是对象')
-      return updateTeam(getExpertsDir(), id, patch)
-    },
-  )
-
-  ipcMain.handle(
-    EXPERT_IPC_CHANNELS.TEMPLATES_LIST,
-    async (): Promise<ExpertTemplate[]> => {
-      const templatesDir = getDefaultExpertTemplatesDir()
-      if (!existsSync(templatesDir)) return []
-      const templates: ExpertTemplate[] = []
-      for (const entry of readdirSync(templatesDir, { withFileTypes: true })) {
-        if (!entry.isFile() || !entry.name.endsWith('.json')) continue
-        try {
-          const parsed = JSON.parse(readFileSync(join(templatesDir, entry.name), 'utf-8'))
-          if (typeof parsed?.slug !== 'string') continue
-          templates.push({
-            slug: parsed.slug,
-            name: typeof parsed.name === 'string' ? parsed.name : parsed.slug,
-            description: typeof parsed.description === 'string' ? parsed.description : '',
-            category: typeof parsed.category === 'string' ? parsed.category : '',
-            icon: typeof parsed.icon === 'string' ? parsed.icon : '',
-            accent: typeof parsed.accent === 'string' ? parsed.accent : '',
-            instructions: typeof parsed.instructions === 'string' ? parsed.instructions : '',
-            skills: Array.isArray(parsed.skills) ? parsed.skills.filter((s: unknown): s is string => typeof s === 'string') : [],
-          })
-        } catch (error) {
-          console.warn(`[专家] 跳过损坏的专家模板 ${entry.name}:`, error)
-          // 损坏文件改名备份，避免每次启动重复解析失败，也保留用户数据恢复的可能
-          try {
-            renameSync(join(templatesDir, entry.name), join(templatesDir, `${entry.name}.corrupt-${Date.now()}.bak`))
-          } catch { /* 备份失败不阻断列表 */ }
-          continue
-        }
-      }
-      return templates.sort((a, b) => a.slug.localeCompare(b.slug))
-    },
-  )
+  registerAgentExpertTeamHandlers()
 }
