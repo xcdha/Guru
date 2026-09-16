@@ -4821,7 +4821,7 @@ function ProjectSessionList({
     <div
       id={id}
       className={cn(
-        'sidebar-workspace-content mt-px grid transition-[grid-template-rows] duration-[160ms] ease-out motion-reduce:transition-none',
+        'sidebar-workspace-content mt-px grid transition-[grid-template-rows] [transition-duration:160ms] ease-out motion-reduce:transition-none',
         !hideWorkspaceHeader && 'ml-4',
         isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
       )}
@@ -4830,7 +4830,7 @@ function ProjectSessionList({
         {shouldRender && (
           <div
             className={cn(
-              'transition-[opacity,transform] duration-[160ms] ease-out motion-reduce:transition-none',
+              'transition-[opacity,transform] [transition-duration:160ms] ease-out motion-reduce:transition-none',
               isOpen ? 'translate-y-0 opacity-100' : '-translate-y-0.5 opacity-0',
             )}
           >

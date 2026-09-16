@@ -872,7 +872,7 @@ export interface ElectronAPI {
   onAgentQueuedMessageStatus: (callback: (status: AgentQueuedMessageStatus) => void) => () => void
 
   // ===== Agent 后台任务管理（Shell/后台任务输出与停止能力尚未实现，主进程返回空输出/空操作；
-  // useBackgroundTasks 的 stopTask 是唯一调用方，目前无 UI 入口调用它——恢复声明避免 typecheck 断裂） =====
+  // 渲染层目前无任何调用入口；新增调用前必须先实现主进程逻辑） =====
 
   /** 获取任务输出 */
   getTaskOutput: (input: GetTaskOutputInput) => Promise<GetTaskOutputResult>

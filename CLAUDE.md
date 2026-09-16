@@ -57,7 +57,7 @@ Every renderer↔main capability flows through four layers, all four of which ne
 
 ```
 @guru/shared (channel name constants + request/response types)
-  → apps/electron/src/main/ipc.ts registers ipcMain.handle() handlers, delegating to main/lib/ services
+  → apps/electron/src/main/ipc.ts wires startup and calls register*Handlers() from apps/electron/src/main/ipc/*.ts, which register ipcMain.handle() handlers and delegate to main/lib/ services
     → apps/electron/src/preload/index.ts exposes a typed window.electronAPI.* surface via contextBridge
       → renderer calls window.electronAPI.*, usually wrapped inside a Jotai atom
 ```
