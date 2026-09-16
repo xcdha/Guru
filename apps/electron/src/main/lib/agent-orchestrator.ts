@@ -69,7 +69,8 @@ import { injectBashDefaultTimeout } from './agent-bash-timeout'
 import { injectChromeDevtoolsMcpServer } from './builtin-mcp/chrome-devtools'
 import { isBuiltinMcpUserEnabled } from './builtin-mcp/settings'
 import { buildPiBuiltinTools } from './adapters/pi-builtin-tools'
-import { getVaultUserContext } from './vault-service'
+import { getAgentVaultRoots, getVaultUserContext } from './vault-service'
+import { resolveRuntimeAdditionalDirectories } from './agent-orchestrator-vault-access'
 import { buildPiMcpTools } from './adapters/pi-mcp-tools'
 import type { AgentRuntimeEnv } from './agent-runtime-env'
 import { isMissingFinalTextAnswer, isVisibleRunMessage } from './agent-run-message-visibility'
@@ -1421,11 +1422,17 @@ export class AgentOrchestrator {
 
       // 必须与 runtime 接收的附加目录保持一致；视觉助手据此限制允许外发的图片路径。
       const productivityTools = appSettings.productivityTools
-      const allAdditionalDirectories = collectAttachedDirectories({
-        extraDirs: additionalDirectories,
-        sessionMeta,
-        workspaceSlug
-      })
+      // Vault 根目录是 Agent 运行期的 ambient 本地文件权限（对齐上游）：把 Obsidian 已登记
+      // 的全部 Vault 与当前选中的 Guru Vault 并入附加目录。否则原生 Read / Write / Edit
+      // 在 Vault 路径上会被文件访问策略拦下，只有会话 cwd 恰好是 Vault 时才可用。
+      const allAdditionalDirectories = resolveRuntimeAdditionalDirectories(
+        collectAttachedDirectories({
+          extraDirs: additionalDirectories,
+          sessionMeta,
+          workspaceSlug
+        }),
+        productivityTools.obsidianEnabled ? getAgentVaultRoots() : []
+      )
 
       const vaultUserContext = getVaultUserContext(sessionId)
 

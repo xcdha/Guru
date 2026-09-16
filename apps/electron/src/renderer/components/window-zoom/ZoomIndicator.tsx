@@ -49,7 +49,7 @@ export function ZoomIndicator(): React.ReactElement {
   return (
     <div
       aria-live="polite"
-      className={`pointer-events-none fixed bottom-6 left-1/2 z-[200] -translate-x-1/2 transition-opacity duration-[180ms] ease-out ${
+      className={`pointer-events-none fixed bottom-6 left-1/2 z-[200] -translate-x-1/2 transition-opacity [transition-duration:180ms] ease-out ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
     >

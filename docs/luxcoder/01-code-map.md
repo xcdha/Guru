@@ -22,11 +22,12 @@
 
 - path:
   - `apps/electron/src/main/index.ts` — 主进程入口，BrowserWindow 创建与生命周期
-  - `apps/electron/src/main/ipc.ts` — 所有 IPC 处理器注册（~57KB，全量 handler 集中在此）
+  - `apps/electron/src/main/ipc.ts` — IPC 启动编排（`registerIpcHandlers()` 依次调用各领域注册函数，约 20KB）
+  - `apps/electron/src/main/ipc/*.ts` — 按领域拆分的 handler 注册模块（39 个，如 `planning-handlers.ts`、`agent-*-handlers.ts`）
   - `apps/electron/src/main/menu.ts` — 原生应用菜单
   - `apps/electron/src/main/tray.ts` — 系统托盘图标与菜单
   - `apps/electron/src/preload/index.ts` — contextBridge，将主进程 API 暴露为 `window.electronAPI.*`
-- notes: `ipc.ts` 是核心，新增 IPC 通道必须同步修改此文件 + preload + shared 常量 + renderer
+- notes: 新增 IPC 通道要同步四处：shared 常量 + `main/ipc/` 下对应领域模块（新领域才在 `ipc.ts` 加一行 `register*Handlers()`）+ preload + renderer
 
 ---
 
