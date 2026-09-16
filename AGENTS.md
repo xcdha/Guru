@@ -145,11 +145,11 @@ bun run generate:icons    # 生成应用图标
 类型定义 → 主进程处理 → Preload 桥接 → 渲染进程调用：
 
 1. **类型 & 常量**：`@guru/shared` 定义 IPC 通道名称常量和请求/响应类型
-2. **主进程处理**：`main/ipc.ts`（57KB）注册 `ipcMain.handle()` 处理器，调用 `main/lib/` 服务
+2. **主进程处理**：`main/ipc.ts`（约 20KB）保留启动编排与少量历史分组，具体 handler 按领域拆在 `main/ipc/*.ts`（39 个模块），调用 `main/lib/` 服务
 3. **Preload 桥接**：`preload/index.ts` 通过 `contextBridge.exposeInMainWorld` 暴露类型安全的 API
 4. **渲染进程**：通过 `window.electronAPI.*` 调用，Jotai atoms 中封装调用逻辑
 
-添加新 IPC 通道时，需要同步修改这四个位置。
+添加新 IPC 通道时，需要同步修改这四个位置；handler 落在 `main/ipc/` 下对应的领域模块，只有新领域才在 `ipc.ts` 里新增一行 `register*Handlers()` 调用。
 
 #### 主要 IPC 通道组
 
