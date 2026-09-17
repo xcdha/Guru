@@ -2065,6 +2065,16 @@ ${workContext}`
           }
         }
       }
+      const startAutoTitleGeneration = (): void => {
+        if (titleGenerationStarted) return
+        titleGenerationStarted = true
+
+        // 标题请求与前台 Agent run 使用独立的 Codex Responses 请求，可并发执行。
+        // 自动标题只会写入仍为默认名称的会话，因此不会覆盖用户的手动重命名。
+        // 标题优先基于用户原文；Bridge 追加的来源标记等 Agent 运行上下文不应出现在标题中。
+        this.autoGenerateTitle(sessionId, rawUserMessage ?? userMessage, channelId, resolvedModel, callbacks)
+          .catch((err) => console.error('[Agent 编排] 标题生成未捕获异常:', err))
+      }
       const handleSessionId = (sdkSessionId: string, piSessionFile?: string): void => {
         // 仅在 session_id 真正变化时才持久化。SDK v2 几乎每条消息都会回调 onSessionId，
         // capturedSdkSessionId 已初始化为 existingSdkSessionId，并在 recovery 时同步重置。
@@ -2089,12 +2099,6 @@ ${workContext}`
           }
         }
 
-        if (!titleGenerationStarted) {
-          titleGenerationStarted = true
-          // 标题请求与前台 Agent run 使用独立的 Codex Responses 请求，可并发执行。
-          // 自动标题只会写入仍为默认名称的会话，因此不会覆盖用户的手动重命名。
-          this.autoGenerateTitle(sessionId, userMessage, channelId, resolvedModel, callbacks).catch((err) => console.error('[Agent 编排] 标题生成未捕获异常:', err))
-        }
       }
       const handleModelResolved = (model: string): void => {
         // `[1m]` 是 SDK 内部上下文变体，不应泄漏到标题生成或用户可见的模型名。
@@ -2216,6 +2220,10 @@ ${workContext}`
           })
         }
       }
+
+      // 首条用户消息已持久化且运行参数已就绪，立刻启动自动命名。
+      // 不依赖 Pi onSessionId：部分第三方渠道在该回调延迟或缺失时仍必须完成重命名。
+      startAutoTitleGeneration()
 
       console.log(`[Agent 编排] 开始通过 Adapter 遍历事件流...`)
 

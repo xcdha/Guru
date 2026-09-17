@@ -16,7 +16,7 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatSidebarModuleCount } from './sidebar-module-model'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getActiveAccelerator, getAcceleratorDisplay } from '@/lib/shortcut-registry'
+import { ShortcutKeycaps } from '@/components/shortcuts/ShortcutKeycaps'
 
 /** 各部位追加 className（用于特殊主题的既有钩子类，如 automation-entry-*） */
 export interface SidebarModuleClassNames {
@@ -145,11 +145,18 @@ export function SidebarModule({
     classNames?.row,
   )
 
-  // 标题旁的快捷键提示：与「新会话 / 新任务」一致，hover 时以文字形式出现在 Tooltip 里，
+  // 标题旁的快捷键提示：与「新会话 / 新任务」一致，hover 时以键帽形式出现在 Tooltip 里，
   // 不在行内常驻占位（避免窄侧栏下挤压标题）。
-  const shortcutHint = keycapShortcutId
-    ? `${title} (${getAcceleratorDisplay(getActiveAccelerator(keycapShortcutId))})`
-    : null
+  const shortcutHint = keycapShortcutId ? (
+    <span className="flex items-center gap-2">
+      <span>{title}</span>
+      <ShortcutKeycaps
+        shortcutId={keycapShortcutId}
+        keycapClassName="h-5 min-w-5 px-1 text-[11px]"
+        separatorClassName="text-[10px]"
+      />
+    </span>
+  ) : null
 
   // 纯入口行：整行点击导航
   if (!collapsible) {

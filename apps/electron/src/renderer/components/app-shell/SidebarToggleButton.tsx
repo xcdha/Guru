@@ -16,11 +16,18 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { sidebarCollapsedAtom } from '@/atoms/tab-atoms'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ShortcutKeycaps } from '@/components/shortcuts/ShortcutKeycaps'
+import { getActiveAccelerator, getAcceleratorDisplay } from '@/lib/shortcut-registry'
 import { cn } from '@/lib/utils'
 
 export function SidebarToggleButton({ className }: { className?: string }): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useAtom(sidebarCollapsedAtom)
-  const shortcutLabel = navigator.platform.includes('Mac') ? '⌘B' : 'Ctrl+Shift+E'
+  // 快捷键展示走快捷键注册表：改键后提示与 aria-label 立即同步，
+  // 并与侧栏其他控件的键帽提示保持同一样式（不再硬编码 ⌘B / Ctrl+Shift+E）。
+  const accelerator = getActiveAccelerator('toggle-sidebar')
+  const shortcutDisplay = accelerator ? getAcceleratorDisplay(accelerator) : ''
+  const label = sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'
+  const ariaLabel = shortcutDisplay ? `${label} (${shortcutDisplay})` : label
 
   return (
     <Tooltip>
@@ -29,7 +36,7 @@ export function SidebarToggleButton({ className }: { className?: string }): Reac
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={sidebarCollapsed ? `展开侧边栏 (${shortcutLabel})` : `收起侧边栏 (${shortcutLabel})`}
+          aria-label={ariaLabel}
           className={cn('relative h-7 w-7 titlebar-no-drag', className)}
           onClick={() => setSidebarCollapsed((prev) => !prev)}
         >
@@ -37,7 +44,14 @@ export function SidebarToggleButton({ className }: { className?: string }): Reac
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">
-        {sidebarCollapsed ? `展开侧边栏 (${shortcutLabel})` : `收起侧边栏 (${shortcutLabel})`}
+        <span className="flex items-center gap-2">
+          <span>{label}</span>
+          <ShortcutKeycaps
+            shortcutId="toggle-sidebar"
+            keycapClassName="h-5 min-w-5 px-1 text-[11px]"
+            separatorClassName="text-[10px]"
+          />
+        </span>
       </TooltipContent>
     </Tooltip>
   )
