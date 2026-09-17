@@ -29,21 +29,23 @@ function renderUserMessage(markdown: string): string {
 }
 
 describe('MessageResponse local file Markdown links', () => {
-  test('renders the reported absolute path with a line suffix as a file chip', () => {
+  test('keeps the reported absolute path visible without rendering an unverified chip', () => {
     const href = '/Users/bigmouth/Workspace/Project/Guru/apps/electron/src/renderer/components/agent/ContextUsageBadge.tsx:247'
     const html = renderMessage(`[ContextUsageBadge.tsx](${href})`)
 
-    expect(html).toContain('<button')
-    expect(html).toContain('ContextUsageBadge.tsx:247')
+    // 首帧/SSR 不渲染 Chip：只有主进程确认文件存在且在当前会话授权范围内才升级，
+    // 避免正文里出现点不开的「坏 Chip」。
+    expect(html).not.toContain('<button')
+    expect(html).toContain('ContextUsageBadge.tsx')
     expect(html).not.toContain(`<a href="${href}"`)
   })
 
-  test('keeps Windows absolute file paths through URL sanitization and renders a file chip', () => {
+  test('keeps Windows absolute file paths through URL sanitization without an unverified chip', () => {
     const href = 'C:/Workspace/Guru/apps/electron/src/message.tsx:247'
     const html = renderMessage(`[message.tsx](${href})`)
 
-    expect(html).toContain('<button')
-    expect(html).toContain('message.tsx:247')
+    expect(html).not.toContain('<button')
+    expect(html).toContain('message.tsx')
     expect(html).not.toContain('<a')
   })
 
