@@ -1,6 +1,6 @@
 # Guru
 
-![image-20260909165815654](https://img.erlich.fun/personal-blog/guru/image-20260909165815654.png)
+![image-20260909165815654](https://img.erlich.fun/personal-blog/proma/image-20260909165815654.png)
 
 
 
@@ -96,7 +96,7 @@ Guru 完全重构了交互体验和 UX 系统，我们认为左侧部分是会�
 
 对于今天的 Agent 和大语言模型来说，更智能的前提是更好的上下文，我们的核心工作就是帮助你组织更好的上下文。下面所有的功能都在解释这一点，也在解释 Guru 是如何站在为专业用户的角度来设计这种更好的上下文的。
 
-![image-20260908110801716](https://img.erlich.fun/personal-blog/guru/image-20260908110801716.png)
+![image-20260908110801716](https://img.erlich.fun/personal-blog/proma/image-20260908110801716.png)
 
 
 
@@ -106,7 +106,7 @@ Guru 完全重构了交互体验和 UX 系统，我们认为左侧部分是会�
 
 左侧是主会话，当你需要并行做深度研究，提高效率和信息密度时，或者对抗性检查等，子会话都是更好的选择，你甚至可以并行查看主会话和子会话。子会话比传统的 Subagent 有更干净的上下文，可以持续迭代和交互的环境，拥有更自由的模型选择和更好的性能。
 
-![image-20260908112300711](https://img.erlich.fun/personal-blog/guru/image-20260908112300711.png)
+![image-20260908112300711](https://img.erlich.fun/personal-blog/proma/image-20260908112300711.png)
 
 
 
@@ -114,7 +114,7 @@ Guru 完全重构了交互体验和 UX 系统，我们认为左侧部分是会�
 
 是探索，而不是分叉。你可以在 Agent 输出结束后点击探索按钮，探索允许你利用前序上下文的同时可以创建无限多个分叉，你可以并行利用上下文，满足一切你的研究需求或者好奇心。之所以是探索而不是分叉，当你完成这些研究后，点击探索右上角的带回到主会话按钮，可以让所有的探索都回到主线继续，这样你将会获得到更优质的主会话上下文，无需担心自己拿捏不定的判断或边缘的问题影响到主会话的上下文。
 
-![image-20260908112614345](https://img.erlich.fun/personal-blog/guru/image-20260908112614345.png)
+![image-20260908112614345](https://img.erlich.fun/personal-blog/proma/image-20260908112614345.png)
 
 
 
@@ -122,7 +122,7 @@ Guru 完全重构了交互体验和 UX 系统，我们认为左侧部分是会�
 
 对于很多产品来说，Agent 对所有文件的操作产生的改动都叫 Artifacts 产出物，但核心就是文件改动。Guru 的文件改动支持划分轮次显示；对于编程场景会展示 Diff；对于 worktree 的开发模式 Agent 会主动选择对应的 worktree 并在对应的 worktree 后面放一个终端按钮，你可以点击一次就进入到开发。当然，Agent 也可以操作这一切。
 
-![image-20260908113333692](https://img.erlich.fun/personal-blog/guru/image-20260908113333692.png)
+![image-20260908113333692](https://img.erlich.fun/personal-blog/proma/image-20260908113333692.png)
 
 
 
@@ -130,9 +130,9 @@ Guru 完全重构了交互体验和 UX 系统，我们认为左侧部分是会�
 
 Guru 一样支持这三种，但对于 Guru 来说，最好的 Skills 都不来自互联网和他人，它来自你的真实场景，我们推荐你可以手把手带着 Agent 做一次你真实的处理流程，然后让 Agent 沉淀成 Skills，这会是更加的方案，再通过实际的使用迭代。Guru 内嵌了一些我们认为必要的 Skills、并支持常见的 MCP 和 CLI 的一键安装。最后商业版还支持团队 Skills 的共享和迭代管理。对于 Skills 和 MCP 来说，Guru 都是分项目的，因为过多的 Skills 和 MCP 也会导致 Agent 能力的下降，按项目区分可以更好的精简这类上下文，可以自然提高 Agent 的实际表现，缺点是需要人本身的关注更多。
 
-![image-20260908113623429](https://img.erlich.fun/personal-blog/guru/image-20260908113623429.png)
+![image-20260908113623429](https://img.erlich.fun/personal-blog/proma/image-20260908113623429.png)
 
-![image-20260908113638780](https://img.erlich.fun/personal-blog/guru/image-20260908113638780.png)
+![image-20260908113638780](https://img.erlich.fun/personal-blog/proma/image-20260908113638780.png)
 
 
 
@@ -140,7 +140,7 @@ Guru 一样支持这三种，但对于 Guru 来说，最好的 Skills 都不来�
 
 Guru 的内嵌浏览器可以主动地被 Agent 使用，它适合于浏览器自动化场景、补充联网搜索的不足、甚至是在一些自动化敏感的网站上做一些研究和信息对照。今天我自己的小红书有一部分就是 Guru 通过内嵌浏览器来打理的，做群聊和评价的回复，回收用户的反馈自动计入 Todo。当你开发网站时也会经常遇到 Agent 使用浏览器，这是个强大的功能，我们对完整的浏览器功能的开发可能也完全不足，推荐你来深度探索。
 
-![image-20260908113724838](https://img.erlich.fun/personal-blog/guru/image-20260908113724838.png)
+![image-20260908113724838](https://img.erlich.fun/personal-blog/proma/image-20260908113724838.png)
 
 
 
@@ -150,7 +150,7 @@ Guru  的记忆也是区分项目的，每个项目会有一个自己的 AGENTS.
 
 然后是更具体的记忆，MEMORY.md 是整个记忆的索引，下面更多的部分是具体类目下的记忆。如果你已经用了一小段时间了，但是还没形成这些内容，不妨新开个会话跟 Agent 说：请帮我形成当前项目下的 AGENTS.md 文件，并探索最近半个月或者一个月的会话来形成一些关于我和项目的记忆。
 
-![image-20260908114118777](https://img.erlich.fun/personal-blog/guru/image-20260908114118777.png)
+![image-20260908114118777](https://img.erlich.fun/personal-blog/proma/image-20260908114118777.png)
 
 
 
@@ -158,7 +158,7 @@ Guru  的记忆也是区分项目的，每个项目会有一个自己的 AGENTS.
 
 Guru 支持主流的文件预览和编辑，比如 markdown，我们采用了 Live Markdown 方案，你可以像在 Typora 或者 Obsidian 里类似的编辑体验，简约实用。并且也支持 PDF、Docx、PPT、Excel 等文档的预览。你不但可以预览，还可以划线这些部分，多次的跟 Agent 对具体的部分进行描述，甚至你还可以打开问答，快速获得一些简单问题的答案。
 
-![image-20260908114657248](https://img.erlich.fun/personal-blog/guru/image-20260908114657248.png)
+![image-20260908114657248](https://img.erlich.fun/personal-blog/proma/image-20260908114657248.png)
 
 
 
@@ -172,7 +172,7 @@ Guru 支持主流的文件预览和编辑，比如 markdown，我们采用了 Li
 
 哦对了，说到拖动，你想引用具体的文件告知 Agent 时，如果它已经存在在当前的项目或者会话文件夹下了，也可以直接从右侧拖过来，然后简单补充几句话即可，或者你更擅长用 @ 也可以引用。
 
-![image-20260908114818028](https://img.erlich.fun/personal-blog/guru/image-20260908114818028.png)
+![image-20260908114818028](https://img.erlich.fun/personal-blog/proma/image-20260908114818028.png)
 
 
 
@@ -180,7 +180,7 @@ Guru 支持主流的文件预览和编辑，比如 markdown，我们采用了 Li
 
 定时任务均可以由 Agent 来为你创建和迭代，越是日程的工作，越有可能会成为定时任务。我们的定时任务不但支持单次运行，还支持间隔一定时间执行，甚至支持工作日上午的十点到十二点，每二十分钟一次这样的复杂要求。
 
-![image-20260908112055273](https://img.erlich.fun/personal-blog/guru/image-20260908112055273.png)
+![image-20260908112055273](https://img.erlich.fun/personal-blog/proma/image-20260908112055273.png)
 
 
 
@@ -188,9 +188,9 @@ Guru 支持主流的文件预览和编辑，比如 markdown，我们采用了 Li
 
 所有的日程和 Todo 均可以通过 Agent 进行操作，也可以人工编辑，Agent 不但可以帮助你记录这些，还可以在合适的时候知晓你的安排并帮助你安排工作，这时候可能语音输入更适合，Guru 也内嵌语音输入
 
-![image-20260908111504034](https://img.erlich.fun/personal-blog/guru/image-20260908111504034.png)
+![image-20260908111504034](https://img.erlich.fun/personal-blog/proma/image-20260908111504034.png)
 
-![image-20260908111521550](https://img.erlich.fun/personal-blog/guru/image-20260908111521550.png)
+![image-20260908111521550](https://img.erlich.fun/personal-blog/proma/image-20260908111521550.png)
 
 
 
@@ -198,7 +198,7 @@ Guru 支持主流的文件预览和编辑，比如 markdown，我们采用了 Li
 
 我们写了一个建议的 Obsidian 样式的 markdown 编辑器，这样可以更好的组织个人的知识以及 Agent 生产的知识，还可以顺手记录或者创作，打开 Obsidian 一样可以进行管理和编辑。
 
-![image-20260908111956671](https://img.erlich.fun/personal-blog/guru/image-20260908111956671.png)
+![image-20260908111956671](https://img.erlich.fun/personal-blog/proma/image-20260908111956671.png)
 
 
 

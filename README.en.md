@@ -71,7 +71,7 @@ Guru completely rethinks the interaction and UX system. The left side manages co
 
 For today's Agents and large language models, better intelligence starts with better context. Our central work is helping you organize that context. The capabilities below explain both this principle and how Guru is designed from a professional user's perspective to create better context.
 
-![Guru context-centered workspace](https://img.erlich.fun/personal-blog/guru/image-20260908110801716.png)
+![Guru context-centered workspace](https://img.erlich.fun/personal-blog/proma/image-20260908110801716.png)
 
 ## Feature Highlights
 
@@ -79,19 +79,19 @@ For today's Agents and large language models, better intelligence starts with be
 
 The left side shows the parent session. When you need to conduct deep research in parallel, increase efficiency and information density, or perform adversarial checks, child sessions are a better choice. You can even view parent and child sessions side by side. Compared with traditional SubAgents, child sessions have cleaner context, a persistent and interactive environment for iterative work, more freedom in model selection, and better performance.
 
-![Guru child and parent sessions](https://img.erlich.fun/personal-blog/guru/image-20260908112300711.png)
+![Guru child and parent sessions](https://img.erlich.fun/personal-blog/proma/image-20260908112300711.png)
 
 ### Exploration Mode
 
 This is exploration, not merely branching. After an Agent finishes responding, click **Explore** to create as many parallel paths as you need while retaining the preceding context. Use them simultaneously for research or curiosity. When you finish, use the button in the upper-right corner of an exploration to bring its findings back to the parent session. This gives the main thread richer context without allowing uncertain decisions or edge cases to disrupt it prematurely.
 
-![Guru exploration mode](https://img.erlich.fun/personal-blog/guru/image-20260908112614345.png)
+![Guru exploration mode](https://img.erlich.fun/personal-blog/proma/image-20260908112614345.png)
 
 ### File Changes
 
 Many products refer to all file operations performed by an Agent as Artifacts. At their core, though, they are file changes. Guru groups file changes by turn; it shows diffs for programming workflows; and in worktree-based development it proactively selects the relevant worktree and places a terminal button next to it. One click takes you into development, and the Agent can operate this workflow too.
 
-![Guru file changes](https://img.erlich.fun/personal-blog/guru/image-20260908113333692.png)
+![Guru file changes](https://img.erlich.fun/personal-blog/proma/image-20260908113333692.png)
 
 ### Skills / MCP / CLI
 
@@ -99,15 +99,15 @@ Guru supports all three. But the best Skills do not come from the internet or fr
 
 Skills and MCP servers are scoped by project. Too many of them can reduce Agent effectiveness; keeping them per-project reduces unnecessary context and can naturally improve real-world results, though it does require more deliberate attention from the user.
 
-![Guru Skills](https://img.erlich.fun/personal-blog/guru/image-20260908113623429.png)
+![Guru Skills](https://img.erlich.fun/personal-blog/proma/image-20260908113623429.png)
 
-![Guru MCP and CLI](https://img.erlich.fun/personal-blog/guru/image-20260908113638780.png)
+![Guru MCP and CLI](https://img.erlich.fun/personal-blog/proma/image-20260908113638780.png)
 
 ### In-App Browser
 
 Agents can actively use Guru's in-app browser. It is suited to browser automation, filling gaps left by web search, and research or cross-checking on automation-sensitive websites. For example, part of my own Xiaohongshu workflow is managed through Guru's in-app browser: replying in group chats and to comments, collecting feedback, and automatically recording it as Todos. Agents also use the browser frequently when you develop websites. It is a powerful capability whose full potential we are still exploring.
 
-![Guru in-app browser](https://img.erlich.fun/personal-blog/guru/image-20260908113724838.png)
+![Guru in-app browser](https://img.erlich.fun/personal-blog/proma/image-20260908113724838.png)
 
 ### Memory
 
@@ -115,13 +115,13 @@ Guru's memory is also separated by project. Every project can have its own `AGEN
 
 For more specific memory, `MEMORY.md` serves as the index, with additional files organized by topic. If you have used Guru for a while but have not yet built these resources, open a new session and ask the Agent to create the current project's `AGENTS.md` and explore your recent two weeks or month of sessions to form memory about you and the project.
 
-![Guru project memory](https://img.erlich.fun/personal-blog/guru/image-20260908114118777.png)
+![Guru project memory](https://img.erlich.fun/personal-blog/proma/image-20260908114118777.png)
 
 ### File Preview and Editing
 
 Guru supports previewing and editing common file types. For Markdown, we use a Live Markdown approach that gives you a simple, practical editing experience similar to Typora or Obsidian. Guru also previews PDFs, DOCX files, presentations, Excel files, and more. You can do more than preview: highlight parts of a document, discuss specific passages with the Agent across multiple turns, or open Q&A to get quick answers to simpler questions.
 
-![Guru file preview and editing](https://img.erlich.fun/personal-blog/guru/image-20260908114657248.png)
+![Guru file preview and editing](https://img.erlich.fun/personal-blog/proma/image-20260908114657248.png)
 
 ### Projects, Project Files, Session Files, and Sessions
 
@@ -131,27 +131,27 @@ A session is each individual conversation. Each session should focus on a specif
 
 If you are concerned that a new session will not know what you are working on or need context from a prior session, build the habit of converting useful knowledge into the project's `AGENTS.md`, memory, Skills, and documents. You can also take the quick route: drag the prior session from the left sidebar into the input box to reference it, or type `&` to add a reference. When you want to reference a specific file already in the current project or session folder, you can drag it from the right panel and add a brief instruction—or use `@` if that is your preferred workflow.
 
-![Guru project and session organization](https://img.erlich.fun/personal-blog/guru/image-20260908114818028.png)
+![Guru project and session organization](https://img.erlich.fun/personal-blog/proma/image-20260908114818028.png)
 
 ### Scheduled Tasks
 
 Agents can create and iteratively improve scheduled tasks for you. The more routine the work, the more likely it can become a scheduled task. Guru supports not only one-time runs and fixed intervals, but also complex schedules such as running every 20 minutes between 10:00 AM and 12:00 PM on weekdays.
 
-![Guru scheduled tasks](https://img.erlich.fun/personal-blog/guru/image-20260908112055273.png)
+![Guru scheduled tasks](https://img.erlich.fun/personal-blog/proma/image-20260908112055273.png)
 
 ### Built-In Calendar and Todo
 
 Agents can operate every calendar event and Todo, and you can edit them manually as well. Agents can help you record them, understand your schedule when appropriate, and plan your work around it. Voice input can be especially helpful for this, and Guru includes it too.
 
-![Guru calendar](https://img.erlich.fun/personal-blog/guru/image-20260908111504034.png)
+![Guru calendar](https://img.erlich.fun/personal-blog/proma/image-20260908111504034.png)
 
-![Guru Todo](https://img.erlich.fun/personal-blog/guru/image-20260908111521550.png)
+![Guru Todo](https://img.erlich.fun/personal-blog/proma/image-20260908111521550.png)
 
 ### Obsidian
 
 We built an Obsidian-inspired Markdown editor to better organize your personal knowledge and the knowledge created by Agents. It also makes note-taking and writing convenient, while letting you manage and edit content in Obsidian as usual.
 
-![Guru Obsidian integration](https://img.erlich.fun/personal-blog/guru/image-20260908111956671.png)
+![Guru Obsidian integration](https://img.erlich.fun/personal-blog/proma/image-20260908111956671.png)
 
 ## Contributing
 

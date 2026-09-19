@@ -410,7 +410,7 @@ Guru 基于 Claude Agent SDK 的 Agent 工具支持 SubAgent。复杂任务中�
 #### 飞书配置手把手教程
 
 <video
-  src="https://img.erlich.fun/personal-blog/uPic/guru-feishu-bot_compressed.mp4"
+  src="https://img.erlich.fun/personal-blog/uPic/proma-feishu-bot_compressed.mp4"
   controls
   playsinline
   style="max-width: 100%; height: auto;"
