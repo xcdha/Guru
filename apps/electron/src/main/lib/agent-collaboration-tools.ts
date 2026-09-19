@@ -1,7 +1,7 @@
 /**
  * Agent 内置协作会话工具
  *
- * 通过 Pi custom tools 暴露 Proma Agent 子会话委派能力。
+ * 通过 Pi custom tools 暴露 Guru Agent 子会话委派能力。
  * Skill 负责判断何时协作；这里负责受控创建真实 Agent 会话、运行、等待和停止。
  */
 
@@ -15,9 +15,9 @@ import type {
   AgentThinkingLevel,
   AskUserRequest,
   PermissionRequest,
-  PromaPermissionMode,
+  GuruPermissionMode,
   SDKMessage,
-} from '@proma/shared'
+} from '@guru/shared'
 import {
   createAgentSession,
   getAgentSessionMeta,
@@ -46,7 +46,7 @@ interface CollaborationToolContext {
   channelId: string
   modelId?: string
   workspaceId?: string
-  permissionMode?: PromaPermissionMode
+  permissionMode?: GuruPermissionMode
   triggeredBy?: 'user' | 'automation' | 'delegation'
 }
 
@@ -64,7 +64,7 @@ interface DelegationRecord {
   thinkingLevel?: AgentThinkingLevel
   role: AgentDelegationRole
   goal: string
-  permissionMode: PromaPermissionMode
+  permissionMode: GuruPermissionMode
   status: AgentDelegationStatus
   startedAt: number
   completedAt?: number
@@ -113,7 +113,7 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
   eventBus.on((sessionId: string, payload: AgentStreamPayload) => {
     const record = Array.from(delegations.values()).find((d) => d.childSessionId === sessionId)
     if (!record || record.status !== 'running') return
-    if (payload.kind !== 'proma_event') return
+    if (payload.kind !== 'guru_event') return
 
     const event = payload.event
     if (event.type === 'ask_user_request') {
@@ -135,12 +135,12 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
       blockedEvents.set(blocked.id, blocked)
 
       eventBus.emit(record.parentSessionId, {
-        kind: 'proma_event',
+        kind: 'guru_event',
         event: {
           type: 'delegation_blocked' as const,
           delegationId: record.delegationId,
           blockedEvent: blocked,
-        } as import('@proma/shared').PromaEvent,
+        } as import('@guru/shared').GuruEvent,
       })
     }
 
@@ -159,12 +159,12 @@ export function registerCollaborationEventBus(eventBus: import('./agent-event-bu
       blockedEvents.set(blocked.id, blocked)
 
       eventBus.emit(record.parentSessionId, {
-        kind: 'proma_event',
+        kind: 'guru_event',
         event: {
           type: 'delegation_blocked' as const,
           delegationId: record.delegationId,
           blockedEvent: blocked,
-        } as import('@proma/shared').PromaEvent,
+        } as import('@guru/shared').GuruEvent,
       })
     }
 
@@ -233,7 +233,7 @@ interface DelegateAgentArgs {
   role?: AgentDelegationRole
   task: string
   expectedOutput?: string
-  permissionMode?: PromaPermissionMode
+  permissionMode?: GuruPermissionMode
   modelId?: string
   /** 子会话的目标思考强度；未传入时保持新会话默认值。 */
   thinkingLevel?: AgentThinkingLevel
@@ -241,14 +241,14 @@ interface DelegateAgentArgs {
 
 interface StartDelegationResult {
   record: DelegationRecord
-  effectivePermissionMode: PromaPermissionMode
+  effectivePermissionMode: GuruPermissionMode
   effectiveModelId?: string
   configuredThinkingLevel: AgentThinkingLevel
 }
 
 interface PiDelegationToolResult {
   delegationId: string
-  effectivePermissionMode: PromaPermissionMode
+  effectivePermissionMode: GuruPermissionMode
   effectiveModelId?: string
   configuredThinkingLevel: AgentThinkingLevel
 }
@@ -511,7 +511,7 @@ function recoverDelegationRecordFromSession(
   parentSessionId: string,
   delegationId: string,
   session: AgentSessionMeta,
-  fallbackPermissionMode: PromaPermissionMode | undefined,
+  fallbackPermissionMode: GuruPermissionMode | undefined,
   fallbackChannelId: string,
   fallbackModelId: string | undefined,
 ): DelegationRecord {
@@ -624,8 +624,8 @@ async function waitForLiveRecords(
 
 function getCurrentParentPermissionMode(
   parent: AgentSessionMeta | undefined,
-  fallback: PromaPermissionMode | undefined,
-): PromaPermissionMode | undefined {
+  fallback: GuruPermissionMode | undefined,
+): GuruPermissionMode | undefined {
   const latestParent = parent ? getAgentSessionMeta(parent.id) : undefined
   return latestParent?.permissionMode ?? parent?.permissionMode ?? fallback
 }
@@ -849,7 +849,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__delegate_agent',
       label: '委派子 Agent',
-      description: '创建一个真实可见的 Proma 协作子 Agent 会话来并行处理独立子任务。可选 thinkingLevel 指定子会话首轮思考强度；模型不支持时运行时会安全归一化。返回中的 configuredThinkingLevel/thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。委派只表示子会话已启动。',
+      description: '创建一个真实可见的 Guru 协作子 Agent 会话来并行处理独立子任务。可选 thinkingLevel 指定子会话首轮思考强度；模型不支持时运行时会安全归一化。返回中的 configuredThinkingLevel/thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。委派只表示子会话已启动。',
       parameters: Type.Object({
         title: Type.Optional(Type.String({ description: '子会话标题' })),
         role: roleType,
@@ -882,7 +882,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__delegate_agents',
       label: '批量委派子 Agent',
-      description: '批量创建多个真实可见的 Proma 协作子 Agent 会话。每个 item 可独立指定首轮 thinkingLevel；模型不支持时运行时会安全归一化。返回中的 configuredThinkingLevels/delegations[].thinkingLevel 表示各项配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
+      description: '批量创建多个真实可见的 Guru 协作子 Agent 会话。每个 item 可独立指定首轮 thinkingLevel；模型不支持时运行时会安全归一化。返回中的 configuredThinkingLevels/delegations[].thinkingLevel 表示各项配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
       parameters: Type.Object({
         sharedContext: Type.Optional(Type.String({ description: '批量子任务共用背景' })),
         items: Type.Array(delegateItemType, { description: '要创建的子会话列表，最多 50 个' }),
@@ -944,7 +944,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__wait_for_delegations',
       label: '等待子会话完成',
-      description: '父会话用于收敛子会话结果的等待屏障：等待指定的 Proma 协作子会话完成，并返回结构化结果摘要。只要本轮回复、决策或交付依赖已委派任务，主会话必须在回复前调用本工具，不能只因 delegate_agent/delegate_agents 已返回就宣称完成；需要全部结果时传入所有 delegationIds 并使用 mode=all，需要部分早期结果时才使用 mode=any。若返回 timeout 或仍有 running 委派，必须如实说明未收敛状态，不能把未完成任务当作已有结果。',
+      description: '父会话用于收敛子会话结果的等待屏障：等待指定的 Guru 协作子会话完成，并返回结构化结果摘要。只要本轮回复、决策或交付依赖已委派任务，主会话必须在回复前调用本工具，不能只因 delegate_agent/delegate_agents 已返回就宣称完成；需要全部结果时传入所有 delegationIds 并使用 mode=all，需要部分早期结果时才使用 mode=any。若返回 timeout 或仍有 running 委派，必须如实说明未收敛状态，不能把未完成任务当作已有结果。',
       parameters: Type.Object({
         delegationIds: Type.Optional(Type.Array(Type.String(), { description: '要等待的委派 ID' })),
         mode: Type.Optional(Type.Union([Type.Literal('all'), Type.Literal('any')])),
@@ -987,7 +987,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__list_delegations',
       label: '列出协作子会话',
-      description: '列出当前父会话创建的 Proma 协作子会话及状态。返回中的 thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
+      description: '列出当前父会话创建的 Guru 协作子会话及状态。返回中的 thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
       parameters: Type.Object({
         includeCompleted: Type.Optional(Type.Boolean({ description: '是否包含已完成委派，默认 true' })),
       }),
@@ -1007,7 +1007,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__get_delegation_results',
       label: '读取子会话结果',
-      description: '按委派 ID 读取一个或多个 Proma 协作子会话的结果摘要。返回中的 thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
+      description: '按委派 ID 读取一个或多个 Guru 协作子会话的结果摘要。返回中的 thinkingLevel 表示配置/请求值，不代表模型 capability normalization 后的实际运行档位。',
       parameters: Type.Object({
         delegationIds: Type.Array(Type.String(), { description: '要读取结果的委派 ID 列表' }),
       }),
@@ -1042,7 +1042,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__stop_delegation',
       label: '停止子会话',
-      description: '停止一个正在运行的 Proma 协作子会话。',
+      description: '停止一个正在运行的 Guru 协作子会话。',
       parameters: Type.Object({
         delegationId: Type.String({ description: '要停止的委派 ID' }),
       }),
@@ -1054,7 +1054,7 @@ export function buildPiCollaborationTools(
     sdk.defineTool({
       name: 'mcp__collaboration__stop_delegations',
       label: '批量停止子会话',
-      description: '批量停止多个正在运行的 Proma 协作子会话。',
+      description: '批量停止多个正在运行的 Guru 协作子会话。',
       parameters: Type.Object({
         delegationIds: Type.Array(Type.String(), { description: '要停止的委派 ID 列表' }),
       }),
@@ -1093,7 +1093,7 @@ export function buildPiCollaborationTools(
           blocked.resolved = !!sessionId
           if (blocked.resolved && _eventBusRef) {
             _eventBusRef.emit(blocked.childSessionId, {
-              kind: 'proma_event',
+              kind: 'guru_event',
               event: { type: 'ask_user_resolved', requestId: blocked.askUserRequestId },
             })
           }
@@ -1107,7 +1107,7 @@ export function buildPiCollaborationTools(
           blocked.resolved = !!sessionId
           if (blocked.resolved && _eventBusRef) {
             _eventBusRef.emit(blocked.childSessionId, {
-              kind: 'proma_event',
+              kind: 'guru_event',
               event: { type: 'permission_resolved', requestId: blocked.permissionRequestId, behavior },
             })
           }

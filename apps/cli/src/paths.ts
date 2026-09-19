@@ -1,11 +1,11 @@
 /**
  * 会话存储路径解析（electron-free）。
  *
- * Proma 主进程用 config-paths.ts 里的 getConfigDir()，其中通过 require('electron')
- * 判断 isPackaged 来在 .proma / .proma-dev 间切换——CLI 没有 electron 运行时，
+ * Guru 主进程用 config-paths.ts 里的 getConfigDir()，其中通过 require('electron')
+ * 判断 isPackaged 来在 .guru / .guru-dev 间切换——CLI 没有 electron 运行时，
  * 因此这里独立实现一份等价逻辑：
- *   - 默认 ~/.proma
- *   - 环境变量 PROMA_DEV=1 → ~/.proma-dev
+ *   - 默认 ~/.guru
+ *   - 环境变量 GURU_DEV=1 → ~/.guru-dev
  *   - 显式 configDir 覆盖（CLI 的 --config-dir）优先级最高
  *
  * 与 config-paths.ts 的目录布局保持一致：
@@ -18,14 +18,14 @@ import { join } from 'node:path'
 export interface PathOptions {
   /** 显式指定配置目录（绝对路径）。优先级最高。 */
   configDir?: string
-  /** 使用开发目录 .proma-dev（等价于 PROMA_DEV=1）。 */
+  /** 使用开发目录 .guru-dev（等价于 GURU_DEV=1）。 */
   dev?: boolean
 }
 
 export function resolveConfigDir(opts: PathOptions = {}): string {
   if (opts.configDir) return opts.configDir
-  const useDev = opts.dev || process.env.PROMA_DEV === '1'
-  return join(homedir(), useDev ? '.proma-dev' : '.proma')
+  const useDev = opts.dev || process.env.GURU_DEV === '1'
+  return join(homedir(), useDev ? '.guru-dev' : '.guru')
 }
 
 export function getSessionsIndexPath(opts: PathOptions = {}): string {

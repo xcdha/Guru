@@ -36,7 +36,7 @@ import {
   type LocalSearchRecordInput,
   type SessionMessageSearch,
 } from '@/lib/session-message-search'
-import { toTranscript } from '@proma/session-core'
+import { toTranscript } from '@guru/session-core'
 import { Spinner } from '@/components/ui/spinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { groupIntoTurns, AssistantLogo, MessageGroupRenderer, getGroupId, getGroupPreview, extractUserText, buildTaskProgressDataForTurn, type MessageGroup } from './SDKMessageRenderer'
@@ -45,8 +45,8 @@ import { AgentBrowserLinkProvider } from '@/components/browser/AgentBrowserLinkP
 import { AgentHistorySelectionLayer } from './AgentHistorySelectionLayer'
 import { TaskProgressOverlay, type ContextCompactionProgress } from './TaskProgressOverlay'
 import { createMessageGroupRenderCache, groupMessagesForRendering } from './message-group-rendering'
-import type { AgentEventUsage, RetryAttempt, SDKAssistantMessage, SDKMessage, SDKSystemMessage, SDKTextBlock, SDKThinkingBlock } from '@proma/shared'
-import { getSDKCompactStatus } from '@proma/shared'
+import type { AgentEventUsage, RetryAttempt, SDKAssistantMessage, SDKMessage, SDKSystemMessage, SDKTextBlock, SDKThinkingBlock } from '@guru/shared'
+import { getSDKCompactStatus } from '@guru/shared'
 import { agentLiveMessagesAtomFamily, agentSessionStreamingStateAtomFamily, type AgentStreamState } from '@/atoms/agent-atoms'
 import type { QuotedSelection } from '@/atoms/preview-atoms'
 
@@ -243,7 +243,7 @@ interface AgentMessagesProps {
   historyQuoteNavigation?: AgentHistoryQuoteNavigationRequest | null
 }
 
-const AGENT_HISTORY_QUOTE_HIGHLIGHT_NAME = 'proma-agent-history-quote'
+const AGENT_HISTORY_QUOTE_HIGHLIGHT_NAME = 'guru-agent-history-quote'
 
 interface TextPosition {
   node: Node
@@ -997,7 +997,7 @@ export const AgentMessages = React.memo(function AgentMessages({
       const record = message as Record<string, unknown>
       // 已标记且未变化时不重写：对老世代消息对象的属性写入会触发 GC 写屏障，
       // 在数百条历史 × 高频 partial 下形成持续开销。
-      if (record._promaStableKey !== key) record._promaStableKey = key
+      if (record._guruStableKey !== key) record._guruStableKey = key
       return message
     }
     const hasUuid = (message: SDKMessage): boolean => {
@@ -1009,7 +1009,7 @@ export const AgentMessages = React.memo(function AgentMessages({
     const upsert = (message: SDKMessage): void => {
       const stamped = stampStableKey(message)
       if (hasUuid(stamped)) {
-        const key = (stamped as Record<string, unknown>)._promaStableKey as string
+        const key = (stamped as Record<string, unknown>)._guruStableKey as string
         const existingIndex = uuidIndexes.get(key)
         if (existingIndex != null) {
           result[existingIndex] = stamped

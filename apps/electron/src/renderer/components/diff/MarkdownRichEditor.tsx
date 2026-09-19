@@ -7,7 +7,7 @@ import Link from '@tiptap/extension-link'
 import { Markdown } from 'tiptap-markdown'
 import type { MarkdownStorage } from 'tiptap-markdown'
 import { TextSelection } from '@tiptap/pm/state'
-import type { FileAccessOptions } from '@proma/shared'
+import type { FileAccessOptions } from '@guru/shared'
 import type { MarkdownEditorSelection, MarkdownScrollPosition } from '@/lib/markdown-editor-state'
 import { cn } from '@/lib/utils'
 import {
@@ -365,15 +365,15 @@ export function MarkdownRichEditor({
           editing ? 'min-h-0 flex-1 overflow-auto scrollbar-thin' : 'h-full min-h-full flex-1',
           showMermaidPreview
             ? [
-                '[&_.proma-code-block--mermaid]:overflow-visible',
-                '[&_.proma-code-block--mermaid]:rounded-none',
-                '[&_.proma-code-block--mermaid]:border-0',
-                '[&_.proma-code-block--mermaid]:bg-transparent',
-                '[&_.proma-code-block--mermaid_.proma-code-header]:hidden',
-                '[&_.proma-code-block--mermaid_.proma-mermaid-preview]:block',
-                '[&_.proma-code-block--mermaid_.proma-code-source-body]:hidden',
+                '[&_.guru-code-block--mermaid]:overflow-visible',
+                '[&_.guru-code-block--mermaid]:rounded-none',
+                '[&_.guru-code-block--mermaid]:border-0',
+                '[&_.guru-code-block--mermaid]:bg-transparent',
+                '[&_.guru-code-block--mermaid_.guru-code-header]:hidden',
+                '[&_.guru-code-block--mermaid_.guru-mermaid-preview]:block',
+                '[&_.guru-code-block--mermaid_.guru-code-source-body]:hidden',
               ]
-            : '[&_.proma-mermaid-preview]:hidden [&_.proma-code-source-body]:block',
+            : '[&_.guru-mermaid-preview]:hidden [&_.guru-code-source-body]:block',
         )}
       />
       {editing && editor && <TableBubbleMenu editor={editor} />}

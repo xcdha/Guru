@@ -20,8 +20,8 @@
  */
 
 import * as React from 'react'
-import { getDisplayName, highlightToTokens, onHighlighterReady } from '@proma/core'
-import type { HighlightToken, HighlightTokensResult } from '@proma/core'
+import { getDisplayName, highlightToTokens, onHighlighterReady } from '@guru/core'
+import type { HighlightToken, HighlightTokensResult } from '@guru/core'
 
 /** react-markdown 传入的 <code> 元素 props */
 interface CodeElementProps {

@@ -21,7 +21,7 @@ import {
   type AgentRuntimeRequest,
   type AgentRuntimeResponse,
   type AgentRuntimeState,
-} from '@proma/shared'
+} from '@guru/shared'
 
 type RuntimePort = Pick<MessagePortMain, 'close' | 'postMessage' | 'start'> & {
   on(event: 'message', listener: (event: { data: unknown }) => void): void
@@ -184,8 +184,8 @@ export class AgentRuntimeClient {
     const generation = ++this.generation
     this.state = { ...this.state, status: 'starting', lastError: undefined }
     const runtimeProcess = utilityProcess.fork(this.entryPath, [], {
-      serviceName: 'Proma Runtime',
-      env: { ...process.env, ...this.env, PROMA_AGENT_SESSION_ID: this.sessionId },
+      serviceName: 'Guru Runtime',
+      env: { ...process.env, ...this.env, GURU_AGENT_SESSION_ID: this.sessionId },
     })
     this.runtimeProcess = runtimeProcess
     const processEvents = runtimeProcess as unknown as {
@@ -214,7 +214,7 @@ export class AgentRuntimeClient {
     port.start()
 
     const transfer: AgentRuntimePortTransfer = {
-      type: 'proma-agent-runtime-port',
+      type: 'guru-agent-runtime-port',
       protocolVersion: AGENT_RUNTIME_PROTOCOL_VERSION,
     }
     runtimeProcess.postMessage(transfer, [channel.port1])

@@ -1,7 +1,7 @@
 {
-  "name": "@proma/electron",
+  "name": "@guru/electron",
   "version": "0.19.55",
-  "description": "Proma，为专业用户设计的 Agent",
+  "description": "Guru，为专业用户设计的 Agent",
   "main": "dist/main.cjs",
   "author": {
     "name": "ErlichLiu",
@@ -78,10 +78,10 @@
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@larksuiteoapi/node-sdk": "^1.65.0",
-    "@proma/core": "workspace:*",
-    "@proma/session-core": "workspace:*",
-    "@proma/shared": "workspace:*",
-    "@proma/ui": "workspace:*",
+    "@guru/core": "workspace:*",
+    "@guru/session-core": "workspace:*",
+    "@guru/shared": "workspace:*",
+    "@guru/ui": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-context-menu": "^2.2.16",
@@ -184,6 +184,6 @@
   "build": {
     "extends": "electron-builder.yml"
   },
-  "proma": {},
-  "homepage": "https://github.com/proma-ai/Proma"
+  "guru": {},
+  "homepage": "https://github.com/guru-ai/Guru"
 }

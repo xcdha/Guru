@@ -1,4 +1,4 @@
-import type { AgentSessionMeta, AgentWorkspace } from '@proma/shared'
+import type { AgentSessionMeta, AgentWorkspace } from '@guru/shared'
 import type { SessionIndicatorStatus } from '@/atoms/agent-atoms'
 
 interface AgentSessionTreeLike {

@@ -12,8 +12,8 @@ import type {
   AutomationScheduleType,
   AutomationPermissionMode,
   AutomationSessionMode,
-} from '@proma/shared'
-import { AUTOMATION_DEFAULT_PERMISSION_MODE, AUTOMATION_DEFAULT_SESSION_MODE } from '@proma/shared'
+} from '@guru/shared'
+import { AUTOMATION_DEFAULT_PERMISSION_MODE, AUTOMATION_DEFAULT_SESSION_MODE } from '@guru/shared'
 
 /** 全部定时任务列表 */
 export const automationsAtom = atom<Automation[]>([])

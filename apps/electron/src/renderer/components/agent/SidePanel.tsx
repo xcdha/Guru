@@ -107,7 +107,7 @@ import {
 import { PreviewPanel } from '@/components/diff/PreviewPanel'
 import { clearPreviewContentCacheForFile } from '@/lib/preview-content-cache'
 import { useOpenPreview } from '@/components/diff/preview-opener'
-import type { FileEntry, AgentPendingFile, AgentSessionMeta, SDKMessage, WorktreeInfo } from '@proma/shared'
+import type { FileEntry, AgentPendingFile, AgentSessionMeta, SDKMessage, WorktreeInfo } from '@guru/shared'
 import { setFilePanelDragData, getMediaTypeFromFilename, dispatchInsertFileMention } from '@/lib/file-panel-drag'
 import { CLOSE_ACTIVE_RIGHT_WORKSPACE_TAB_EVENT } from '@/lib/right-workspace-events'
 import {

@@ -169,7 +169,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import type { ConversationMeta, AgentSessionMeta, AgentWorkspace, WorkspaceCapabilities } from '@proma/shared'
+import type { ConversationMeta, AgentSessionMeta, AgentWorkspace, WorkspaceCapabilities } from '@guru/shared'
 
 function formatAutomationCount(count: number): string {
   return count > 99 ? '99+' : String(count)
@@ -345,8 +345,8 @@ const PROJECT_SESSION_RECENT_WINDOW_MS = 3 * 86_400_000
 const PROJECT_SESSION_EXPAND_STEP = 10
 const SESSION_QUICK_SWITCH_HINT_DELAY_MS = 1000
 const SESSION_QUICK_SWITCH_LIMIT = 9
-const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'proma:session-quick-switch-keydown'
-const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'proma:session-quick-switch-keyup'
+const SESSION_QUICK_SWITCH_KEYDOWN_EVENT = 'guru:session-quick-switch-keydown'
+const SESSION_QUICK_SWITCH_KEYUP_EVENT = 'guru:session-quick-switch-keyup'
 
 const ACTIVE_SESSION_STATUSES: ReadonlySet<SessionIndicatorStatus> = new Set([
   'blocked',
@@ -2463,7 +2463,7 @@ export function LeftSidebar({ width, noTransition }: LeftSidebarProps): React.Re
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除项目</AlertDialogTitle>
           <AlertDialogDescription>
-            将删除「{pendingDeleteWorkspace?.name ?? '该项目'}」在 Proma 中保存的会话、自动任务、MCP、Skills 与 Proma 工作区配置；空白项目的 Proma 托管项目文件也会被删除。本地项目根目录、附加目录和附加文件只会移除关联，不会删除原始文件。删除后无法恢复。
+            将删除「{pendingDeleteWorkspace?.name ?? '该项目'}」在 Guru 中保存的会话、自动任务、MCP、Skills 与 Guru 工作区配置；空白项目的 Guru 托管项目文件也会被删除。本地项目根目录、附加目录和附加文件只会移除关联，不会删除原始文件。删除后无法恢复。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

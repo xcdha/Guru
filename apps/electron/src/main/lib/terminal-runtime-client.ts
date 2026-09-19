@@ -8,7 +8,7 @@ import type {
   TerminalOutputEvent,
   TerminalResizeInput,
   TerminalState,
-} from '@proma/shared'
+} from '@guru/shared'
 
 type RuntimePort = Pick<MessagePortMain, 'close' | 'postMessage' | 'start'> & {
   on(event: 'message', listener: (event: { data: unknown }) => void): void
@@ -110,7 +110,7 @@ export class TerminalRuntimeClient {
     if (this.starting) return this.starting
     this.starting = new Promise<void>((resolve, reject) => {
       const entryPath = join(__dirname, 'terminal-runtime.cjs')
-      const runtimeProcess = utilityProcess.fork(entryPath, [], { serviceName: 'Proma Terminal Runtime' })
+      const runtimeProcess = utilityProcess.fork(entryPath, [], { serviceName: 'Guru Terminal Runtime' })
       this.runtimeProcess = runtimeProcess
       const channel = new MessageChannelMain()
       const port = channel.port2 as unknown as RuntimePort
@@ -137,7 +137,7 @@ export class TerminalRuntimeClient {
       runtimeProcess.on('error', (type) => fail(new Error(`终端运行时错误：${type}`)))
       const processEvents = runtimeProcess as unknown as { on(event: 'exit', listener: (code: number) => void): void }
       processEvents.on('exit', (code) => fail(new Error(`终端运行时已退出（${code}）`)))
-      runtimeProcess.postMessage({ type: 'proma-terminal-runtime-port' }, [channel.port1])
+      runtimeProcess.postMessage({ type: 'guru-terminal-runtime-port' }, [channel.port1])
     }).finally(() => { this.starting = undefined })
     return this.starting
   }

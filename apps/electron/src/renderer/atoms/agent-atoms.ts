@@ -9,8 +9,8 @@ import { atom } from 'jotai'
 import type { Getter } from 'jotai'
 import { atomWithStorage, selectAtom } from 'jotai/utils'
 import { atomFamily } from 'jotai-family'
-import type { AgentSessionMeta, AgentEvent, AgentWorkspace, AgentPendingFile, RetryAttempt, PromaPermissionMode, PermissionRequest, AskUserRequest, ExitPlanModeRequest, ThinkingConfig, AgentEffort, SDKMessage, UnstagedChangesResult } from '@proma/shared'
-import { PROMA_DEFAULT_PERMISSION_MODE } from '@proma/shared'
+import type { AgentSessionMeta, AgentEvent, AgentWorkspace, AgentPendingFile, RetryAttempt, GuruPermissionMode, PermissionRequest, AskUserRequest, ExitPlanModeRequest, ThinkingConfig, AgentEffort, SDKMessage, UnstagedChangesResult } from '@guru/shared'
+import { GURU_DEFAULT_PERMISSION_MODE } from '@guru/shared'
 import { calculateDockBadgeCount, countPendingRequests } from '@/lib/dock-badge-count'
 import type { AgentQueuedMessage } from '@/lib/agent-message-queue'
 import type { SessionFileChange } from '@/lib/session-file-changes'
@@ -500,7 +500,7 @@ export const workspaceGitDiffRefreshVersionAtom = atom(0)
 
 /** 侧面板是否打开：按 Agent 会话持久化，未存储的会话默认打开。 */
 export const agentSidePanelOpenMapAtom = atomWithStorage<Record<string, boolean>>(
-  'proma-agent-sidepanel-open-by-session',
+  'guru-agent-sidepanel-open-by-session',
   {},
   undefined,
   { getOnInit: true },
@@ -562,7 +562,7 @@ export function pruneAgentSidePanelLayouts(
 
 /** 右侧工作区布局：按 Agent Session 持久化，包含普通与宽视图的尺寸。 */
 export const agentSidePanelLayoutMapAtom = atomWithStorage<Record<string, AgentSidePanelLayout>>(
-  'proma-agent-workspace-layout-by-session',
+  'guru-agent-workspace-layout-by-session',
   {},
   undefined,
   { getOnInit: true },
@@ -594,7 +594,7 @@ export const agentSidePanelLayoutAtomFamily = atomFamily((sessionId: string) => 
 /** 文件来源选择：按会话持久化，未存储的会话默认显示项目文件。 */
 export type AgentFileSourceFilter = 'session' | 'project'
 export const agentFileSourceFilterMapAtom = atomWithStorage<Record<string, AgentFileSourceFilter>>(
-  'proma-agent-file-source-filter-map',
+  'guru-agent-file-source-filter-map',
   {},
   undefined,
   { getOnInit: true },
@@ -714,9 +714,9 @@ export function isUserPriorityWorkspaceComponentTab(
 
 /** Pi `/tree` 探索分支在右侧工作区的展示信息。 */
 export interface AgentExplorationBranchTab {
-  /** Pi 原生 fork 生成的独立 Proma session。 */
+  /** Pi 原生 fork 生成的独立 Guru session。 */
   sessionId: string
-  /** 作为分叉锚点的 Proma assistant message UUID。 */
+  /** 作为分叉锚点的 Guru assistant message UUID。 */
   sourceMessageId: string
   /** 给用户看的分叉来源。 */
   sourceLabel: string
@@ -802,7 +802,7 @@ export const currentSessionSidePanelOpenAtom = atom(
  * 但同一 workspace 的后台会话不得改变彼此的右侧 Tab，避免抢走用户焦点。
  */
 export const agentSessionComponentOpenMapAtom = atomWithStorage<Record<string, WorkspaceComponentTab[]>>(
-  'proma-agent-session-component-tabs',
+  'guru-agent-session-component-tabs',
   {},
   undefined,
   { getOnInit: true },
@@ -828,7 +828,7 @@ export const agentSidePanelSplitMapAtom = atom<Map<string, RightWorkspaceSplitSt
 
 /** 双 Pane 分隔比例按 Session 持久化，但不持久化可能在重启后失效的动态 Tab ID。 */
 export const agentSidePanelSplitRatioMapAtom = atomWithStorage<Record<string, number>>(
-  'proma-agent-workspace-split-ratio-by-session',
+  'guru-agent-workspace-split-ratio-by-session',
   {},
   undefined,
   { getOnInit: true },
@@ -982,14 +982,14 @@ export const RECENTLY_MODIFIED_TTL_MS = 60_000
 // ===== 权限系统 Atoms =====
 
 /** 新会话默认权限模式 */
-export const agentDefaultPermissionModeAtom = atom<PromaPermissionMode>(PROMA_DEFAULT_PERMISSION_MODE)
+export const agentDefaultPermissionModeAtom = atom<GuruPermissionMode>(GURU_DEFAULT_PERMISSION_MODE)
 
-/** Per-session 权限模式 Map — sessionId → PromaPermissionMode */
-export const agentPermissionModeMapAtom = atom<Map<string, PromaPermissionMode>>(new Map())
+/** Per-session 权限模式 Map — sessionId → GuruPermissionMode */
+export const agentPermissionModeMapAtom = atom<Map<string, GuruPermissionMode>>(new Map())
 
 /**
  * 按 sessionId 派生该 session 的持久化权限模式。
- * 返回 `undefined`（session 不存在或未设置）或具体的 PromaPermissionMode 字符串，
+ * 返回 `undefined`（session 不存在或未设置）或具体的 GuruPermissionMode 字符串，
  * jotai 用 === 比较，只有值真正变化时才通知下游——避免流式中无关字段更新引发 re-render。
  */
 export const sessionPersistedPermissionModeAtom = atomFamily((sessionId: string) =>

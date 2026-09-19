@@ -1,4 +1,4 @@
-import type { ChannelPlanQuotaResult, ChannelPlanQuotaWindow } from '@proma/shared'
+import type { ChannelPlanQuotaResult, ChannelPlanQuotaWindow } from '@guru/shared'
 
 interface CodexUsageWindow {
   used_percent?: unknown

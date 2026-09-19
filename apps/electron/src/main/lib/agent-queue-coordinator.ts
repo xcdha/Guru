@@ -5,7 +5,7 @@ import type {
   AgentQueuedMessageSnapshot,
   AgentQueuedMessageControlInput,
   AgentQueuedMessageStatus,
-} from '@proma/shared'
+} from '@guru/shared'
 
 type DispatchedQueueRunInput = AgentDeferredQueueMessageInput & { runGeneration: number }
 

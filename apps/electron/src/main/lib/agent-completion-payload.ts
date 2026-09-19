@@ -1,8 +1,8 @@
-import { AGENT_IPC_CHANNELS } from '@proma/shared'
+import { AGENT_IPC_CHANNELS } from '@guru/shared'
 import type {
   AgentSendInput,
   AgentStreamCompletePayload,
-} from '@proma/shared'
+} from '@guru/shared'
 
 export type AgentStreamCompletionDetails = Omit<
   AgentStreamCompletePayload,

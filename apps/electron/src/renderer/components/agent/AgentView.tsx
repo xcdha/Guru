@@ -125,8 +125,8 @@ import { useOpenSession } from '@/hooks/useOpenSession'
 import { draftSessionIdsAtom } from '@/atoms/draft-session-atoms'
 import { sendWithCmdEnterAtom } from '@/atoms/shortcut-atoms'
 import { useOpenPreview } from '@/components/diff/preview-opener'
-import type { AgentDeferredQueueMessageInput, AgentSendInput, AgentPendingFile, AgentThinkingLevel, FileDialogLargeFile, FileDialogResult, ModelOption, ReasoningCapability, SDKMessage, SDKUserMessage } from '@proma/shared'
-import { inferContextWindow, inferReasoningTransport, isCodexFastModeSupportedModel, MAX_ATTACHMENT_SIZE, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningCapability, resolveReasoningProfile } from '@proma/shared'
+import type { AgentDeferredQueueMessageInput, AgentSendInput, AgentPendingFile, AgentThinkingLevel, FileDialogLargeFile, FileDialogResult, ModelOption, ReasoningCapability, SDKMessage, SDKUserMessage } from '@guru/shared'
+import { inferContextWindow, inferReasoningTransport, isCodexFastModeSupportedModel, MAX_ATTACHMENT_SIZE, normalizeReasoningCapabilityLevel, normalizeReasoningLevel, resolveReasoningCapability, resolveReasoningProfile } from '@guru/shared'
 import { fileToBase64, formatFileNames, getFileParentPath } from '@/lib/file-utils'
 import { getFilePanelDragData, INSERT_FILE_MENTION_EVENT, type FilePanelDragItem } from '@/lib/file-panel-drag'
 import {
@@ -331,7 +331,7 @@ interface CodexThinkingConfig {
 }
 
 interface AgentThinkingPopoverProps {
-  agentThinking: import('@proma/shared').ThinkingConfig | undefined
+  agentThinking: import('@guru/shared').ThinkingConfig | undefined
   onToggle: () => void
   codexConfig?: CodexThinkingConfig
 }
@@ -2043,7 +2043,7 @@ export function AgentView({ sessionId, embedded = false }: AgentViewProps): Reac
     const additionalDirectoriesForRun = createBaseAdditionalDirectories()
 
     if (streaming) {
-      // Agent 正在输出时，用户消息默认进入 Proma 托管队列，不打断当前 turn。
+      // Agent 正在输出时，用户消息默认进入 Guru 托管队列，不打断当前 turn。
       const attachmentContext = pendingFilesSnapshot.length > 0
         ? await preparePendingFilesForSend(pendingFilesSnapshot, additionalDirectoriesForRun)
         : null
@@ -2316,7 +2316,7 @@ export function AgentView({ sessionId, embedded = false }: AgentViewProps): Reac
     const localUuid = crypto.randomUUID()
 
     // 1. 立即注入合成用户消息（/compact 气泡立刻可见，与普通发送路径一致）
-    const syntheticMsg: import('@proma/shared').SDKMessage = {
+    const syntheticMsg: import('@guru/shared').SDKMessage = {
       type: 'user',
       uuid: localUuid,
       message: {
@@ -2324,7 +2324,7 @@ export function AgentView({ sessionId, embedded = false }: AgentViewProps): Reac
       },
       parent_tool_use_id: null,
       _createdAt: streamStartedAt,
-    } as unknown as import('@proma/shared').SDKMessage
+    } as unknown as import('@guru/shared').SDKMessage
 
     store.set(liveMessagesMapAtom, (prev) => {
       const map = new Map(prev)
@@ -2620,8 +2620,8 @@ export function AgentView({ sessionId, embedded = false }: AgentViewProps): Reac
       const target = getStopGenerationTarget(event)
       if (target?.kind === 'agent' && target.sessionId === sessionId && streaming) handleStop()
     }
-    window.addEventListener('proma:stop-generation', handler)
-    return () => window.removeEventListener('proma:stop-generation', handler)
+    window.addEventListener('guru:stop-generation', handler)
+    return () => window.removeEventListener('guru:stop-generation', handler)
   }, [sessionId, streaming, handleStop])
 
   // 监听快捷键系统分发的 focus-input 事件（Cmd+L）
@@ -2630,8 +2630,8 @@ export function AgentView({ sessionId, embedded = false }: AgentViewProps): Reac
       const proseMirror = document.querySelector('[data-input-mode="agent"] .ProseMirror') as HTMLElement | null
       proseMirror?.focus()
     }
-    window.addEventListener('proma:focus-input', handler)
-    return () => window.removeEventListener('proma:focus-input', handler)
+    window.addEventListener('guru:focus-input', handler)
+    return () => window.removeEventListener('guru:focus-input', handler)
   }, [])
 
   // 监听文件面板三点菜单「引用到 Agent」事件：在输入框插入 @file 引用

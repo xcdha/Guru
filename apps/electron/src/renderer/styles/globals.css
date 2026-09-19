@@ -536,9 +536,9 @@ body {
 
 @layer base {
   /* Electron 主窗口不应成为滚动容器；所有滚动必须停留在各自面板内。 */
-  html.proma-main-window,
-  html.proma-main-window body,
-  html.proma-main-window #root {
+  html.guru-main-window,
+  html.guru-main-window body,
+  html.guru-main-window #root {
     width: 100%;
     height: 100%;
     overflow: hidden;

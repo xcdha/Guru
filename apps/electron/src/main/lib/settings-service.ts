@@ -2,14 +2,14 @@
  * 应用设置服务
  *
  * 管理应用设置（主题模式等）的读写。
- * 存储在 ~/.proma/settings.json
+ * 存储在 ~/.guru/settings.json
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { getSettingsPath } from './config-paths'
 import { DEFAULT_THEME_MODE, normalizeProductivityToolsSettings } from '../../types'
 import type { AgentIslandSettings, AppSettings } from '../../types'
-import { getTerminalProfilesForPlatform, isTerminalProfile } from '@proma/shared'
+import { getTerminalProfilesForPlatform, isTerminalProfile } from '@guru/shared'
 
 function sanitizeAgentIslandSettings(input: unknown): AgentIslandSettings | undefined {
   if (!input || typeof input !== 'object') return undefined

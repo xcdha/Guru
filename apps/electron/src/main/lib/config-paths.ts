@@ -1,8 +1,8 @@
 /**
  * 配置路径工具
  *
- * 管理 Proma 应用的本地配置文件路径。
- * 所有用户配置存储在 ~/.proma/ 目录下。
+ * 管理 Guru 应用的本地配置文件路径。
+ * 所有用户配置存储在 ~/.guru/ 目录下。
  */
 
 import { createHash } from 'node:crypto'
@@ -15,28 +15,28 @@ import { readJsonFileSafe, writeJsonFileAtomic } from './safe-file'
 /**
  * 获取配置目录名称
  *
- * 开发模式下返回 '.proma-dev'，正式版本返回 '.proma'。
+ * 开发模式下返回 '.guru-dev'，正式版本返回 '.guru'。
  *
  * 检测优先级：
- * 1. PROMA_DEV=1 环境变量（显式覆盖）
+ * 1. GURU_DEV=1 环境变量（显式覆盖）
  * 2. Electron app.isPackaged（未打包 = 开发模式）
- * 3. 兜底 '.proma'
+ * 3. 兜底 '.guru'
  */
 let _configDirName: string | undefined
 
 export function getConfigDirName(): string {
   if (_configDirName === undefined) {
-    if (process.env.PROMA_DEV === '1') {
-      _configDirName = '.proma-dev'
+    if (process.env.GURU_DEV === '1') {
+      _configDirName = '.guru-dev'
     } else {
       try {
         const { app } = require('electron')
-        _configDirName = app.isPackaged ? '.proma' : '.proma-dev'
+        _configDirName = app.isPackaged ? '.guru' : '.guru-dev'
       } catch {
-        _configDirName = '.proma'
+        _configDirName = '.guru'
       }
     }
-    const mode = _configDirName === '.proma-dev' ? '开发模式' : '正式版本'
+    const mode = _configDirName === '.guru-dev' ? '开发模式' : '正式版本'
     console.log(`[配置] 配置目录: ~/${_configDirName}/（${mode}）`)
   }
   return _configDirName
@@ -45,7 +45,7 @@ export function getConfigDirName(): string {
 /**
  * 获取配置目录路径
  *
- * 开发模式返回 ~/.proma-dev/，正式版本返回 ~/.proma/。
+ * 开发模式返回 ~/.guru-dev/，正式版本返回 ~/.guru/。
  * 如果目录不存在则自动创建。
  */
 export function getConfigDir(): string {
@@ -62,7 +62,7 @@ export function getConfigDir(): string {
 /**
  * 获取渠道配置文件路径
  *
- * @returns ~/.proma/channels.json
+ * @returns ~/.guru/channels.json
  */
 export function getChannelsPath(): string {
   return join(getConfigDir(), 'channels.json')
@@ -71,7 +71,7 @@ export function getChannelsPath(): string {
 /**
  * 获取对话索引文件路径
  *
- * @returns ~/.proma/conversations.json
+ * @returns ~/.guru/conversations.json
  */
 export function getConversationsIndexPath(): string {
   return join(getConfigDir(), 'conversations.json')
@@ -82,7 +82,7 @@ export function getConversationsIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.proma/conversations/
+ * @returns ~/.guru/conversations/
  */
 export function getConversationsDir(): string {
   const dir = join(getConfigDir(), 'conversations')
@@ -99,7 +99,7 @@ export function getConversationsDir(): string {
  * 获取指定对话的消息文件路径
  *
  * @param id 对话 ID
- * @returns ~/.proma/conversations/{id}.jsonl
+ * @returns ~/.guru/conversations/{id}.jsonl
  */
 export function getConversationMessagesPath(id: string): string {
   return join(getConversationsDir(), `${id}.jsonl`)
@@ -110,7 +110,7 @@ export function getConversationMessagesPath(id: string): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.proma/attachments/
+ * @returns ~/.guru/attachments/
  */
 export function getAttachmentsDir(): string {
   const dir = join(getConfigDir(), 'attachments')
@@ -129,7 +129,7 @@ export function getAttachmentsDir(): string {
  * 如果目录不存在则自动创建。
  *
  * @param conversationId 对话 ID
- * @returns ~/.proma/attachments/{conversationId}/
+ * @returns ~/.guru/attachments/{conversationId}/
  */
 export function getConversationAttachmentsDir(conversationId: string): string {
   const dir = join(getAttachmentsDir(), conversationId)
@@ -145,7 +145,7 @@ export function getConversationAttachmentsDir(conversationId: string): string {
  * 解析附件相对路径为完整路径
  *
  * @param localPath 相对路径 {conversationId}/{uuid}.ext
- * @returns 完整路径 ~/.proma/attachments/{conversationId}/{uuid}.ext
+ * @returns 完整路径 ~/.guru/attachments/{conversationId}/{uuid}.ext
  */
 export function resolveAttachmentPath(localPath: string): string {
   return join(getAttachmentsDir(), localPath)
@@ -154,7 +154,7 @@ export function resolveAttachmentPath(localPath: string): string {
 /**
  * 获取应用设置文件路径
  *
- * @returns ~/.proma/settings.json
+ * @returns ~/.guru/settings.json
  */
 export function getSettingsPath(): string {
   return join(getConfigDir(), 'settings.json')
@@ -169,16 +169,16 @@ export function getVaultConfigPath(): string {
 }
 
 /**
- * 解析 Proma 管理的默认 Markdown Vault 目录。
+ * 解析 Guru 管理的默认 Markdown Vault 目录。
  */
 export function resolveDefaultVaultDir(configDir: string): string {
   return join(configDir, 'vault')
 }
 
 /**
- * 获取 Proma 管理的默认 Markdown Vault 目录，并在首次使用时创建。
+ * 获取 Guru 管理的默认 Markdown Vault 目录，并在首次使用时创建。
  *
- * @returns 正式版本 ~/.proma/vault/，开发模式 ~/.proma-dev/vault/
+ * @returns 正式版本 ~/.guru/vault/，开发模式 ~/.guru-dev/vault/
  */
 export function getDefaultVaultDir(configDir = getConfigDir()): string {
   const dir = resolveDefaultVaultDir(configDir)
@@ -192,7 +192,7 @@ export function getDefaultVaultDir(configDir = getConfigDir()): string {
 /**
  * 获取系统默认 App 探测缓存路径
  *
- * @returns ~/.proma/default-apps.json
+ * @returns ~/.guru/default-apps.json
  */
 export function getDefaultAppsCachePath(): string {
   return join(getConfigDir(), 'default-apps.json')
@@ -201,7 +201,7 @@ export function getDefaultAppsCachePath(): string {
 /**
  * 获取用户档案文件路径
  *
- * @returns ~/.proma/user-profile.json
+ * @returns ~/.guru/user-profile.json
  */
 export function getUserProfilePath(): string {
   return join(getConfigDir(), 'user-profile.json')
@@ -210,7 +210,7 @@ export function getUserProfilePath(): string {
 /**
  * 获取代理配置文件路径
  *
- * @returns ~/.proma/proxy-settings.json
+ * @returns ~/.guru/proxy-settings.json
  */
 export function getProxySettingsPath(): string {
   return join(getConfigDir(), 'proxy-settings.json')
@@ -219,7 +219,7 @@ export function getProxySettingsPath(): string {
 /**
  * 获取系统提示词配置文件路径
  *
- * @returns ~/.proma/system-prompts.json
+ * @returns ~/.guru/system-prompts.json
  */
 export function getSystemPromptsPath(): string {
   return join(getConfigDir(), 'system-prompts.json')
@@ -228,7 +228,7 @@ export function getSystemPromptsPath(): string {
 /**
  * 获取 Chat 工具配置文件路径
  *
- * @returns ~/.proma/chat-tools.json
+ * @returns ~/.guru/chat-tools.json
  */
 export function getChatToolsConfigPath(): string {
   return join(getConfigDir(), 'chat-tools.json')
@@ -246,7 +246,7 @@ export function getMcpOAuthCredentialsPath(): string {
 /**
  * 获取 Agent 会话索引文件路径
  *
- * @returns ~/.proma/agent-sessions.json
+ * @returns ~/.guru/agent-sessions.json
  */
 export function getAgentSessionsIndexPath(): string {
   return join(getConfigDir(), 'agent-sessions.json')
@@ -257,7 +257,7 @@ export function getAgentSessionsIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.proma/agent-sessions/
+ * @returns ~/.guru/agent-sessions/
  */
 export function getAgentSessionsDir(): string {
   const dir = join(getConfigDir(), 'agent-sessions')
@@ -274,7 +274,7 @@ export function getAgentSessionsDir(): string {
  * 获取指定 Agent 会话的消息文件路径
  *
  * @param id 会话 ID
- * @returns ~/.proma/agent-sessions/{id}.jsonl
+ * @returns ~/.guru/agent-sessions/{id}.jsonl
  */
 export function getAgentSessionMessagesPath(id: string): string {
   return join(getAgentSessionsDir(), `${id}.jsonl`)
@@ -283,7 +283,7 @@ export function getAgentSessionMessagesPath(id: string): string {
 /**
  * 获取 Agent 工作区索引文件路径
  *
- * @returns ~/.proma/agent-workspaces.json
+ * @returns ~/.guru/agent-workspaces.json
  */
 export function getAgentWorkspacesIndexPath(): string {
   return join(getConfigDir(), 'agent-workspaces.json')
@@ -294,7 +294,7 @@ export function getAgentWorkspacesIndexPath(): string {
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.proma/agent-workspaces/
+ * @returns ~/.guru/agent-workspaces/
  */
 export function getAgentWorkspacesDir(): string {
   const dir = join(getConfigDir(), 'agent-workspaces')
@@ -313,7 +313,7 @@ export function getAgentWorkspacesDir(): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/
+ * @returns ~/.guru/agent-workspaces/{slug}/
  */
 export function getAgentWorkspacePath(slug: string): string {
   const dir = join(getAgentWorkspacesDir(), slug)
@@ -330,7 +330,7 @@ export function getAgentWorkspacePath(slug: string): string {
  * 获取指定工作区的 MCP 配置文件路径
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/mcp.json
+ * @returns ~/.guru/agent-workspaces/{slug}/mcp.json
  */
 export function getWorkspaceMcpPath(slug: string): string {
   return join(getAgentWorkspacePath(slug), 'mcp.json')
@@ -342,7 +342,7 @@ export function getWorkspaceMcpPath(slug: string): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/skills/
+ * @returns ~/.guru/agent-workspaces/{slug}/skills/
  */
 export function getWorkspaceSkillsDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'skills')
@@ -361,7 +361,7 @@ export function getWorkspaceSkillsDir(slug: string): string {
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/workspace-files/
+ * @returns ~/.guru/agent-workspaces/{slug}/workspace-files/
  */
 export function getWorkspaceFilesDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'workspace-files')
@@ -380,7 +380,7 @@ export function getWorkspaceFilesDir(slug: string): string {
  * 适用于 /now 等只读查询场景。
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/workspace-files/
+ * @returns ~/.guru/agent-workspaces/{slug}/workspace-files/
  */
 export function resolveWorkspaceFilesDir(slug: string): string {
   return join(getConfigDir(), 'agent-workspaces', slug, 'workspace-files')
@@ -394,7 +394,7 @@ export function resolveWorkspaceFilesDir(slug: string): string {
  *
  * @param slug 工作区 slug
  * @param sessionId 会话 ID
- * @returns ~/.proma/agent-workspaces/{slug}/{sessionId}/
+ * @returns ~/.guru/agent-workspaces/{slug}/{sessionId}/
  */
 export function resolveAgentSessionWorkspacePath(slug: string, sessionId: string): string {
   return join(getConfigDir(), 'agent-workspaces', slug, sessionId)
@@ -407,7 +407,7 @@ export function resolveAgentSessionWorkspacePath(slug: string, sessionId: string
  * 如果目录不存在则自动创建。
  *
  * @param slug 工作区 slug
- * @returns ~/.proma/agent-workspaces/{slug}/skills-inactive/
+ * @returns ~/.guru/agent-workspaces/{slug}/skills-inactive/
  */
 export function getInactiveSkillsDir(slug: string): string {
   const dir = join(getAgentWorkspacePath(slug), 'skills-inactive')
@@ -424,7 +424,7 @@ export function getInactiveSkillsDir(slug: string): string {
  *
  * 新建工作区时自动复制此目录的内容到工作区 skills/ 下。
  *
- * @returns ~/.proma/default-skills/
+ * @returns ~/.guru/default-skills/
  */
 export function getDefaultSkillsDir(): string {
   const dir = join(getConfigDir(), 'default-skills')
@@ -437,7 +437,7 @@ export function getDefaultSkillsDir(): string {
 }
 
 /**
- * 获取打包进 App 的 proma CLI 二进制路径。
+ * 获取打包进 App 的 guru CLI 二进制路径。
  *
  * 打包模式下从 process.resourcesPath/bin 取（electron-builder extraResources 注入）。
  * 开发模式下没有编译二进制——返回 undefined，由调用方回退到源码运行
@@ -448,7 +448,7 @@ export function getDefaultSkillsDir(): string {
 export function getBundledCliPath(): string | undefined {
   const { app } = require('electron')
   if (!app.isPackaged) return undefined
-  const binName = process.platform === 'win32' ? 'proma.exe' : 'proma'
+  const binName = process.platform === 'win32' ? 'guru.exe' : 'guru'
   const cliPath = join(process.resourcesPath, 'bin', binName)
   return existsSync(cliPath) ? cliPath : undefined
 }
@@ -513,7 +513,7 @@ export function isRetiredDefaultSkill(slug: string): boolean {
   return RETIRED_DEFAULT_SKILL_SLUG_SET.has(slug)
 }
 
-/** 清理 ~/.proma/default-skills/ 中已退役的内置 Skill 缓存。 */
+/** 清理 ~/.guru/default-skills/ 中已退役的内置 Skill 缓存。 */
 export function removeRetiredDefaultSkills(dir = getDefaultSkillsDir()): void {
   for (const slug of RETIRED_DEFAULT_SKILL_SLUGS) {
     const target = join(dir, slug)
@@ -546,7 +546,7 @@ function defaultSkillCopyFilter(src: string): boolean {
 }
 
 /**
- * 从 app bundle 同步默认 Skills 到 ~/.proma/default-skills/
+ * 从 app bundle 同步默认 Skills 到 ~/.guru/default-skills/
  *
  * 打包模式下从 process.resourcesPath/default-skills 复制。
  * 开发模式下从源码 default-skills/ 目录复制。
@@ -610,7 +610,7 @@ export function seedDefaultSkills(): void {
 /**
  * 获取微信配置文件路径
  *
- * @returns ~/.proma/wechat.json
+ * @returns ~/.guru/wechat.json
  */
 export function getWeChatConfigPath(): string {
   return join(getConfigDir(), 'wechat.json')
@@ -619,7 +619,7 @@ export function getWeChatConfigPath(): string {
 /**
  * 获取微信长轮询同步游标路径
  *
- * @returns ~/.proma/wechat-sync.json
+ * @returns ~/.guru/wechat-sync.json
  */
 export function getWeChatSyncPath(): string {
   return join(getConfigDir(), 'wechat-sync.json')
@@ -628,7 +628,7 @@ export function getWeChatSyncPath(): string {
 /**
  * 获取微信聊天绑定持久化路径
  *
- * @returns ~/.proma/wechat-bindings.json
+ * @returns ~/.guru/wechat-bindings.json
  */
 export function getWeChatBindingsPath(): string {
   return join(getConfigDir(), 'wechat-bindings.json')
@@ -637,7 +637,7 @@ export function getWeChatBindingsPath(): string {
 /**
  * 获取钉钉配置文件路径
  *
- * @returns ~/.proma/dingtalk.json
+ * @returns ~/.guru/dingtalk.json
  */
 export function getDingTalkConfigPath(): string {
   return join(getConfigDir(), 'dingtalk.json')
@@ -646,18 +646,18 @@ export function getDingTalkConfigPath(): string {
 /**
  * 获取某个钉钉 Bot 的聊天绑定持久化路径
  *
- * @returns ~/.proma/dingtalk-bindings-{botId}.json
+ * @returns ~/.guru/dingtalk-bindings-{botId}.json
  */
 export function getDingTalkBotBindingsPath(botId: string): string {
   return join(getConfigDir(), `dingtalk-bindings-${botId}.json`)
 }
 
-/** 获取 Slack 配置文件路径（~/.proma/slack.json）。 */
+/** 获取 Slack 配置文件路径（~/.guru/slack.json）。 */
 export function getSlackConfigPath(): string {
   return join(getConfigDir(), 'slack.json')
 }
 
-/** 获取单个 Slack Bot 的 thread → Proma session 绑定文件。 */
+/** 获取单个 Slack Bot 的 thread → Guru session 绑定文件。 */
 export function getSlackBotBindingsPath(botId: string): string {
   return join(getConfigDir(), `slack-bindings-${botId}.json`)
 }
@@ -673,7 +673,7 @@ export function getSlackBotDeliveryPath(botId: string): string {
 /**
  * 获取飞书配置文件路径
  *
- * @returns ~/.proma/feishu.json
+ * @returns ~/.guru/feishu.json
  */
 export function getFeishuConfigPath(): string {
   return join(getConfigDir(), 'feishu.json')
@@ -682,7 +682,7 @@ export function getFeishuConfigPath(): string {
 /**
  * 获取飞书聊天绑定持久化路径
  *
- * @returns ~/.proma/feishu-bindings.json
+ * @returns ~/.guru/feishu-bindings.json
  */
 export function getFeishuBindingsPath(): string {
   return join(getConfigDir(), 'feishu-bindings.json')
@@ -691,7 +691,7 @@ export function getFeishuBindingsPath(): string {
 /**
  * 获取某个飞书 Bot 的聊天绑定持久化路径
  *
- * @returns ~/.proma/feishu-bindings-{botId}.json
+ * @returns ~/.guru/feishu-bindings-{botId}.json
  */
 export function getFeishuBotBindingsPath(botId: string): string {
   return join(getConfigDir(), `feishu-bindings-${botId}.json`)
@@ -702,7 +702,7 @@ export function getFeishuBotBindingsPath(botId: string): string {
  *
  * 用于保存最近交互用户 open_id 等需要跨进程重启恢复的状态。
  *
- * @returns ~/.proma/feishu-metadata-{botId}.json
+ * @returns ~/.guru/feishu-metadata-{botId}.json
  */
 export function getFeishuBotMetadataPath(botId: string): string {
   return join(getConfigDir(), `feishu-metadata-${botId}.json`)
@@ -716,7 +716,7 @@ export function getFeishuBotMetadataPath(botId: string): string {
  *
  * @param workspaceSlug 工作区 slug
  * @param sessionId 会话 ID
- * @returns ~/.proma/agent-workspaces/{slug}/{sessionId}/
+ * @returns ~/.guru/agent-workspaces/{slug}/{sessionId}/
  */
 export function getAgentSessionWorkspacePath(workspaceSlug: string, sessionId: string): string {
   const dir = join(getAgentWorkspacePath(workspaceSlug), sessionId)
@@ -733,11 +733,11 @@ export function getAgentSessionWorkspacePath(workspaceSlug: string, sessionId: s
  * 获取 SDK 隔离配置目录路径
  *
  * 用于保存 Pi session artifact 等运行时数据，
- * 而不是用户的 ~/.claude.json，实现 Proma 与 Claude Code CLI 的配置隔离。
+ * 而不是用户的 ~/.claude.json，实现 Guru 与 Claude Code CLI 的配置隔离。
  *
  * 如果目录不存在则自动创建。
  *
- * @returns ~/.proma/sdk-config/
+ * @returns ~/.guru/sdk-config/
  */
 export function getSdkConfigDir(): string {
   const dir = join(getConfigDir(), 'sdk-config')
@@ -803,12 +803,12 @@ function findScratchPadMigrationDestination(vaultDir: string, legacyContentSha25
 /**
  * 获取 Scratch Pad 文件路径。
  *
- * 保留原始旧版 scratch-pad.md，并按其内容指纹仅复制到 Proma 管理的默认 Vault 一次。
+ * 保留原始旧版 scratch-pad.md，并按其内容指纹仅复制到 Guru 管理的默认 Vault 一次。
  * 已存在的 Vault 内容绝不覆盖；旧文件优先复制为草稿.md，重名时使用草稿 N.md。
  * 内容复制成功后以崩溃安全的状态文件记录指纹；重启或重复调用只返回 canonical Vault 路径。
  * 迁移失败时继续使用旧路径，以便下次安全重试。
  *
- * @returns 正式版本 ~/.proma/vault/scratch-pad.md，开发模式 ~/.proma-dev/vault/scratch-pad.md
+ * @returns 正式版本 ~/.guru/vault/scratch-pad.md，开发模式 ~/.guru-dev/vault/scratch-pad.md
  */
 export function getScratchPadPath(configDir = getConfigDir()): string {
   const legacyPath = join(configDir, 'scratch-pad.md')
@@ -851,7 +851,7 @@ export function getScratchPadPath(configDir = getConfigDir()): string {
 /**
  * 获取定时任务（Automation）配置文件路径
  *
- * @returns ~/.proma/automations.json
+ * @returns ~/.guru/automations.json
  */
 export function getAutomationsPath(): string {
   return join(getConfigDir(), 'automations.json')

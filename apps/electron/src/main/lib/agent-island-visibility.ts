@@ -1,4 +1,4 @@
-import type { AgentIslandState } from '@proma/shared'
+import type { AgentIslandState } from '@guru/shared'
 
 /**
  * 构建 Island 的可见性指纹（纯函数，便于单测）。

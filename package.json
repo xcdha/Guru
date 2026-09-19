@@ -1,7 +1,7 @@
 {
-  "name": "proma",
+  "name": "guru",
   "version": "0.1.1",
-  "description": "Proma，为专业用户设计的 Agent",
+  "description": "Guru，为专业用户设计的 Agent",
   "type": "module",
   "private": true,
   "workspaces": [
@@ -9,13 +9,13 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "bun run --filter='@proma/electron' dev",
-    "electron:dev": "bun run --filter='@proma/electron' dev",
-    "electron:build": "bun run --filter='@proma/electron' build",
-    "electron:start": "bun run --filter='@proma/electron' start",
-    "dist:mac": "bun run --filter='@proma/electron' dist:mac",
-  "dist:win": "bun run --filter='@proma/electron' dist:win",
-  "dist:linux": "bun run --filter='@proma/electron' dist:linux",
+    "dev": "bun run --filter='@guru/electron' dev",
+    "electron:dev": "bun run --filter='@guru/electron' dev",
+    "electron:build": "bun run --filter='@guru/electron' build",
+    "electron:start": "bun run --filter='@guru/electron' start",
+    "dist:mac": "bun run --filter='@guru/electron' dist:mac",
+  "dist:win": "bun run --filter='@guru/electron' dist:win",
+  "dist:linux": "bun run --filter='@guru/electron' dist:linux",
     "build": "bun run --filter='*' build",
     "typecheck": "bun run --filter='*' typecheck",
     "test": "bun test"

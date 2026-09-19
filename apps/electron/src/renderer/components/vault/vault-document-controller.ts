@@ -1,4 +1,4 @@
-import type { VaultReadResult } from '@proma/shared'
+import type { VaultReadResult } from '@guru/shared'
 
 export type VaultDocumentWriteRequest = {
   relativePath: string

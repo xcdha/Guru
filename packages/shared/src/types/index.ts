@@ -1,5 +1,5 @@
 /**
- * Shared type definitions for proma
+ * Shared type definitions for guru
  */
 
 // Placeholder types - will be expanded as needed

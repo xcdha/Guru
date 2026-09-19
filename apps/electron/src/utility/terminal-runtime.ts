@@ -10,7 +10,7 @@ import {
   type TerminalOutputEvent,
   type TerminalResizeInput,
   type TerminalState,
-} from '@proma/shared'
+} from '@guru/shared'
 import { resolveTerminalShell } from './terminal-shell-resolver'
 
 type MessagePortLike = {
@@ -67,7 +67,7 @@ if (!parentPort) {
 parentPort.on('message', (event) => {
   const value = event?.data as Record<string, unknown> | undefined
   const transfer = value?.data && typeof value.data === 'object' ? value.data as Record<string, unknown> : value
-  if (!transfer || transfer.type !== 'proma-terminal-runtime-port') return
+  if (!transfer || transfer.type !== 'guru-terminal-runtime-port') return
   const port = event.ports?.[0] ?? value?.port as MessagePortLike | undefined
   if (!port) {
     console.error('[TerminalRuntime] invalid MessagePort bootstrap message')
@@ -188,7 +188,7 @@ function flushOutput(terminalId: string): void {
   if (terminal.inFlight) return
   if (!terminal.output && terminal.droppedOutputChars === 0) return
   const lossMarker = terminal.droppedOutputChars > 0
-    ? `\r\n\x1b[33m[Proma：终端输出过快，已丢弃 ${terminal.droppedOutputChars} 个字符]\x1b[0m\r\n`
+    ? `\r\n\x1b[33m[Guru：终端输出过快，已丢弃 ${terminal.droppedOutputChars} 个字符]\x1b[0m\r\n`
     : ''
   const data = terminal.output + lossMarker
   terminal.output = ''

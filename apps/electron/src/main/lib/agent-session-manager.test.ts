@@ -10,7 +10,7 @@ let manager: AgentSessionManager
 let contextPrompt: AgentSessionContextPrompt
 let tempHome: string
 const originalHome = process.env.HOME
-const originalPromaDev = process.env.PROMA_DEV
+const originalGuruDev = process.env.GURU_DEV
 
 // agent-session-manager loads Pi lazily for fork/rewind, so this focused fake isolates
 // entry-tree semantics without requiring a real Pi session JSONL fixture.
@@ -69,7 +69,7 @@ function jsonl(rows: string[]): string {
 }
 
 function writeAgentSessionJsonl(sessionId: string, rows: string[]): void {
-  const dir = join(tempHome, '.proma', 'agent-sessions')
+  const dir = join(tempHome, '.guru', 'agent-sessions')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, `${sessionId}.jsonl`), jsonl(rows), 'utf-8')
 }
@@ -87,7 +87,7 @@ function writeAgentSessionsIndex(sessions: Array<{
   forkSourceSdkSessionId?: string
   resumeAtMessageUuid?: string
 }>): void {
-  const dir = join(tempHome, '.proma')
+  const dir = join(tempHome, '.guru')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'agent-sessions.json'), JSON.stringify({ version: 1, sessions }), 'utf-8')
 }
@@ -99,7 +99,7 @@ function writeAgentWorkspacesIndex(workspaces: Array<{
   createdAt: number
   updatedAt: number
 }>): void {
-  const dir = join(tempHome, '.proma')
+  const dir = join(tempHome, '.guru')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'agent-workspaces.json'), JSON.stringify({ version: 2, workspaces }), 'utf-8')
 }
@@ -115,9 +115,9 @@ function createIndexedSessions(count: number) {
 }
 
 beforeAll(async () => {
-  tempHome = mkdtempSync(join(os.tmpdir(), 'proma-agent-session-manager-'))
+  tempHome = mkdtempSync(join(os.tmpdir(), 'guru-agent-session-manager-'))
   process.env.HOME = tempHome
-  process.env.PROMA_DEV = '0'
+  process.env.GURU_DEV = '0'
   manager = await import('./agent-session-manager')
   contextPrompt = await import('./agent-session-context-prompt')
 })
@@ -128,10 +128,10 @@ afterAll(() => {
   } else {
     process.env.HOME = originalHome
   }
-  if (originalPromaDev === undefined) {
-    delete process.env.PROMA_DEV
+  if (originalGuruDev === undefined) {
+    delete process.env.GURU_DEV
   } else {
-    process.env.PROMA_DEV = originalPromaDev
+    process.env.GURU_DEV = originalGuruDev
   }
   rmSync(tempHome, { recursive: true, force: true })
 })
@@ -162,8 +162,8 @@ describe('Agent 会话 JSONL 读取', () => {
 
 describe('Agent 会话 runtime 元数据', () => {
   test('Given 已保存 OpenAI medium 默认值 When 新建会话 Then 始终创建并持久化 Pi 会话', () => {
-    const settingsPath = join(tempHome, '.proma', 'settings.json')
-    mkdirSync(join(tempHome, '.proma'), { recursive: true })
+    const settingsPath = join(tempHome, '.guru', 'settings.json')
+    mkdirSync(join(tempHome, '.guru'), { recursive: true })
     writeFileSync(settingsPath, JSON.stringify({
       agentThinking: { type: 'adaptive' },
       agentEffort: 'max',
@@ -233,7 +233,7 @@ describe('Agent 会话 runtime 元数据', () => {
       piSessionFile: '/tmp/pi-session.jsonl',
       piEntryBindings: { 'assistant-1': 'entry-1' },
     }])
-    mkdirSync(join(tempHome, '.proma', 'agent-workspaces', 'workspace-a', 'pi-session-to-move'), { recursive: true })
+    mkdirSync(join(tempHome, '.guru', 'agent-workspaces', 'workspace-a', 'pi-session-to-move'), { recursive: true })
 
     const moved = manager.moveSessionToWorkspace('pi-session-to-move', 'workspace-b')
 
@@ -241,14 +241,14 @@ describe('Agent 会话 runtime 元数据', () => {
     expect(moved.sdkSessionId).toBeUndefined()
     expect(moved.piSessionFile).toBeUndefined()
     expect(moved.piEntryBindings).toBeUndefined()
-    expect(existsSync(join(tempHome, '.proma', 'agent-workspaces', 'workspace-b', 'pi-session-to-move'))).toBe(true)
+    expect(existsSync(join(tempHome, '.guru', 'agent-workspaces', 'workspace-b', 'pi-session-to-move'))).toBe(true)
   })
 
   test('Given 新安装用户保存关闭思考 When 连续新建会话 Then 不被旧版迁移改回 high', () => {
-    const settingsPath = join(tempHome, '.proma', 'settings.json')
-    const indexPath = join(tempHome, '.proma', 'agent-sessions.json')
+    const settingsPath = join(tempHome, '.guru', 'settings.json')
+    const indexPath = join(tempHome, '.guru', 'agent-sessions.json')
     const indexBackupPath = `${indexPath}.bak`
-    mkdirSync(join(tempHome, '.proma'), { recursive: true })
+    mkdirSync(join(tempHome, '.guru'), { recursive: true })
     rmSync(indexPath, { force: true })
     rmSync(indexBackupPath, { force: true })
     writeFileSync(settingsPath, JSON.stringify({

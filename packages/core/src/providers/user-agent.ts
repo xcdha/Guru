@@ -1,16 +1,16 @@
-const PROMA_REPO_URL = 'https://github.com/ErlichLiu/Proma'
+const GURU_REPO_URL = 'https://github.com/ErlichLiu/Guru'
 
-let _promaVersion = '0.0.0'
+let _guruVersion = '0.0.0'
 
-export function setPromaVersion(version: string): void {
-  _promaVersion = version
+export function setGuruVersion(version: string): void {
+  _guruVersion = version
 }
 
-export function getPromaVersion(): string {
-  return _promaVersion
+export function getGuruVersion(): string {
+  return _guruVersion
 }
 
-export function getPromaUserAgent(version?: string): string {
-  const v = version ?? _promaVersion
-  return `Proma/${v} (+${PROMA_REPO_URL})`
+export function getGuruUserAgent(version?: string): string {
+  const v = version ?? _guruVersion
+  return `Guru/${v} (+${GURU_REPO_URL})`
 }

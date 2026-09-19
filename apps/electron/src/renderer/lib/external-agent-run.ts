@@ -1,4 +1,4 @@
-import type { AgentSessionMeta, SDKMessage } from '@proma/shared'
+import type { AgentSessionMeta, SDKMessage } from '@guru/shared'
 import type { AgentStreamState } from '@/atoms/agent-atoms'
 import type { TabItem } from '@/atoms/tab-atoms'
 
@@ -39,7 +39,7 @@ export function createExternalAgentRunUserMessage(input: {
     message: { content: [{ type: 'text', text: input.userMessage }] },
     parent_tool_use_id: null,
     _createdAt: input.startedAt,
-    _promaLiveRunStartedAt: input.startedAt,
+    _guruLiveRunStartedAt: input.startedAt,
   } as unknown as SDKMessage
 }
 

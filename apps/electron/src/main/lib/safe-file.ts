@@ -48,7 +48,7 @@ export function writeTextFileAtomic(filePath: string, content: string): void {
   let descriptor: number | null = null
   try {
     for (let attempt = 0; attempt < 16; attempt++) {
-      const candidate = join(parent, `.${stem}.proma-${randomBytes(12).toString('hex')}.tmp`)
+      const candidate = join(parent, `.${stem}.guru-${randomBytes(12).toString('hex')}.tmp`)
       try {
         descriptor = openSync(candidate, 'wx', 0o600)
         tmpPath = candidate

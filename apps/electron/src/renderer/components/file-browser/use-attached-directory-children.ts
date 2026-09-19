@@ -1,5 +1,5 @@
 import * as React from 'react'
-import type { FileEntry } from '@proma/shared'
+import type { FileEntry } from '@guru/shared'
 
 interface AttachedDirectoryChildrenOptions {
   stateKey: string

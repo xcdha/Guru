@@ -1,7 +1,7 @@
 /**
  * Pi 模型注册与渠道兼容层。
  *
- * Pi SDK 需要把 Proma 渠道临时注册成 runtime provider；这里集中处理
+ * Pi SDK 需要把 Guru 渠道临时注册成 runtime provider；这里集中处理
  * ProviderType 到 Pi API 协议、baseUrl、认证头和模型 catalog 默认值的映射。
  */
 
@@ -21,14 +21,14 @@ import {
   type ReasoningCapability,
   type ReasoningTransport,
   type ProviderType,
-} from '@proma/shared'
+} from '@guru/shared'
 import {
-  getPromaUserAgent,
+  getGuruUserAgent,
   normalizeAnthropicBaseUrlForSdk,
   normalizeOpenAIBaseUrlForSdk,
   normalizeVersionedAnthropicBaseUrl,
   resolveAnthropicMessagesUrl,
-} from '@proma/core'
+} from '@guru/core'
 import type { Api, KnownProvider, Model } from '@earendil-works/pi-ai/compat'
 import type { PiAgentQueryOptions } from './pi-agent-adapter'
 import { rememberXaiOAuthCredentials, refreshXaiOAuthCredentialsSerial } from '../xai-oauth-credentials'
@@ -132,7 +132,7 @@ function compilePiReasoningCapabilities(
 }
 
 /**
- * Proma re-registers every non-OAuth channel as an ephemeral Pi provider. Preserve
+ * Guru re-registers every non-OAuth channel as an ephemeral Pi provider. Preserve
  * only this protocol-safe catalog flag: current Claude models require adaptive
  * thinking, while copying the complete catalog compat object could leak unrelated
  * tool/sampling behaviour across provider protocols.
@@ -327,7 +327,7 @@ function createXaiRuntimeCredentialStore(
 
 /**
  * Pi 0.85.0 已在 catalog 中原生声明 experimental vision 变体。
- * 常规 Flash 的视觉能力仍由 Proma 已验证的渠道契约兜底，不改变实际模型 ID、协议或推理参数。
+ * 常规 Flash 的视觉能力仍由 Guru 已验证的渠道契约兜底，不改变实际模型 ID、协议或推理参数。
  */
 const DEEPSEEK_V4_FLASH_VISION_MODEL_IDS = new Set([
   'deepseek-v4-flash',
@@ -745,7 +745,7 @@ export function normalizePiBaseUrl(baseUrl: string | undefined, provider: Provid
   return normalizedBaseUrl
 }
 
-export function requiresPromaUserAgent(provider: ProviderType): boolean {
+export function requiresGuruUserAgent(provider: ProviderType): boolean {
   return provider === 'kimi-coding'
     || provider === 'xiaomi-token-plan'
     || provider === 'qwen-token-plan'
@@ -754,7 +754,7 @@ export function requiresPromaUserAgent(provider: ProviderType): boolean {
 }
 
 function usesBearerOnlyAnthropicAuth(provider: ProviderType): boolean {
-  return requiresPromaUserAgent(provider) || provider === 'minimax' || provider === 'qwen-anthropic'
+  return requiresGuruUserAgent(provider) || provider === 'minimax' || provider === 'qwen-anthropic'
 }
 
 export function buildPiRequestHeaders(provider: ProviderType, apiKey: string): PiRequestHeaders | undefined {
@@ -764,8 +764,8 @@ export function buildPiRequestHeaders(provider: ProviderType, apiKey: string): P
     Authorization: `Bearer ${apiKey}`,
   }
 
-  if (requiresPromaUserAgent(provider)) {
-    headers['User-Agent'] = getPromaUserAgent()
+  if (requiresGuruUserAgent(provider)) {
+    headers['User-Agent'] = getGuruUserAgent()
   }
 
   return headers
@@ -842,8 +842,8 @@ export async function getCodexCatalogModels(): Promise<PiCatalogModel[]> {
  * openai-codex 是 Pi SDK 的内置 KnownProvider：模型目录、baseUrl 和
  * `openai-codex-responses` 协议全部内置，无需（也不能）手工构造 models 或 baseUrl。
  * Pi 0.80.10 将它声明为 OAuth-only provider；runtime API key 不会参与其认证解析。
- * 因此将 Proma 已刷新过的完整凭据放入一次性内存 OAuth credential store，
- * 按真实 expires 刷新并回写 Proma，避免读写全局 ~/.pi 认证文件。
+ * 因此将 Guru 已刷新过的完整凭据放入一次性内存 OAuth credential store，
+ * 按真实 expires 刷新并回写 Guru，避免读写全局 ~/.pi 认证文件。
  */
 export async function buildCodexModel(sdk: PiSdk, input: CodexModelInput) {
   if (!input.codexOAuthCredentials) {
@@ -971,7 +971,7 @@ export async function buildModel(sdk: PiSdk, input: PiAgentQueryOptions) {
   if (input.provider === 'github-copilot') {
     return buildGithubCopilotModel(sdk, input)
   }
-  const providerName = `proma-${input.provider}-${input.sessionId}`
+  const providerName = `guru-${input.provider}-${input.sessionId}`
   const resolvedApiKey = resolvePiApiKey(input.provider, input.apiKey)
   // pi runtime 统一剥离历史 `[1m]` 后缀：无论上游从哪条路径传入，注册与查找都用干净 ID。
   const resolvedModelId = stripLegacyAgentSdkContextSuffix(input.model)

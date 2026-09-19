@@ -5,9 +5,9 @@
  * 替代 chat-service.ts 中硬编码的 if/else 分支。
  */
 
-import type { ToolCall, ToolResult } from '@proma/core'
+import type { ToolCall, ToolResult } from '@guru/core'
 import type { WebContents } from 'electron'
-import { CHAT_IPC_CHANNELS } from '@proma/shared'
+import { CHAT_IPC_CHANNELS } from '@guru/shared'
 import { isCustomHttpToolCall, executeHttpTool } from './chat-tools/http-tool-executor'
 import { isAgentRecommendToolCall, executeAgentRecommendTool } from './chat-tools/agent-recommend-tool'
 import { getChatToolsConfig } from './chat-tool-config'

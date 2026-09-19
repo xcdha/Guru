@@ -6,10 +6,10 @@ import type {
   SDKMessage,
   SDKUserMessageInput,
   SendQueuedMessageOptions,
-} from '@proma/shared'
+} from '@guru/shared'
 import {
   AGENT_RUNTIME_METHODS,
-} from '@proma/shared'
+} from '@guru/shared'
 import type { PermissionResult, CanUseToolOptions } from '../agent-permission-service'
 import { AgentRuntimeClient } from '../agent-runtime-client'
 import type { PiAgentQueryOptions } from './pi-agent-adapter'
@@ -44,7 +44,7 @@ type AsyncEventQueue<T> = {
 
 /**
  * Main-process facade for one utility process per active Agent session.
- * Only serializable query data crosses the boundary; Proma callbacks return
+ * Only serializable query data crosses the boundary; Guru callbacks return
  * through capability RPC so business ownership stays in the main process.
  */
 export class PiUtilityAdapter {

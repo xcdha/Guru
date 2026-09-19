@@ -10,7 +10,7 @@ import { existsSync, realpathSync, readFileSync, writeFileSync, mkdirSync, statS
 import { realpath, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
-import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, AGENT_ISLAND_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, SLACK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, VAULT_IPC_CHANNELS, PLANNING_CONFLICT_ERROR, MAX_ATTACHMENT_SIZE, isPromaPermissionMode, normalizePathForCompare, removeMcpServerFromConfig, TERMINAL_IPC_CHANNELS } from '@proma/shared'
+import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, AGENT_ISLAND_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, INSTALLER_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, CHAT_TOOL_IPC_CHANNELS, FEISHU_IPC_CHANNELS, DINGTALK_IPC_CHANNELS, SLACK_IPC_CHANNELS, WECHAT_IPC_CHANNELS, AUTOMATION_IPC_CHANNELS, PLANNING_IPC_CHANNELS, VAULT_IPC_CHANNELS, PLANNING_CONFLICT_ERROR, MAX_ATTACHMENT_SIZE, isGuruPermissionMode, normalizePathForCompare, removeMcpServerFromConfig, TERMINAL_IPC_CHANNELS } from '@guru/shared'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS, SCRATCH_PAD_IPC_CHANNELS, QUICK_TASK_IPC_CHANNELS, VOICE_DICTATION_IPC_CHANNELS, APP_ICON_IPC_CHANNELS, DOCK_BADGE_IPC_CHANNELS, STORAGE_IPC_CHANNELS, WINDOWS_AGENT_ISLAND_IPC_CHANNELS, TRAY_IPC_CHANNELS } from '../types'
 import type {
   QuickTaskSubmitInput,
@@ -80,7 +80,7 @@ import type {
   GitHubRelease,
   GitHubReleaseListOptions,
   PermissionResponse,
-  PromaPermissionMode,
+  GuruPermissionMode,
   AskUserResponse,
   ExitPlanModeResponse,
   SystemPromptConfig,
@@ -154,7 +154,7 @@ import type {
   BrowserNavigateInput,
   BrowserTabInput,
   BrowserCreateTabInput,
-} from '@proma/shared'
+} from '@guru/shared'
 import type { UserProfile, AppSettings } from '../types'
 import { getRuntimeStatus, getGitRepoStatus, reinitializeRuntime } from './lib/runtime-init'
 import { browserController } from './lib/browser-controller'
@@ -162,7 +162,7 @@ import { acknowledgeTerminalOutput, closeTerminalsForSession, createTerminal, ge
 import { getMainWindow } from './lib/main-window-store'
 import { resolveBrowserProfileKey } from './lib/browser-profile-policy'
 import { getUnstagedChanges, invalidateGitDiffCache, getFileDiff, getUntrackedContent, revertFile, getDiffContents, listWorktrees, getWorktreeChanges, getMainRepoRoot } from './lib/git-diff-service'
-import { registerPromaDirectoryPath, registerPromaFilePath } from './lib/local-file-protocol'
+import { registerGuruDirectoryPath, registerGuruFilePath } from './lib/local-file-protocol'
 import {
   authorizeDiscoveredVault,
   configureVault,
@@ -194,8 +194,8 @@ import { loginCodexOAuth, cancelCodexOAuthLogin } from './lib/codex-oauth-servic
 import { loginGithubCopilotOAuth, cancelGithubCopilotOAuthLogin } from './lib/github-copilot-oauth-service'
 import { loginXaiOAuth, cancelXaiOAuthLogin } from './lib/xai-oauth-service'
 import { resolvePiReasoningCapability } from './lib/adapters/pi-model-registry'
-import { serializeCodexCredentials, serializeGithubCopilotCredentials, serializeXaiCredentials } from '@proma/shared'
-import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, GithubCopilotOAuthDeviceCode, XaiOAuthDeviceCode } from '@proma/shared'
+import { serializeCodexCredentials, serializeGithubCopilotCredentials, serializeXaiCredentials } from '@guru/shared'
+import type { CodexOAuthDeviceCode, CodexOAuthLoginMethod, GithubCopilotOAuthDeviceCode, XaiOAuthDeviceCode } from '@guru/shared'
 import {
   listConversations,
   createConversation,
@@ -374,7 +374,7 @@ const workspaceMemoryWatchDestroyedListeners = new Set<number>()
  * 该代数仅用于进程内竞态保护，不写入用户的 mcp.json。
  */
 const workspaceMcpRefreshGenerations = new Map<string, number>()
-const workspaceMcpPendingValidations = new Map<string, Map<string, import('@proma/shared').McpServerEntry>>()
+const workspaceMcpPendingValidations = new Map<string, Map<string, import('@guru/shared').McpServerEntry>>()
 
 function advanceWorkspaceMcpRefreshGeneration(workspaceSlug: string): number {
   const generation = (workspaceMcpRefreshGenerations.get(workspaceSlug) ?? 0) + 1
@@ -382,12 +382,12 @@ function advanceWorkspaceMcpRefreshGeneration(workspaceSlug: string): number {
   return generation
 }
 
-function getWorkspaceMcpPendingValidation(workspaceSlug: string, name: string): import('@proma/shared').McpServerEntry | undefined {
+function getWorkspaceMcpPendingValidation(workspaceSlug: string, name: string): import('@guru/shared').McpServerEntry | undefined {
   return workspaceMcpPendingValidations.get(workspaceSlug)?.get(name)
 }
 
-function setWorkspaceMcpPendingValidation(workspaceSlug: string, name: string, entry: import('@proma/shared').McpServerEntry): void {
-  const pending = workspaceMcpPendingValidations.get(workspaceSlug) ?? new Map<string, import('@proma/shared').McpServerEntry>()
+function setWorkspaceMcpPendingValidation(workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): void {
+  const pending = workspaceMcpPendingValidations.get(workspaceSlug) ?? new Map<string, import('@guru/shared').McpServerEntry>()
   pending.set(name, entry)
   workspaceMcpPendingValidations.set(workspaceSlug, pending)
 }
@@ -488,7 +488,7 @@ function realpathOrResolve(path: string): string {
 function getAuthorizedRoots(options?: FileAccessOptions): string[] {
   const roots: string[] = [
     getAgentWorkspacesDir(),
-    join(tmpdir(), 'proma-preview'),
+    join(tmpdir(), 'guru-preview'),
   ]
 
   const workspaceSlugs = new Set<string>()
@@ -751,7 +751,7 @@ function ensurePathAllowed(filePath: string, options?: FileAccessOptions): boole
 /**
  * 在 ensurePathAllowed 基础上，额外放行「已授权仓库的 worktree」。
  *
- * worktree 常被放在主仓库之外（如 ~/proma-dev/worktrees/xxx），其路径不在任何
+ * worktree 常被放在主仓库之外（如 ~/guru-dev/worktrees/xxx），其路径不在任何
  * 授权根下，会被 ensurePathAllowed 拒绝。但只要它回溯到的主仓库已被授权，就应放行。
  * 用 git 自身背书（--git-common-dir），避免粗暴跳过安全检查。
  */
@@ -768,7 +768,7 @@ async function ensurePathAllowedWithWorktree(filePath: string, options?: FileAcc
       if (authorizedRoot === targetMainRepo) return true
     }
     for (const workspaceSlug of getWorkspaceSlugsForAccess(options)) {
-      let repos: import('@proma/shared').WorkspaceWorktreeRepo[]
+      let repos: import('@guru/shared').WorkspaceWorktreeRepo[]
       try {
         repos = await getWorktreeRepos(workspaceSlug)
       } catch {
@@ -807,7 +807,7 @@ function getBundledResourcesDir(): string {
  * 默认 App 探测结果按文件后缀缓存，避免反复 spawn Swift / 注册表查询。
  * 成功结果会落盘；失败只做短暂内存冷却，避免一次瞬时失败导致整会话都隐藏按钮。
  */
-const defaultAppCache = new Map<string, import('@proma/shared').DefaultAppInfo>()
+const defaultAppCache = new Map<string, import('@guru/shared').DefaultAppInfo>()
 const defaultAppFailureCache = new Map<string, number>()
 const DEFAULT_APP_FAILURE_RETRY_MS = 60_000
 
@@ -850,7 +850,7 @@ async function getMacAppIconViaSips(appPath: string): Promise<string> {
   const icnsPath = candidates.find((p) => existsSync(p))
   if (!icnsPath) return ''
 
-  const tmp = mkdtempSync(join(tmpdir(), 'proma-icon-'))
+  const tmp = mkdtempSync(join(tmpdir(), 'guru-icon-'))
   const outPath = join(tmp, 'icon.png')
   try {
     const r = await runCmd('sips', ['-s', 'format', 'png', '-Z', '64', icnsPath, '--out', outPath], { timeoutMs: 4000 })
@@ -927,13 +927,13 @@ async function runCliCommand(bin: string, args: string[], opts: { timeoutMs?: nu
 interface McpRefreshValidation {
   name: string
   fingerprint: string
-  lastTestResult: NonNullable<import('@proma/shared').McpServerEntry['lastTestResult']>
+  lastTestResult: NonNullable<import('@guru/shared').McpServerEntry['lastTestResult']>
 }
 
 /**
  * 生成 MCP 可运行配置的稳定摘要。摘要只用于内存中比较，绝不记录或返回，避免暴露 headers/env 中的敏感值。
  */
-export function getMcpEntryFingerprint(entry: import('@proma/shared').McpServerEntry): string {
+export function getMcpEntryFingerprint(entry: import('@guru/shared').McpServerEntry): string {
   const sortedEntries = (record: Record<string, string> | undefined): Array<[string, string]> =>
     Object.entries(record ?? {}).sort(([left], [right]) => left.localeCompare(right))
 
@@ -978,9 +978,9 @@ export async function mapWithConcurrency<T, R>(
  * 因而同名服务器被编辑、禁用、删除或被后一次刷新取代时，旧结果不会落盘。
  */
 export function mergeMcpRefreshResults(
-  currentConfig: import('@proma/shared').WorkspaceMcpConfig,
+  currentConfig: import('@guru/shared').WorkspaceMcpConfig,
   validations: readonly McpRefreshValidation[],
-): import('@proma/shared').WorkspaceMcpConfig {
+): import('@guru/shared').WorkspaceMcpConfig {
   const servers = { ...currentConfig.servers }
   for (const validation of validations) {
     const currentEntry = servers[validation.name]
@@ -1004,10 +1004,10 @@ export function mergeMcpRefreshResults(
 async function validateAndConditionallyPersistMcp(
   workspaceSlug: string,
   name: string,
-  candidateEntry: import('@proma/shared').McpServerEntry,
+  candidateEntry: import('@guru/shared').McpServerEntry,
   expectedPersistedFingerprint: string,
   expectedRefreshGeneration: number,
-): Promise<import('@proma/shared').McpConnectionMutationResult> {
+): Promise<import('@guru/shared').McpConnectionMutationResult> {
   const { validateMcpServer } = await import('./lib/mcp-validator')
   const result = await validateMcpServer(name, candidateEntry, workspaceSlug)
   const verification = {
@@ -1072,7 +1072,7 @@ function isDingTalkCliAuthenticated(result: CliCommandResult): boolean {
 export async function getCliIntegrationStatuses(
   runner: CliCommandRunner = runCliCommand,
   disabledIds: ReadonlySet<string> = new Set(),
-): Promise<import('@proma/shared').CliIntegrationStatus[]> {
+): Promise<import('@guru/shared').CliIntegrationStatus[]> {
   const [wecom, dingtalk, github, feishu] = await Promise.all([
     runCliProbe(runner, 'wecom-cli', ['auth', 'show', '--status']),
     runCliProbe(runner, 'dws', ['auth', 'status', '--format', 'json']),
@@ -1260,7 +1260,7 @@ async function getWindowsDefaultAppInfo(filePath: string): Promise<{ appPath: st
 async function getDefaultAppInfoForFile(
   filePath: string,
   options?: FileAccessOptions,
-): Promise<import('@proma/shared').DefaultAppInfo | null> {
+): Promise<import('@guru/shared').DefaultAppInfo | null> {
   const absPath = await resolveFileAccessPath(filePath, options)
 
   const cacheKey = `${process.platform}:${extOf(filePath) || filePath}`
@@ -1335,7 +1335,7 @@ if let appUrl = NSWorkspace.shared.urlForApplication(toOpen: url) {
   console.log('[DefaultApp] iconDataUrl 长度:', iconDataUrl?.length)
   if (!iconDataUrl) return cacheNull(cacheKey)
 
-  const info: import('@proma/shared').DefaultAppInfo = { name: appName, appPath, iconDataUrl }
+  const info: import('@guru/shared').DefaultAppInfo = { name: appName, appPath, iconDataUrl }
   defaultAppCache.set(cacheKey, info)
   defaultAppFailureCache.delete(cacheKey)
   saveCachedDefaultAppInfo(cacheKey, info)
@@ -1363,7 +1363,7 @@ export function resolveAppIconPath(variantId: string): string | null {
   if (!variantId || variantId === 'default') {
     return join(resourcesDir, 'icon.png')
   }
-  return join(resourcesDir, 'proma-logos', `proma-${variantId}.png`)
+  return join(resourcesDir, 'guru-logos', `guru-${variantId}.png`)
 }
 
 function releaseDirectoryWatcherIfUnreferenced(dirPath: string): void {
@@ -1677,7 +1677,7 @@ export function registerIpcHandlers(): void {
   // 扫描系统中的编辑器应用（仅 macOS）
   ipcMain.handle(
     IPC_CHANNELS.SCAN_EDITORS,
-    async (): Promise<import('@proma/shared').EditorApp[]> => {
+    async (): Promise<import('@guru/shared').EditorApp[]> => {
       if (process.platform !== 'darwin') return []
       const { existsSync } = await import('node:fs')
       const { homedir } = await import('node:os')
@@ -1699,7 +1699,7 @@ export function registerIpcHandlers(): void {
   // 查询某个文件在本机的默认打开应用信息（带图标）
   ipcMain.handle(
     IPC_CHANNELS.GET_DEFAULT_APP_FOR_FILE,
-    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@proma/shared').DefaultAppInfo | null> => {
+    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@guru/shared').DefaultAppInfo | null> => {
       if (!filePath || typeof filePath !== 'string') return null
       try {
         const options = normalizeFileAccessOptions(access)
@@ -1788,7 +1788,7 @@ export function registerIpcHandlers(): void {
   // 查询订阅 Plan 额度（用于 Agent Context 圆环 hover 信息）
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.GET_PLAN_QUOTA,
-    async (_, channelId: string): Promise<import('@proma/shared').ChannelPlanQuotaResult> => {
+    async (_, channelId: string): Promise<import('@guru/shared').ChannelPlanQuotaResult> => {
       return getChannelPlanQuota(channelId)
     }
   )
@@ -1798,7 +1798,7 @@ export function registerIpcHandlers(): void {
   // apiKey 传给 create/update，channel-manager 加密后存储——与现有 apiKey 明文回传模式一致。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.CODEX_OAUTH_LOGIN,
-    async (event, requestedMethod?: CodexOAuthLoginMethod): Promise<import('@proma/shared').CodexOAuthLoginResult> => {
+    async (event, requestedMethod?: CodexOAuthLoginMethod): Promise<import('@guru/shared').CodexOAuthLoginResult> => {
       const method: CodexOAuthLoginMethod = requestedMethod === 'device_code' ? 'device_code' : 'browser'
       try {
         const credentials = await loginCodexOAuth({
@@ -1837,7 +1837,7 @@ export function registerIpcHandlers(): void {
   // 组织策略可用的模型；成功后的凭据沿用 Channel.apiKey 加密存储。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.GITHUB_COPILOT_OAUTH_LOGIN,
-    async (event, enterpriseUrl?: string): Promise<import('@proma/shared').GithubCopilotOAuthLoginResult> => {
+    async (event, enterpriseUrl?: string): Promise<import('@guru/shared').GithubCopilotOAuthLoginResult> => {
       try {
         const credentials = await loginGithubCopilotOAuth({
           enterpriseUrl,
@@ -1867,7 +1867,7 @@ export function registerIpcHandlers(): void {
   // 预填的浏览器授权链接；成功后的凭据沿用 Channel.apiKey 加密存储。
   ipcMain.handle(
     CHANNEL_IPC_CHANNELS.XAI_OAUTH_LOGIN,
-    async (event): Promise<import('@proma/shared').XaiOAuthLoginResult> => {
+    async (event): Promise<import('@guru/shared').XaiOAuthLoginResult> => {
       try {
         const credentials = await loginXaiOAuth({
           onDeviceCode: (deviceCode) => {
@@ -2879,7 +2879,7 @@ export function registerIpcHandlers(): void {
   // 创建 Agent 工作区（保留给迁移与低层管理调用；交互式项目创建应使用 CREATE_PROJECT）。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.CREATE_WORKSPACE,
-    async (_, input: import('@proma/shared').CreateAgentWorkspaceInput): Promise<AgentWorkspace> => {
+    async (_, input: import('@guru/shared').CreateAgentWorkspaceInput): Promise<AgentWorkspace> => {
       const workspace = await createAgentWorkspace(input)
       if (workspace.projectRootPath) watchAttachedDirectory(workspace.projectRootPath)
       return workspace
@@ -2889,7 +2889,7 @@ export function registerIpcHandlers(): void {
   // 创建项目时同时生成其首个 Agent 会话，避免项目以无会话状态进入界面。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.CREATE_PROJECT,
-    async (_, input: import('@proma/shared').CreateAgentWorkspaceInput, channelId?: string, modelId?: string): Promise<import('@proma/shared').CreateAgentProjectResult> => {
+    async (_, input: import('@guru/shared').CreateAgentWorkspaceInput, channelId?: string, modelId?: string): Promise<import('@guru/shared').CreateAgentProjectResult> => {
       const workspace = await createAgentWorkspace(input)
       if (workspace.projectRootPath) watchAttachedDirectory(workspace.projectRootPath)
 
@@ -3037,11 +3037,11 @@ export function registerIpcHandlers(): void {
   // card toggle before they can become enabled.
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SAVE_MCP_CONFIG,
-    async (_, workspaceSlug: string, config: WorkspaceMcpConfig, options?: import('@proma/shared').SaveWorkspaceMcpConfigOptions): Promise<void> => {
+    async (_, workspaceSlug: string, config: WorkspaceMcpConfig, options?: import('@guru/shared').SaveWorkspaceMcpConfigOptions): Promise<void> => {
       for (const name of options?.explicitlyDisabledServerNames ?? []) {
         clearWorkspaceMcpPendingValidation(workspaceSlug, name)
       }
-      const pendingValidations: Array<{ name: string; candidate: import('@proma/shared').McpServerEntry }> = []
+      const pendingValidations: Array<{ name: string; candidate: import('@guru/shared').McpServerEntry }> = []
       const servers: WorkspaceMcpConfig['servers'] = {}
 
       const configServerNames = new Set(Object.keys(config.servers))
@@ -3105,7 +3105,7 @@ export function registerIpcHandlers(): void {
   // generation, while fingerprint matching protects this entry's validation writeback.
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SET_MCP_ENABLED_AND_VALIDATE,
-    async (_, workspaceSlug: string, name: string, enabled: boolean): Promise<import('@proma/shared').McpConnectionMutationResult> => {
+    async (_, workspaceSlug: string, name: string, enabled: boolean): Promise<import('@guru/shared').McpConnectionMutationResult> => {
       const current = getWorkspaceMcpConfig(workspaceSlug)
       const entry = current.servers[name]
       if (!entry) throw new Error('找不到 MCP 配置')
@@ -3144,7 +3144,7 @@ export function registerIpcHandlers(): void {
   // replaced by a stale renderer snapshot.
   ipcMain.handle(
     AGENT_IPC_CHANNELS.INSTALL_MCP_AND_VALIDATE,
-    async (_, workspaceSlug: string, name: string, entry: import('@proma/shared').McpServerEntry): Promise<import('@proma/shared').McpInstallMutationResult> => {
+    async (_, workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): Promise<import('@guru/shared').McpInstallMutationResult> => {
       const current = getWorkspaceMcpConfig(workspaceSlug)
       if (current.servers[name]) {
         return {
@@ -3217,21 +3217,21 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.START_MCP_OAUTH,
-    async (_, input: import('@proma/shared').StartMcpOAuthInput): Promise<import('@proma/shared').McpOAuthStartResult> => {
+    async (_, input: import('@guru/shared').StartMcpOAuthInput): Promise<import('@guru/shared').McpOAuthStartResult> => {
       return startMcpOAuth(input)
     }
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SAVE_MCP_OAUTH_CLIENT_SECRET,
-    (_, input: import('@proma/shared').SaveMcpOAuthClientSecretInput): void => {
+    (_, input: import('@guru/shared').SaveMcpOAuthClientSecretInput): void => {
       saveMcpOAuthClientSecret(input)
     }
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SAVE_MCP_API_KEY,
-    async (_, input: import('@proma/shared').SaveMcpApiKeyInput): Promise<void> => {
+    async (_, input: import('@guru/shared').SaveMcpApiKeyInput): Promise<void> => {
       return saveMcpApiKey(input)
     }
   )
@@ -3247,14 +3247,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_CLI_INTEGRATION_STATUSES,
-    async (_, workspaceSlug: string): Promise<import('@proma/shared').CliIntegrationStatus[]> => {
+    async (_, workspaceSlug: string): Promise<import('@guru/shared').CliIntegrationStatus[]> => {
       return getCliIntegrationStatuses(undefined, getDisabledCliIntegrationIds(workspaceSlug))
     }
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SET_CLI_INTEGRATION_ENABLED,
-    async (_, workspaceSlug: string, id: string, enabled: boolean): Promise<import('@proma/shared').CliIntegrationStatus[]> => {
+    async (_, workspaceSlug: string, id: string, enabled: boolean): Promise<import('@guru/shared').CliIntegrationStatus[]> => {
       setCliIntegrationEnabled(workspaceSlug, id, enabled)
       return getCliIntegrationStatuses(undefined, getDisabledCliIntegrationIds(workspaceSlug))
     },
@@ -3263,7 +3263,7 @@ export function registerIpcHandlers(): void {
   // 测试 MCP 服务器连接
   ipcMain.handle(
     AGENT_IPC_CHANNELS.TEST_MCP_SERVER,
-    async (_, workspaceSlug: string, name: string, entry: import('@proma/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
+    async (_, workspaceSlug: string, name: string, entry: import('@guru/shared').McpServerEntry): Promise<{ success: boolean; message: string }> => {
       const { validateMcpServer } = await import('./lib/mcp-validator')
       const result = await validateMcpServer(name, entry, workspaceSlug)
       return {
@@ -3322,7 +3322,7 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // 获取默认 Skills 的 slug 列表（来自 ~/.proma/default-skills/）
+  // 获取默认 Skills 的 slug 列表（来自 ~/.guru/default-skills/）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_DEFAULT_SKILL_SLUGS,
     async () => {
@@ -3572,7 +3572,7 @@ export function registerIpcHandlers(): void {
   // 排队发送消息
   ipcMain.handle(
     AGENT_IPC_CHANNELS.QUEUE_MESSAGE,
-    async (event, input: import('@proma/shared').AgentQueueMessageInput): Promise<string> => {
+    async (event, input: import('@guru/shared').AgentQueueMessageInput): Promise<string> => {
       return queueAgentMessage(input, event.sender)
     }
   )
@@ -3580,14 +3580,14 @@ export function registerIpcHandlers(): void {
   // 主进程原子决定立即注入活跃 Agent 或进入 deferred queue。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.SUBMIT_OR_ENQUEUE_MESSAGE,
-    async (event, input: import('@proma/shared').AgentSubmitOrEnqueueInput): Promise<import('@proma/shared').AgentSubmitOrEnqueueResult> => {
+    async (event, input: import('@guru/shared').AgentSubmitOrEnqueueInput): Promise<import('@guru/shared').AgentSubmitOrEnqueueResult> => {
       return submitOrEnqueueAgentMessage(input, event.sender)
     },
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_QUEUED_MESSAGES,
-    async (_, sessionId: string): Promise<import('@proma/shared').AgentQueuedMessageSnapshot[]> => {
+    async (_, sessionId: string): Promise<import('@guru/shared').AgentQueuedMessageSnapshot[]> => {
       if (!sessionId || typeof sessionId !== 'string') return []
       return listQueuedAgentMessages(sessionId)
     },
@@ -3596,21 +3596,21 @@ export function registerIpcHandlers(): void {
   // 兼容旧调用：将消息交给主进程 deferred queue。
   ipcMain.handle(
     AGENT_IPC_CHANNELS.ENQUEUE_QUEUED_MESSAGE,
-    async (event, input: import('@proma/shared').AgentDeferredQueueMessageInput): Promise<void> => {
+    async (event, input: import('@guru/shared').AgentDeferredQueueMessageInput): Promise<void> => {
       enqueueAgentQueuedMessage(input, event.sender)
     },
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.CANCEL_QUEUED_MESSAGE,
-    async (_, input: import('@proma/shared').AgentQueuedMessageControlInput): Promise<boolean> => {
+    async (_, input: import('@guru/shared').AgentQueuedMessageControlInput): Promise<boolean> => {
       return cancelAgentQueuedMessage(input)
     },
   )
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.MOVE_QUEUED_MESSAGE,
-    async (_, input: import('@proma/shared').AgentMoveQueuedMessageInput): Promise<boolean> => {
+    async (_, input: import('@guru/shared').AgentMoveQueuedMessageInput): Promise<boolean> => {
       return moveAgentQueuedMessage(input)
     },
   )
@@ -3628,7 +3628,7 @@ export function registerIpcHandlers(): void {
       if (sessionId) {
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'proma_event', event: { type: 'permission_resolved', requestId, behavior } },
+          payload: { kind: 'guru_event', event: { type: 'permission_resolved', requestId, behavior } },
         })
       }
     }
@@ -3637,8 +3637,8 @@ export function registerIpcHandlers(): void {
   // 热切换指定会话的权限模式（运行中生效，不广播）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.UPDATE_SESSION_PERMISSION_MODE,
-    async (_, sessionId: string, mode: PromaPermissionMode): Promise<void> => {
-      if (!isPromaPermissionMode(mode)) {
+    async (_, sessionId: string, mode: GuruPermissionMode): Promise<void> => {
+      if (!isGuruPermissionMode(mode)) {
         throw new Error(`无效的权限模式: ${mode}`)
       }
       // 会话不存在时直接抛错（避免 updateAgentSessionMeta 的通用异常被降级为 warn）
@@ -3752,7 +3752,7 @@ export function registerIpcHandlers(): void {
       if (sessionId) {
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'proma_event', event: { type: 'ask_user_resolved', requestId } },
+          payload: { kind: 'guru_event', event: { type: 'ask_user_resolved', requestId } },
         })
       }
     }
@@ -3772,7 +3772,7 @@ export function registerIpcHandlers(): void {
         // 通知渲染进程请求已处理
         event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
           sessionId,
-          payload: { kind: 'proma_event', event: { type: 'exit_plan_mode_resolved', requestId: response.requestId } },
+          payload: { kind: 'guru_event', event: { type: 'exit_plan_mode_resolved', requestId: response.requestId } },
         })
 
         // 如果用户选择了新的权限模式，通知渲染进程更新 UI
@@ -3788,7 +3788,7 @@ export function registerIpcHandlers(): void {
           }
           event.sender.send(AGENT_IPC_CHANNELS.STREAM_EVENT, {
             sessionId,
-            payload: { kind: 'proma_event', event: { type: 'permission_mode_changed', mode: targetMode } },
+            payload: { kind: 'guru_event', event: { type: 'permission_mode_changed', mode: targetMode } },
           })
           console.log(`[IPC] ExitPlanMode 权限模式切换: ${targetMode}`)
         }
@@ -3801,7 +3801,7 @@ export function registerIpcHandlers(): void {
   // 获取所有待处理的交互请求快照（渲染进程重载后恢复状态）
   ipcMain.handle(
     AGENT_IPC_CHANNELS.GET_PENDING_REQUESTS,
-    async (): Promise<import('@proma/shared').PendingRequestsSnapshot> => {
+    async (): Promise<import('@guru/shared').PendingRequestsSnapshot> => {
       return {
         permissions: permissionService.getPendingRequests(),
         askUsers: askUserService.getPendingRequests(),
@@ -4008,7 +4008,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     AGENT_IPC_CHANNELS.ADD_WORKTREE_REPO,
-    async (_, workspaceSlug: string, repo: import('@proma/shared').WorkspaceWorktreeRepo) => {
+    async (_, workspaceSlug: string, repo: import('@guru/shared').WorkspaceWorktreeRepo) => {
       return addWorktreeRepo(workspaceSlug, repo)
     }
   )
@@ -4097,7 +4097,7 @@ export function registerIpcHandlers(): void {
       const { existsSync, mkdirSync } = await import('node:fs')
       const { writeFile } = await import('node:fs/promises')
 
-      const tmpDir = join(tmpdir(), 'proma-preview')
+      const tmpDir = join(tmpdir(), 'guru-preview')
       if (!existsSync(tmpDir)) {
         mkdirSync(tmpDir, { recursive: true })
       }
@@ -4184,7 +4184,7 @@ export function registerIpcHandlers(): void {
   // 解析文件路径并读取内容（供内联预览使用）
   ipcMain.handle(
     'file:resolve-and-read',
-    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@proma/shared').FilePreviewReadResult | null> => {
+    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@guru/shared').FilePreviewReadResult | null> => {
       const { resolveAndReadFile } = await import('./lib/file-preview-service')
       const options = normalizeFileAccessOptions(access)
       const resolved = await resolveAuthorizedPreviewPath(filePath, options)
@@ -4256,7 +4256,7 @@ export function registerIpcHandlers(): void {
       const result = resolveMarkdownRelativeMediaPath(markdownFilePath, src, options)
       if (!result) return null
       try {
-        return { url: registerPromaFilePath(result) }
+        return { url: registerGuruFilePath(result) }
       } catch (err) {
         console.warn('[IPC] file:resolve-markdown-media 无法注册图片，跳过:', result, err instanceof Error ? err.message : err)
         return null
@@ -4264,17 +4264,17 @@ export function registerIpcHandlers(): void {
     },
   )
 
-  // 仅解析文件路径（供 PDF/图片等用 proma-file:// 加载）
+  // 仅解析文件路径（供 PDF/图片等用 guru-file:// 加载）
   ipcMain.handle(
     'file:resolve-path',
     async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<(ResolvedFileUrl & { resolvedPath: string }) | null> => {
       const options = normalizeFileAccessOptions(access)
       const result = await resolveAuthorizedPreviewPath(filePath, options)
       if (!result) return null
-      // registerPromaFilePath 对目录路径会抛「不是文件」。渲染端（如悬浮预览解析 markdown
+      // registerGuruFilePath 对目录路径会抛「不是文件」。渲染端（如悬浮预览解析 markdown
       // 链接）可能传入目录路径，此处优雅降级为 null，而不是让异常冒泡成未捕获的 handler 错误。
       try {
-        return { url: registerPromaFilePath(result), resolvedPath: result }
+        return { url: registerGuruFilePath(result), resolvedPath: result }
       } catch (err) {
         console.warn('[IPC] file:resolve-path 无法注册为文件，跳过:', result, err instanceof Error ? err.message : err)
         return null
@@ -4283,7 +4283,7 @@ export function registerIpcHandlers(): void {
   )
 
   // 当所在目录本身已授权时，为 HTML 预览注册它以加载相对 CSS、脚本和图片资源；
-  // 单文件授权仅注册 HTML 本体。返回的仍是 token-gated proma-file URL。
+  // 单文件授权仅注册 HTML 本体。返回的仍是 token-gated guru-file URL。
   ipcMain.handle(
     'file:resolve-html-preview-path',
     async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<ResolvedFileUrl | null> => {
@@ -4295,9 +4295,9 @@ export function registerIpcHandlers(): void {
         // 单文件附件只授权该文件本身，不能因 HTML 预览而将父目录整体注册为 URL 根；
         // 此时仍可加载 HTML 本体，但同目录资源会按授权边界被拒绝。
         if (!isExplicitPreviewDirectoryPath(parentDir, options)) {
-          return { url: registerPromaFilePath(result) }
+          return { url: registerGuruFilePath(result) }
         }
-        const directoryUrl = registerPromaDirectoryPath(parentDir)
+        const directoryUrl = registerGuruDirectoryPath(parentDir)
         return { url: `${directoryUrl}/${encodeURIComponent(basename(result))}` }
       } catch (err) {
         console.warn('[IPC] file:resolve-html-preview-path 无法注册预览目录，跳过:', result, err instanceof Error ? err.message : err)
@@ -4322,7 +4322,7 @@ export function registerIpcHandlers(): void {
   // Office 文件转高保真 HTML（内联预览；失败时由服务层降级到内置解析器）
   ipcMain.handle(
     'file:office-to-html',
-    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@proma/shared').OfficePreviewResult | null> => {
+    async (_, filePath: string, access?: FileAccessOptions | string[]): Promise<import('@guru/shared').OfficePreviewResult | null> => {
       const { convertOfficeToHtml } = await import('./lib/file-preview-service')
       const options = normalizeFileAccessOptions(access)
       const resolved = await resolveAuthorizedPreviewPath(filePath, options)
@@ -4938,7 +4938,7 @@ export function registerIpcHandlers(): void {
   // 保存单个 Bot 配置
   ipcMain.handle(
     FEISHU_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (_, input: import('@proma/shared').FeishuBotConfigInput) => {
+    async (_, input: import('@guru/shared').FeishuBotConfigInput) => {
       const saved = saveFeishuBotConfig(input)
       feishuBridgeManager.setSessionMirrorOperator(saved.id, input.operatorOpenId)
       // 配置变更后自动重启或停止（不阻塞保存结果）
@@ -4997,7 +4997,7 @@ export function registerIpcHandlers(): void {
   // 测试飞书连接
   ipcMain.handle(
     FEISHU_IPC_CHANNELS.TEST_CONNECTION,
-    async (_, appId: string, appSecret: string, domain?: import('@proma/shared').FeishuDomain): Promise<FeishuTestResult> => {
+    async (_, appId: string, appSecret: string, domain?: import('@guru/shared').FeishuDomain): Promise<FeishuTestResult> => {
       return feishuBridgeManager.testConnection(appId, appSecret, domain)
     }
   )
@@ -5055,7 +5055,7 @@ export function registerIpcHandlers(): void {
         const lark = await import('@larksuiteoapi/node-sdk')
         const QRCode = (await import('qrcode')).default
         const result = await lark.registerApp({
-          source: 'proma',
+          source: 'guru',
           signal: abort.signal,
           onQRCodeReady: async (info) => {
             if (event.sender.isDestroyed()) return
@@ -5183,7 +5183,7 @@ export function registerIpcHandlers(): void {
   // 保存单个 Bot 配置
   ipcMain.handle(
     DINGTALK_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (_, input: import('@proma/shared').DingTalkBotConfigInput) => {
+    async (_, input: import('@guru/shared').DingTalkBotConfigInput) => {
       const saved = saveDingTalkBotConfig(input)
       // 配置变更后自动重启或停止（不阻塞保存结果）
       if (saved.enabled && saved.clientId && saved.clientSecret) {
@@ -5250,7 +5250,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     SLACK_IPC_CHANNELS.SAVE_BOT_CONFIG,
-    async (event, input: import('@proma/shared').SlackBotConfigInput) => {
+    async (event, input: import('@guru/shared').SlackBotConfigInput) => {
       assertMainSettingsRenderer(event.sender.id)
       const saved = saveSlackBotConfig(input)
       if (saved.enabled && saved.botToken && saved.appToken) {
@@ -5524,7 +5524,7 @@ export function registerIpcHandlers(): void {
       const sourceInputId = typeof input?.sourceInputId === 'string' && input.sourceInputId.length > 0 && input.sourceInputId.length <= 512
         ? input.sourceInputId
         : undefined
-      toggleVoiceDictationWindow({ targetIsProma: !!sourceWindow, sourceInputId })
+      toggleVoiceDictationWindow({ targetIsGuru: !!sourceWindow, sourceInputId })
     }
   )
 
@@ -5658,7 +5658,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('migration:open-data-folder', async (): Promise<void> => {
     const dataDir = getConfigDir()
     const error = await shell.openPath(dataDir)
-    if (error) throw new Error(`无法打开 Proma 数据文件夹：${error}`)
+    if (error) throw new Error(`无法打开 Guru 数据文件夹：${error}`)
   })
 
   // ===== 窗口控制（Windows 自定义标题栏按钮）=====
@@ -5905,7 +5905,7 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle(PLANNING_IPC_CHANNELS.LIST_NATIVE_SYNC_CONFLICTS, async (): Promise<PlanningNativeSyncConflict[]> => listPlanningNativeSyncConflicts())
   ipcMain.handle(PLANNING_IPC_CHANNELS.RESOLVE_NATIVE_SYNC_CONFLICT, async (_, input: ResolvePlanningNativeSyncConflictInput): Promise<boolean> => {
-    if (!input || typeof input.id !== 'string' || !['keep_proma', 'keep_system'].includes(input.resolution)) throw new Error('冲突解决参数非法')
+    if (!input || typeof input.id !== 'string' || !['keep_guru', 'keep_system'].includes(input.resolution)) throw new Error('冲突解决参数非法')
     const resolved = resolvePlanningNativeSyncConflict(input)
     if (resolved) { broadcastPlanningChanged(['todos', 'calendar_events']); void runPlanningNativeSync(true) }
     return resolved
@@ -5925,7 +5925,7 @@ export function registerIpcHandlers(): void {
   // ===== 定时任务（Automation）=====
 
   // 渲染进程可能被注入内容污染（XSS via markdown / MCP tool output），主进程必须自己校验入参,
-  // 否则 NaN / -Infinity / 越界值会污染 ~/.proma/automations.json，无法回滚。
+  // 否则 NaN / -Infinity / 越界值会污染 ~/.guru/automations.json，无法回滚。
   const isNonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.length > 0
   const isNonBlankString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
   const isFiniteInt = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Number.isInteger(v)
@@ -6154,7 +6154,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(VAULT_IPC_CHANNELS.RESOLVE_MEDIA, async (_, noteRelativePath: unknown, src: unknown): Promise<ResolvedFileUrl | null> => {
     if (typeof noteRelativePath !== 'string' || typeof src !== 'string') return null
     const resolvedPath = getConfiguredVaultFileSystem().resolveMedia(noteRelativePath, src)
-    return resolvedPath ? { url: registerPromaFilePath(resolvedPath) } : null
+    return resolvedPath ? { url: registerGuruFilePath(resolvedPath) } : null
   })
 
   ipcMain.handle(VAULT_IPC_CHANNELS.SAVE_PASTED_IMAGE, async (_, input: unknown): Promise<{ src: string } | null> => {

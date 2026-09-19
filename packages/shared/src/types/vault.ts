@@ -20,7 +20,7 @@ export interface VaultCandidate {
   path: string
   displayName: string
   isObsidianVault: boolean
-  isPromaManaged?: boolean
+  isGuruManaged?: boolean
 }
 
 export interface VaultFileEntry {

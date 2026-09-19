@@ -7,9 +7,9 @@ import { existsSync } from 'fs'
 // 必须在任何会读取 userData 路径的模块加载之前执行
 if (!app.isPackaged) {
   // 多个 worktree 可显式隔离开发实例，避免其中一个分支抢走另一分支的 Chromium SingletonLock。
-  const instance = process.env.PROMA_DEV_INSTANCE?.replace(/[^a-zA-Z0-9_-]/g, '')
-  if (instance) app.setName(`Proma-${instance}`)
-  app.setPath('userData', join(app.getPath('appData'), instance ? `@proma/electron-dev-${instance}` : '@proma/electron-dev'))
+  const instance = process.env.GURU_DEV_INSTANCE?.replace(/[^a-zA-Z0-9_-]/g, '')
+  if (instance) app.setName(`Guru-${instance}`)
+  app.setPath('userData', join(app.getPath('appData'), instance ? `@guru/electron-dev-${instance}` : '@guru/electron-dev'))
 }
 
 // 单实例锁：防止重复启动同一个版本（dev/prod 因 userData 已隔离，互不影响）
@@ -21,8 +21,8 @@ if (!app.isPackaged) {
 // second-instance 事件，由主实例负责显示窗口。
 if (!app.requestSingleInstanceLock()) {
   console.warn(
-    '[启动] 已有 Proma 进程持有单实例锁，本次启动将退出。\n' +
-      '  如果窗口未出现，可能旧进程已卡死。请运行 `killall Proma` 后重试。',
+    '[启动] 已有 Guru 进程持有单实例锁，本次启动将退出。\n' +
+      '  如果窗口未出现，可能旧进程已卡死。请运行 `killall Guru` 后重试。',
   )
   app.quit()
 } else {
@@ -32,9 +32,9 @@ if (!app.requestSingleInstanceLock()) {
 
 function registerProtocolsAndHandlers(): void {
   // 注册自定义协议方案为"特权"（必须在 app ready 之前）
-  // 用于内联预览本地文件（renderer 用 iframe 加载 proma-file:// 资源）
+  // 用于内联预览本地文件（renderer 用 iframe 加载 guru-file:// 资源）
   protocol.registerSchemesAsPrivileged([
-    { scheme: 'proma-file', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
+    { scheme: 'guru-file', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
   ])
 
   // Windows: 禁用 LCD 次像素抗锯齿（ClearType），改用灰度 AA。
@@ -52,7 +52,7 @@ function registerProtocolsAndHandlers(): void {
 
 
 import { getSettings, updateSettings } from './lib/settings-service'
-import { handlePromaFileRequest } from './lib/local-file-protocol'
+import { handleGuruFileRequest } from './lib/local-file-protocol'
 
 // 处理 EPIPE 错误：当 stdout/stderr 管道被关闭时（如 electronmon 重启），忽略写入错误
 // 这在开发环境热重载时经常发生，不影响应用功能
@@ -131,7 +131,7 @@ import {
   shouldSuppressVoiceDictationActivate,
 } from './lib/voice-dictation-window'
 import { registerGlobalShortcut, unregisterAllGlobalShortcuts } from './lib/global-shortcut-service'
-import { setPromaVersion } from '@proma/core'
+import { setGuruVersion } from '@guru/core'
 import { canRecoverRenderer, RENDERER_RECOVERY_WINDOW_MS } from './lib/renderer-process-recovery'
 import { TRAY_IPC_CHANNELS, WINDOWS_AGENT_ISLAND_IPC_CHANNELS } from '../types'
 
@@ -536,7 +536,7 @@ function createWindow(): void {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;')
-    const page = `<!doctype html><html><head><meta charset="utf-8"><title>Proma 无法加载</title><style>body{font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:48px;color:#222;background:#fff}main{max-width:680px;margin:auto}h1{font-size:20px;font-weight:600}pre{white-space:pre-wrap;background:#f3f3f3;padding:16px;border-radius:8px}a{display:inline-block;margin-top:12px;padding:9px 14px;border-radius:6px;background:#222;color:#fff;text-decoration:none}</style></head><body><main><h1>Proma 无法加载主界面</h1><pre>${escapeHtml(reason)}</pre><a href="${escapeHtml(rendererEntryUrl)}">重新加载主界面</a></main></body></html>`
+    const page = `<!doctype html><html><head><meta charset="utf-8"><title>Guru 无法加载</title><style>body{font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:48px;color:#222;background:#fff}main{max-width:680px;margin:auto}h1{font-size:20px;font-weight:600}pre{white-space:pre-wrap;background:#f3f3f3;padding:16px;border-radius:8px}a{display:inline-block;margin-top:12px;padding:9px 14px;border-radius:6px;background:#222;color:#fff;text-decoration:none}</style></head><body><main><h1>Guru 无法加载主界面</h1><pre>${escapeHtml(reason)}</pre><a href="${escapeHtml(rendererEntryUrl)}">重新加载主界面</a></main></body></html>`
     mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(page)}`).catch((error) => {
       console.error('[启动] 降级错误页加载失败:', error)
       mainWindow?.show()
@@ -717,21 +717,21 @@ app.whenReady().then(bootstrap).catch(handleBootstrapFailure)
  * 单点失败不应阻止窗口和托盘的创建（用户至少要能看到界面）。
  */
 async function bootstrap(): Promise<void> {
-  // 初始化 Proma 版本号（供 User-Agent 等全局标识使用）
-  setPromaVersion(app.getVersion())
+  // 初始化 Guru 版本号（供 User-Agent 等全局标识使用）
+  setGuruVersion(app.getVersion())
 
   // 先显示不依赖 Renderer 的静态启动页；运行时检测耗时不会再变成用户可见的空白。
   createStartupSplashWindow()
 
-  // 注册自定义协议 proma-file:// 用于内联预览本地文件。
+  // 注册自定义协议 guru-file:// 用于内联预览本地文件。
   // 协议只接受主进程签发的 opaque token，不解析 renderer 提供的绝对路径。
-  protocol.handle('proma-file', handlePromaFileRequest)
+  protocol.handle('guru-file', handleGuruFileRequest)
 
   // 初始化运行时环境。Node.js 仅由 npx / npm 型 MCP 在实际连接时使用，
   // 或由用户从设置手动检测；启动时不应将其作为 Agent 的前置要求。
   await safeAwait('initializeRuntime', () => initializeRuntime({ skipNodeDetection: true }))
 
-  // 同步默认 Skills 模板到 ~/.proma/default-skills/
+  // 同步默认 Skills 模板到 ~/.guru/default-skills/
   safeRun('seedDefaultSkills', seedDefaultSkills)
 
   // 升级所有工作区中版本过旧的默认 Skills
@@ -852,7 +852,7 @@ async function bootstrap(): Promise<void> {
   )
   safeRun('registerGlobalShortcut:voice-dictation', () =>
     registerGlobalShortcut('voice-dictation', () => {
-      toggleVoiceDictationWindow({ targetIsProma: mainWindow?.isFocused() === true })
+      toggleVoiceDictationWindow({ targetIsGuru: mainWindow?.isFocused() === true })
     }),
   )
 
@@ -909,13 +909,13 @@ function handleBootstrapFailure(err: unknown): void {
   try {
     const message = err instanceof Error ? (err.stack ?? err.message) : String(err)
     dialog.showErrorBox(
-      'Proma 启动遇到错误',
+      'Guru 启动遇到错误',
       `部分功能可能不可用：\n\n${message}\n\n` +
         `日志位置：${app.getPath('logs')}\n\n` +
         `常见原因与排查：\n` +
-        `1. 旧版 Proma 进程未退出（终端运行 killall Proma 后重试）\n` +
-        `2. ~/.proma/ 配置损坏（重命名 ~/.proma 后重启）\n` +
-        `3. 系统 Keychain 无法解密保存的凭证（删除 ~/.proma/feishu.json 等后重新登录）\n\n` +
+        `1. 旧版 Guru 进程未退出（终端运行 killall Guru 后重试）\n` +
+        `2. ~/.guru/ 配置损坏（重命名 ~/.guru 后重启）\n` +
+        `3. 系统 Keychain 无法解密保存的凭证（删除 ~/.guru/feishu.json 等后重新登录）\n\n` +
         `如需协助请到 GitHub Issues 反馈。`,
     )
   } catch {
